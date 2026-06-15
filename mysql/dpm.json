@@ -1,7 +1,7 @@
 {
     "name": "mysql",
     "version": "0.1.0",
-    "source": "https://github.com/djazair-language/djazair-extensions",
+    "source": "https://github.com/djazair-language/djazair-extensions/tree/main/mysql",
     "developer": {
         "name": "Harizi Riyadh",
         "email": "hariziriaydh@gmail.com"
