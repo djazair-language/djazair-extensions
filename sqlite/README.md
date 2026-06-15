@@ -74,22 +74,22 @@ use sqlite
 # 1. الاتصال بقاعدة البيانات
 let db = sqlite.connect("school.db")
 
-if db.is_connected():
+if db.isConnected():
     # 2. إنشاء الجداول
     db.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, score REAL)")
     
     # 3. إدخال بيانات آمن ومحمي
-    db.safe_execute("INSERT INTO users (name, score) VALUES (?, ?)", ["Riad", 98.5])
-    db.safe_execute("INSERT INTO users (name, score) VALUES (?, ?)", ["Anis", 89.0])
+    db.safeExecute("INSERT INTO users (name, score) VALUES (?, ?)", ["Riad", 98.5])
+    db.safeExecute("INSERT INTO users (name, score) VALUES (?, ?)", ["Anis", 89.0])
     
     # 4. استعلام آمن مفلتر بالبارامترات
-    let res = db.safe_query("SELECT * FROM users WHERE score > ?", [90.0])
+    let res = db.safeQuery("SELECT * FROM users WHERE score > ?", [90.0])
     
     # طباعة الأعمدة
     print("Columns: " + str(res.columns()))
     
     # قراءة البيانات كخرائط
-    let users = res.fetch_all_assoc()
+    let users = res.fetchAllAssoc()
     let i = 0
     while i < users.length():
         let user = users[i]

@@ -39,7 +39,7 @@ let db = mysql.Connection("localhost", "root", "pass", "testdb", 3306)
 التحقق من نجاح الاتصال.
 
 ```dz
-if db.is_connected():
+if db.isConnected():
     print("متصل بقاعدة البيانات")
 end
 ```
@@ -263,7 +263,7 @@ let cols = res.columns()
 let row = res.fetchRow()
 while row != Null:
     print(row[0])
-    row = res.fetch_row()
+    row = res.fetchRow()
 end
 ```
 
@@ -332,14 +332,14 @@ use mysql
 
 let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
 
-if db.is_connected():
+if db.isConnected():
     db.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, age INT)")
 
-    db.safe_execute("INSERT INTO users (name, age) VALUES (?, ?)", ["Riad", 30])
-    db.safe_execute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
+    db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Riad", 30])
+    db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
 
-    let res = db.safe_query("SELECT * FROM users WHERE age > ?", [20])
-    let users = res.fetch_all_assoc()
+    let res = db.safeQuery("SELECT * FROM users WHERE age > ?", [20])
+    let users = res.fetchAllAssoc()
     for user in users:
         print("ID: " + str(user["id"]) + ", Name: " + user["name"] + ", Age: " + str(user["age"]))
     end
