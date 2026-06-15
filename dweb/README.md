@@ -1,139 +1,138 @@
-# التوثيق الشامل لإطار عمل الويب دزاير (Djazair `dweb` Web Framework Manual)
+# Djazair `dweb` Web Framework Manual
 
-يعتبر **dweb** إطار عمل ويب متكامل وقوي مبني بالكامل بلغة دزاير، ومصمم لتسهيل بناء تطبيقات ومواقع الويب وخوادم الويب (APIs) بنمط **MVC (Model-View-Controller)**. يتميز إطار العمل بأدائه العالي وحمايته المدمجة، ويوفر بيئة برمجية متطورة تشمل نظام مسارات مرناً (Routing)، ومحرك قوالب AST متقدماً (Templates)، ومصادقة بالاعتماد على الجلسات (Sessions)، وحماية تلقائية ضد ثغرات CSRF، ومستلم ملفات مرفوعة، وباني استعلامات مرناً لقواعد البيانات (QueryBuilder).
-
----
-
-## 📋 جدول المحتويات
-1. [هيكل المشروع والتهيئة (Directory Structure & Setup)](#1-هيكل-المشروع-والتهيئة-directory-structure--setup)
-2. [المسارات والتحكم (Routing & Controllers)](#2-المسارات-والتحكم-routing--controllers)
-3. [التحقق وفحص البيانات (Validator API)](#3-التحقق-وفحص-البيانات-validator-api)
-4. [محرك القوالب والتصميم (AST Template Engine)](#4-محرك-القوالب-والتصميم-ast-template-engine)
-5. [باني استعلامات قواعد البيانات (QueryBuilder & DB)](#5-باني-استعلامات-قواعد-البيانات-querybuilder--db)
-6. [إدارة الجلسات والأمان (Sessions & CSRF Protection)](#6-إدارة-الجلسات-والأمان-sessions--csrf-protection)
-7. [معالجة رفع الملفات (Multipart File Upload)](#7-معالجة-رفع-الملفات-multipart-file-upload)
-8. [مشروع ويب متكامل (Complete Web MVC App)](#8-مشروع-ويب-متكامل-complete-web-mvc-app)
+**dweb** is a feature-rich, MVC (Model-View-Controller) web framework written entirely in the Djazair programming language. It provides all the essentials for building secure, scalable, and modern web applications and APIs, including dynamic routing, AST-compiled templates, cookie-based sessions, automated CSRF protection, file upload handlers, validation libraries, and a fluent SQL QueryBuilder.
 
 ---
 
-## 1. هيكل المشروع والتهيئة (Directory Structure & Setup)
+## 📋 Table of Contents
+1. [Project Directory & Setup](#1-project-directory--setup)
+2. [Routing & Controllers](#2-routing--controllers)
+3. [Input Validation (Validator API)](#3-input-validation-validator-api)
+4. [AST Template Engine](#4-ast-template-engine)
+5. [Database & QueryBuilder](#5-database--querybuilder)
+6. [Sessions & CSRF Protection](#6-sessions--csrf-protection)
+7. [Multipart File Uploads](#7-multipart-file-uploads)
+8. [Complete Web MVC Application](#8-complete-web-mvc-application)
 
-لإنتاج تطبيق ويب متناسق ونظيف بنمط MVC، يوصى بالهيكل التالي للمجلدات:
+---
+
+## 1. Project Directory & Setup
+
+To structure a clean MVC application, we recommend the following folder tree:
 ```text
 my-web-app/
-├── app.dz                # ملف الدخول الرئيسي
-├── controllers/          # وحدات التحكم بالطلب
+├── app.dz                # Core entry point script
+├── controllers/          # Business logic controllers
 │   └── UserController.dz
-├── models/               # هياكل البيانات والاتصال بالـ DB
-├── views/                # قوالب العرض (HTML)
+├── models/               # Database models
+├── views/                # HTML templates
 │   ├── layouts/
-│   │   └── base.html     # التصميم العام للموقع
-│   ├── index.html        # الصفحة الرئيسية
-│   └── register.html     # صفحة التسجيل
-└── public/               # الملفات الثابتة المتاحة للعموم
+│   │   └── base.html     # Base HTML layout
+│   ├── index.html        # Main home view
+│   └── register.html     # User registration view
+└── public/               # Exposed static files folder
     ├── css/
     ├── js/
-    └── uploads/          # مجلد رفع صور الأعضاء
+    └── uploads/          # Folder for user uploads
 ```
 
-### التثبيت عبر DPM:
+### Installation via DPM:
 ```bash
 dpm install dweb
 ```
+*DPM will automatically fetch and configure database drivers and curl dependency libraries.*
 
 ---
 
-## 2. المسارات والتحكم (Routing & Controllers)
+## 2. Routing & Controllers
 
-### كلاس التطبيق الرئيسي `dweb.App`
-يتحكم في استقبال طلبات HTTP وإدارة المسارات والبرمجيات الوسيطة (Middlewares).
+### Main Application Class `dweb.App`
+Controls HTTP server lifecycle, middleware registration, and routes mapping.
 
-*   `init(options)`: إنشاء كائن التطبيق.
-    *   *خيارات:* `"views"` (مسار مجلد العروض، الافتراضي هو مجلد السكربت المنفّذ).
-*   `setViews(directory)`: تعيين أو تعديل مسار قوالب العرض ديناميكياً.
-*   `middleware(handler)`: تسجيل برمجية وسيطة عالمية تُنفذ على جميع الطلبات بالصيغة `fn(req, res, next)`.
-*   `serveStatic(url_prefix, directory_path)`: خدمة الملفات الثابتة من مجلد محدد (مثال: `app.serveStatic("/assets", "./public")`).
-*   `run(port = 8080)`: بدء تشغيل خادم الويب والاستماع للمنفذ المحدد.
+*   `init(options)`: Instantiates a new application.
+    *   *Options:* `"views"` (base directory path for templates. Defaults to script running directory).
+*   `setViews(directory)`: Updates views location dynamically.
+*   `middleware(handler)`: Registers a global middleware function `fn(req, res, next)`.
+*   `serveStatic(url_prefix, directory_path)`: Serve assets folder files (e.g. `app.serveStatic("/assets", "./public")`).
+*   `run(port = 8080)`: Fires up the HTTP server listening on specified port.
 
-### دوال المسارات (Routing Methods):
-تأخذ المعاملات: `path` (المسار المطلوب)، `handler` (دالة المعالجة أو كلاس التحكم)، و `middlewares` (مصفوفة برمجيات وسيطة اختيارية خاصة بالمسار).
+### Routing Methods:
+All routing methods accept `path` (url pattern), `handler` (callback or controller class methods), and an optional array of path-specific `middlewares`.
 *   `get(path, handler, middlewares = [])`
 *   `post(path, handler, middlewares = [])`
 *   `put(path, handler, middlewares = [])`
 *   `patch(path, handler, middlewares = [])`
 *   `delete(path, handler, middlewares = [])`
-*   `group(prefix, callback)`: تجميع عدة مسارات ببادئة مشتركة.
+*   `group(prefix, callback)`: Encapsulates routing group sharing a prefix path.
 
-### كلاس الطلب `Request` (الكائن `req`)
-يحتوي على تفاصيل الطلب المرسل من المتصفح:
-*   `req.method`: طريقة الطلب (GET, POST...).
-*   `req.path`: المسار المطلوب.
-*   `req.headers`: خريطة بالترويسات المستقبلة.
-*   `req.cookies`: خريطة بالكوكيز المرسلة من المتصفح.
-*   `req.query`: خريطة بمعاملات رابط الطلب (Query string).
-*   `req.body`: خريطة ببيانات الطلب المرسلة عبر النماذج (Forms) أو الـ JSON.
-*   `req.pathParams`: خريطة ببارامترات المسار المتغير (مثال: للمسار `"/users/:id"`، قيمة `req.pathParams["id"]` ستعود بمعرف المستخدم).
-*   `req.session`: كائن الجلسة الفردي للمستخدم (متاح فقط عند تفعيل برمجية الجلسات).
+### Request Class (The `req` object)
+Contains metadata of the incoming request:
+*   `req.method`: Request method (GET, POST, etc.).
+*   `req.path`: The requested path.
+*   `req.headers`: Map containing request headers.
+*   `req.cookies`: Map containing client-sent cookies.
+*   `req.query`: Map containing URL query parameters.
+*   `req.body`: Map containing post form-data or JSON payload.
+*   `req.pathParams`: Map containing matched path placeholders (e.g., for `"/users/:id"`, `req.pathParams["id"]` holds the ID).
+*   `req.session`: Session store object (if sessions middleware is enabled).
 
-### كلاس الاستجابة `Response` (الكائن `res`)
-يتحكم في تشكيل وإرسال الرد للمتصفح:
-*   `res.status(code)`: تعيين رمز الحالة (HTTP Status code). يرجع نفس كائن الاستجابة لتمكين الاستدعاء المتتالي.
-*   `res.header(name, value)`: تعيين ترويسة معينة للاستجابة.
-*   `res.cookie(name, value, options = {})`: إرسال كوكيز للمتصفح.
-*   `res.send(body)`: إرسال رد نصي عادي أو خام للمتصفح.
-*   `res.html(htmlString)`: إرسال كود HTML للمتصفح وتعيين الترويسة `Content-Type: text/html`.
-*   `res.json(data)`: إرسال كود JSON وتعيين الترويسة `Content-Type: application/json`.
-*   `res.redirect(url)`: إعادة توجيه المتصفح لصفحة أخرى.
-*   `res.view(templatePath, data = {})`: قراءة وعرض قالب محدد وتمرير خريطة بالبيانات له لمعالجتها.
+### Response Class (The `res` object)
+Controls response generation:
+*   `res.status(code)`: Sets HTTP status code (returns response instance for chaining).
+*   `res.header(name, value)`: Sets a response header.
+*   `res.cookie(name, value, options = {})`: Sends a cookie.
+*   `res.send(body)`: Sends plain text response.
+*   `res.html(htmlString)`: Sends HTML response with `Content-Type: text/html`.
+*   `res.json(data)`: Sends JSON response with `Content-Type: application/json`.
+*   `res.redirect(url)`: Triggers client redirection.
+*   `res.view(templatePath, data = {})`: Renders template file merging variables.
 
 ---
 
-## 3. التحقق وفحص البيانات (Validator API)
+## 3. Input Validation (Validator API)
 
-يوفر كلاس `dweb.Validator` واجهة مرنة وسلسة للتحقق من صحة المدخلات وخلوها من الأخطاء:
+The `dweb.Validator` provides a fluent validation interface:
 
 ```djazair
-let v = dweb.Validator(req.body)
+let validator = dweb.Validator(req.body)
     .required("username").minLength("username", 4)
     .required("email").email("email")
     .optional("website").url("website")
     .required("role").oneOf("role", ["admin", "member"])
 ```
 
-### قواعد الفحص المتاحة (Validation Rules):
-*   `required(field)`: يجب أن يكون الحقل متواجداً وغير فارغ.
-*   `optional(field)`: الحقل اختياري (تجاوز بقية القواعد إذا لم يكن متواجداً).
-*   `string(field)`: يجب أن يكون الحقل نصاً.
-*   `number(field)`: يجب أن يكون الحقل عدداً.
-*   `boolean(field)`: يجب أن يكون الحقل قيمة منطقية (1, 0, true, false).
-*   `minLength(field, length)` / `maxLength(field, length)`: الحد الأدنى والأقصى لطول النص.
-*   `min(field, value)` / `max(field, value)`: القيمة الرقمية الصغرى والكبرى للعداد.
-*   `email(field)`: فحص مطابقة صيغة البريد الإلكتروني.
-*   `url(field)`: فحص مطابقة صيغة رابط الويب (يبدأ بـ `http://` أو `https://`).
-*   `oneOf(field, arrayChoices)`: يجب أن تكون القيمة أحد الخيارات المدرجة بالمصفوفة.
-*   `notOneOf(field, arrayChoices)`: يجب ألا تكون القيمة ضمن الخيارات الممنوعة.
-*   `same(field, otherField)`: يجب مطابقة محتوى الحقلين تماماً (مثل حقل كلمة المرور وتأكيدها).
-*   `different(field, otherField)`: يجب اختلاف محتوى الحقلين.
-*   `custom(field, rule_fn)`: تمرير دالة فحص مخصصة `rule_fn(val)` ترجع `True` عند الصحة أو نص رسالة الخطأ عند الفشل.
+### Supported Validation Rules:
+*   `required(field)`: Field must be present and not empty.
+*   `optional(field)`: Skip subsequent checks if field is absent.
+*   `string(field)` / `number(field)` / `boolean(field)`: Type validation.
+*   `minLength(field, length)` / `maxLength(field, length)`: Checks string length boundaries.
+*   `min(field, value)` / `max(field, value)`: Numeric minimum and maximum thresholds.
+*   `email(field)`: Checks email pattern match.
+*   `url(field)`: Checks URL format match (must begin with `http://` or `https://`).
+*   `oneOf(field, arrayChoices)`: Must match one of the array options.
+*   `notOneOf(field, arrayChoices)`: Must not match any of the blacklisted options.
+*   `same(field, otherField)`: Value must match other field's value (e.g., password confirmation).
+*   `different(field, otherField)`: Value must differ from other field.
+*   `custom(field, rule_fn)`: Executes user callback `rule_fn(val)`. Must return `True` or error message.
 
-### دوال النتائج والتحقق (`Validator` results):
-*   `passes()`: ترجع `True` في حال خلو المدخلات من أخطاء التحقق.
-*   `fails()`: ترجع `True` في حال وجود خطأ تحقق واحد على الأقل.
-*   `errors()`: ترجع خريطة بالأخطاء المسجلة بالصيغة `{ "field": ["error_message"] }`.
-*   `firstError(field)`: جلب أول رسالة خطأ للحقل المحدد.
-*   `validated()`: إرجاع البيانات الآمنة التي تم فحصها ونجحت فقط (لاستخدامها مباشرةً في قاعدة البيانات وتجنب حقن مدخلات ضارة).
+### Validator Results Methods:
+*   `passes()`: Returns `True` if inputs contain no errors.
+*   `fails()`: Returns `True` if any input violations are found.
+*   `errors()`: Returns error map: `{ "field": ["error_msg"] }`.
+*   `firstError(field)`: Returns the first validation error string for specified field.
+*   `validated()`: Returns a map of successfully validated keys only (prevents unwanted inputs injection).
 
 ---
 
-## 4. محرك القوالب والتصميم (AST Template Engine)
+## 4. AST Template Engine
 
-يعمل محرك القوالب المدمج عبر قراءة ملفات HTML من مجلد العروض، وتحويلها لـ AST (شجرة قواعد تمثيلية) ومعالجتها برمجياً للتSubstitution والتحكم.
+The template engine parses HTML files, compile them into an Abstract Syntax Tree (AST), and renders them with variables.
 
-### الميزات البرمجية للقوالب:
+### Template Engine Features:
 
-#### أ. التوريث والتجزئة (Inheritance & Partials):
-يمكنك مشاركة تصميم أساسي موحد وتعديل أقسام معينة لكل صفحة.
-في الملف الرائد `views/layouts/base.html`:
+#### A. Layout Inheritance & Partials:
+Structure templates efficiently using base layout sheets.
+In layout base file `views/layouts/base.html`:
 ```html
 <!DOCTYPE html>
 <html>
@@ -141,15 +140,15 @@ let v = dweb.Validator(req.body)
     <title>{% block title %}Default Title{% endblock %}</title>
 </head>
 <body>
-    {% include "partials/nav.html" %}  <!-- تضمين شريط التنقل -->
+    {% include "partials/nav.html" %}
     
     <main>
-        {% block content %}{% endblock %} <!-- مكان حقن محتوى الصفحة الفرعية -->
+        {% block content %}{% endblock %}
     </main>
 </body>
 </html>
 ```
-وفي صفحة العرض الخاصة بالصفحة الرئيسية `views/index.html`:
+In the child template page `views/index.html`:
 ```html
 {% extends "layouts/base.html" %}
 
@@ -161,7 +160,7 @@ let v = dweb.Validator(req.body)
 {% endblock %}
 ```
 
-#### ب. الجمل الشرطية والتحكم:
+#### B. Conditionals:
 ```html
 {% if user.role == "admin" %}
     <p>Welcome Admin!</p>
@@ -172,8 +171,8 @@ let v = dweb.Validator(req.body)
 {% endif %}
 ```
 
-#### ج. الحلقات والتكرار:
-يمرر المتغيران بالترتيب (معامل الفهرس، الكائن المأخوذ):
+#### C. Loops:
+Loops provide index and element handles in order:
 ```html
 <ul>
     {% for index, u in users %}
@@ -182,101 +181,97 @@ let v = dweb.Validator(req.body)
 </ul>
 ```
 
-#### د. حماية الـ XSS وطباعة البيانات:
-*   `{{ text }}`: ستقوم بتصفية رموز HTML تلقائياً وطباعتها بشكل آمن (مثال: تحويل `<` لـ `&lt;`).
-*   `{{{ trusted_html }}}`: طباعة النص الخام بالكامل دون تصفية (مفيد لتضمين كود محرر نصوص منسق).
+#### D. Variables Output & XSS Safety:
+*   `{{ text }}`: Escapes HTML tags automatically before rendering (XSS protection).
+*   `{{{ trusted_html }}}`: Renders raw, unescaped HTML content directly.
 
 ---
 
-## 5. باني استعلامات قواعد البيانات (QueryBuilder & DB)
+## 5. Database & QueryBuilder
 
-يدعم إطار العمل اتصالاً ذكياً كسولاً (Lazy) بالـ SQLite أو MySQL؛ حيث يتم تهيئة قواعد البيانات ولكن لا يتم الاتصال الفعلي بالخوادم إلا عند تنفيذ أول استعلام لتقليل زمن التحميل وموارد النظام.
+`dweb` integrates database drivers under a lazy connection design. The database connection opens only on executing the first actual query, avoiding startup lag.
 
-### باني الاستعلامات `QueryBuilder`
-يسهل صياغة استعلامات قواعد البيانات بلغة دزاير محمية تماماً ضد ثغرات حقن الاستعلامات (SQL Injection) عن طريق إفلات البارامترات يدوياً وتلقائياً.
+### SQL QueryBuilder
+A fluent database query builder with automated parameters escaping to prevent SQL injection.
 
-#### استعلامات القراءة (Select & Fetch):
-*   `app.table(db, "name")`: تحديد الجدول المطلوب العمل عليه.
-*   `select(arrayColumns)`: اختيار أعمدة معينة (الافتراضي اختيار الكل `*`).
-*   `where(field, value)` أو `where(field, operator, value)`: إضافة تصفية شرطية (مثال: `where("age", ">=", 18)`).
-*   `whereIn(field, arrayValues)`: شرط تواجد القيمة ضمن مصفوفة خيارات.
-*   `orderBy(field, direction = "ASC")`: ترتيب النتائج تصاعدياً أو تنازلياً.
-*   `limit(number)` / `offset(number)`: تحديد حجم النتائج والإزاحة لعمل تصفح الصفحات.
-*   `get()`: تنفيذ الاستعلام وإرجاع مصفوفة من الخرائط بالنتائج كاملة.
-*   `first()`: تنفيذ الاستعلام وجلب الصف الأول فقط كخريطة `Map` أو `Null`.
-*   `count()`: إرجاع عدد الصفوف المطابقة للشرط.
-*   `exists()`: التحقق من وجود نتائج تطابق الشرط (ترجع `True` أو `False`).
-*   `paginate(page, perPage)`: تصفح متطور للبيانات يرجع خريطة تحتوي على النتائج والعدد الإجمالي وبيانات الصفحة الحالية.
+#### Read Operations:
+*   `app.table(db, "name")`: Sets active table.
+*   `select(arrayColumns)`: Restrict fields list. (Default: `*`).
+*   `where(field, value)` or `where(field, operator, value)`: Adds conditions (e.g. `where("age", ">=", 18)`).
+*   `whereIn(field, arrayValues)`: IN clause checking.
+*   `orderBy(field, direction = "ASC")`: Sort results.
+*   `limit(number)` / `offset(number)`: Range limiting.
+*   `get()`: Fetch all matched rows as array of maps.
+*   `first()`: Fetch first matched row as map or `Null`.
+*   `count()`: Returns matching rows integer count.
+*   `exists()`: Check matching rows presence.
+*   `paginate(page, perPage)`: Returns map containing results subset, pagination index, and total records count.
 
-#### استعلامات التعديل (Write Operations):
-*   `insert(mapData)`: إدخال صف جديد. تأخذ خريطة بالبيانات وترجع المعرف المدرج الأخير (`insertId`).
-*   `update(mapData)`: تعديل البيانات للصفوف التي تطابق شروط الـ `where()` المسبقة. ترجع `True` أو `False`.
-*   `delete()`: حذف الصفوف التي تطابق شروط الـ `where()` المسبقة. ترجع `True` أو `False`.
-
----
-
-## 6. إدارة الجلسات والأمان (Sessions & CSRF Protection)
-
-### كود الجلسات (`app.sessions(options)`)
-برمجية وسيطة تقوم بتثبيت كوكيز مشفر لحفظ بيانات الجلسة لكل متصفح.
-*   *خيارات:* `"secret"` (مفتاح تشفير الكوكيز، يجب أن يكون فريداً وقوياً)، `"lifetime"` (عمر الكوكيز بالثواني).
-*   **الدوال المتاحة عبر `req.session`:**
-    *   `set(key, value)` / `get(key, defaultValue)`: حفظ وجلب قيم الجلسة.
-    *   `remove(key)`: حذف مفتاح محدد من الجلسة.
-    *   `setFlash(key, message)`: حفظ رسالة سريعة تُعرض لمرة واحدة في الطلب القادم ثم تُحذف تلقائياً من الذاكرة (مفيدة لرسائل تأكيد العمليات أو أخطاء النماذج).
-    *   `getFlash(key)`: استرجاع رسالة الـ Flash.
-
-### حماية CSRF المدمجة
-عند تفعيل البرمجية الوسيطة `app.middleware(app.csrf())`:
-1.  يقوم الخادم بتوليد توكن فريد للجلسة وحفظه في `req.csrfToken`.
-2.  يجب إدراج هذا التوكن في أي نموذج يقوم بتعديل البيانات (POST/PUT/PATCH/DELETE) كحقل مخفي باسم `_csrf` أو إرساله في الترويسات كـ `X-CSRF-Token` في طلبات الأجاكس.
-3.  إذا لم يطابق التوكن المرسل ما تم حفظه في الجلسة، سيعيد الخادم صفحة خطأ `419 - CSRF Token Mismatch`.
+#### Write Operations:
+*   `insert(mapData)`: Insert a new record. Returns new record's ID.
+*   `update(mapData)`: Update record matching `where()` clauses. Returns `True`/`False`.
+*   `delete()`: Deletes records matching `where()` clauses. Returns `True`/`False`.
 
 ---
 
-## 7. معالجة رفع الملفات (Multipart File Upload)
+## 6. Sessions & CSRF Protection
 
-يوفر كلاس `dweb.FileUpload` استقبالاً آمناً للملفات المرفوعة من النماذج التي تستخدم `enctype="multipart/form-data"`.
+### Sessions Middleware (`app.sessions(options)`)
+Uses encrypted cookies to save session values on the client.
+*   *Options:* `"secret"` (cookie encryption passkey), `"lifetime"` (cookie lifespan in seconds).
+*   **Methods via `req.session`:**
+    *   `set(key, value)` / `get(key, defaultValue)`: Session data storage.
+    *   `remove(key)`: Deletes key from session.
+    *   `setFlash(key, message)`: Registers a message that persists only for the next request.
+    *   `getFlash(key)`: Retrives flash messages.
 
-*   `FileUpload(req, options)`: إعداد مستلم الملفات.
-    *   *خيارات:* `"dest"` (مجلد حفظ الملف المرفوع)، `"maxSize"` (أقصى حجم مسموح للبايت)، `"allowed"` (مصفوفة الامتدادات المسموح بها مثل `[".png", ".jpg"]`).
-*   `upload.file(fieldName)`: جلب الكائن الممثل للملف المرفوع عبر اسم الحقل في النموذج.
-*   `file.isValid()`: التحقق من مطابقة الملف للشروط والقيود (الحجم والامتداد).
-*   `file.save(customName)`: حفظ الملف في مجلد الوجهة. إذا لم يتم تمرير اسم مخصص، فسيقوم النظام بتوليد اسم فريد بالاعتماد على التوقيت الزمني لمنع تكرار المسميات.
-*   `file.savedPath`: جلب المسار الكامل لحفظ الملف بعد الانتهاء.
-*   `file.error`: جلب رسالة خطأ التحقق للملف عند الفشل.
+### Automated CSRF Protection
+Enabling the global middleware `app.middleware(app.csrf())` protects mutation routes:
+1.  A session token is generated and attached to `req.csrfToken`.
+2.  All state-changing requests (POST/PUT/PATCH/DELETE) must include this token in the `_csrf` form field or the `X-CSRF-Token` header.
+3.  Invalid tokens reject the request with a `419 - CSRF Token Mismatch` error.
 
 ---
 
-## 8. مشروع ويب متكامل (Complete Web MVC App)
+## 7. Multipart File Uploads
 
-مثال برمجي كامل يربط قاعدة البيانات والجلسات وحماية الـ CSRF والتحقق والقوالب لعرض وإضافة أعضاء:
+The `dweb.FileUpload` class handles files incoming from forms with `enctype="multipart/form-data"`:
+
+*   `FileUpload(req, options)`: Sets parser constraints.
+    *   *Options:* `"dest"` (target folder), `"maxSize"` (bytes limit), `"allowed"` (extensions whitelist).
+*   `upload.file(fieldName)`: Retrieves uploaded file reference.
+*   `file.isValid()`: Validates size and extension constraints.
+*   `file.save(customName)`: Saves the file. If no custom name is passed, generates a unique timestamped filename.
+*   `file.savedPath`: Holds the final file destination path.
+*   `file.error`: Error message if file fails constraints check.
+
+---
+
+## 8. Complete Web MVC Application
+
+A complete application managing registered members using SQLite:
 
 ```djazair
 use dweb
 use sqlite
 
-# 1. تهيئة التطبيق وإعداد مجلد العروض وقواعد البيانات الكسولة
+# 1. Initialize Web App View Path and SQLite Database
 let app = dweb.App({
     "views": "./views"
 })
 
-# الاتصال بقاعدة بيانات SQLite
 let db = app.sqlite("portal.db")
 db.execute("CREATE TABLE IF NOT EXISTS members (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT, email TEXT, avatar TEXT)")
 
-# 2. تفعيل البرمجيات الوسيطة الأساسية
+# 2. Register Global Middlewares
 app.middleware(app.sessions({
     "secret": "djazair_portal_secure_passphrase"
 }))
 app.middleware(app.csrf())
 
-# 3. مسار GET لعرض الواجهة الرسومية والأعضاء
+# 3. GET Route for Listing Members
 app.get("/", fn(req, res)
-    # جلب الأعضاء عبر باني الاستعلامات
     let members = app.table(db, "members").orderBy("id", "DESC").get()
-    
-    # جلب رسائل الـ Flash
     let successMessage = req.session.getFlash("success")
     let errorsMap = req.session.getFlash("errors")
     
@@ -288,9 +283,9 @@ app.get("/", fn(req, res)
     })
 end)
 
-# 4. مسار POST لاستقبال النموذج والتحقق ورفع الملف
+# 4. POST Route for Creating Members
 app.post("/register", fn(req, res)
-    # أ. التحقق من صحة المدخلات النصية
+    # A. Validate Text Inputs
     let validator = dweb.Validator(req.body)
         .required("name").minLength("name", 3).maxLength("name", 50)
         .required("email").email("email")
@@ -301,10 +296,10 @@ app.post("/register", fn(req, res)
         return
     end
 
-    # ب. معالجة رفع الملف المرفق
+    # B. Handle File Upload (Avatar Image)
     let upload = dweb.FileUpload(req, {
         "dest": "./public/uploads",
-        "maxSize": 3 * 1024 * 1024, # 3 Megabytes
+        "maxSize": 3 * 1024 * 1024, # 3MB limit
         "allowed": [".png", ".jpg", ".jpeg"]
     })
     
@@ -313,10 +308,8 @@ app.post("/register", fn(req, res)
     
     if avatarFile.isValid()
         avatarFile.save()
-        # جلب اسم الملف بعد الحفظ الآمن
         avatarPath = "/uploads/" + path.basename(avatarFile.savedPath)
     else
-        # إذا وجد ملف وحجمه غير صالح أو امتداده غير مسموح
         if avatarFile.error != "No file provided for field 'avatar'"
             req.session.setFlash("errors", {"avatar": [avatarFile.error]})
             res.redirect("/")
@@ -324,7 +317,7 @@ app.post("/register", fn(req, res)
         end
     end
 
-    # ج. إدخال البيانات المعتمدة بأمان لقاعدة البيانات
+    # C. Insert to Database
     let validated = validator.validated()
     app.table(db, "members").insert({
         "name": validated["name"],
@@ -336,14 +329,14 @@ app.post("/register", fn(req, res)
     res.redirect("/")
 end)
 
-# 5. تفعيل تقديم الصور والملفات المرفوعة للجمهور
+# 5. Serve Uploaded Static Files Publicly
 app.serveStatic("/uploads", "./public/uploads")
 
-# 6. تشغيل الخادم
+# 6. Run Server
 app.run(8080)
 ```
 
-### القالب الموحد للتطبيق (`views/index.html`):
+### Template Layout Source (`views/index.html`):
 ```html
 <!DOCTYPE html>
 <html>
@@ -369,7 +362,7 @@ app.run(8080)
     {% endif %}
 
     <form method="POST" action="/register" enctype="multipart/form-data">
-        <!-- توكن الأمان CSRF -->
+        <!-- CSRF Token -->
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
         
         <label>Full Name:</label>

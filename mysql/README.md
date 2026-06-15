@@ -1,331 +1,252 @@
-# إضافة MySQL لغة دزاير (MySQL Extension for Djazair)
+# Djazair MySQL Extension Manual
 
-توفر هذه الإضافة واجهة للتعامل مع قواعد بيانات MySQL مع دعم الاتصال الآمن، الاستعلامات المحمية من حقن SQL، وإدارة المعاملات (Transactions).
+The **MySQL** extension provides database connectivity to MySQL and MariaDB servers from the Djazair programming language. It supports secure connections, query parameters escaping to prevent SQL injection, transaction management, and fluent result sets traversal.
 
 ---
 
-## كيفية الاستدعاء (Importing)
+## 📋 Table of Contents
+1. [Importing](#1-importing)
+2. [Connection Class](#2-connection-class)
+3. [ResultSet Class](#3-resultset-class)
+4. [Complete Code Example](#4-complete-code-example)
 
+---
+
+## 1. Importing
+
+To import the MySQL module, use:
 ```djazair
 use mysql
 ```
 
 ---
 
-## كلاس `Connection`
+## 2. Connection Class
 
-يُستخدم لإدارة الاتصال بقاعدة بيانات MySQL.
+Manages the database connection session and query executions.
 
-### `init(host, user, password, db, port)`
-
-إنشاء اتصال جديد بقاعدة البيانات.
-
-| المعامل | النوع | الوصف |
-|---------|-------|-------|
-| `host` | String | مضيف قاعدة البيانات (مثل `"localhost"`) |
-| `user` | String | اسم المستخدم |
-| `password` | String | كلمة المرور |
-| `db` | String | اسم قاعدة البيانات |
-| `port` | Number | رقم المنفذ (عادة `3306`) |
-
-```dz
-let db = mysql.Connection("localhost", "root", "pass", "testdb", 3306)
-```
+### `init(host, user, password, db, port = 3306)`
+*   **Description:** Opens a new connection to the MySQL server. Sets character set to `utf8mb4` automatically.
+*   **Parameters:**
+    *   `host` (String): Server host address (e.g., `"localhost"`).
+    *   `user` (String): Database username.
+    *   `password` (String): Database user password.
+    *   `db` (String): Target database schema name.
+    *   `port` (Number): MySQL port. (Default: `3306`).
+*   **Example:**
+    ```dz
+    let db = mysql.Connection("localhost", "root", "password", "testdb", 3306)
+    ```
 
 ---
 
 ### `isConnected()` → Bool
-
-التحقق من نجاح الاتصال.
-
-```dz
-if db.isConnected():
-    print("متصل بقاعدة البيانات")
-end
-```
+*   **Description:** Returns `True` if the connection is active and authenticated.
+    ```dz
+    if db.isConnected():
+        print("Connected to database successfully!")
+    end
+    ```
 
 ---
 
 ### `ping()` → Bool
-
-التحقق من أن الخادم ما زال حياً.
-
-```dz
-if !db.ping():
-    print("فقد الاتصال بالخادم")
-end
-```
+*   **Description:** Pings the server to check connection health. Returns `False` if connection has dropped.
+    ```dz
+    if !db.ping():
+        print("Connection to database server lost.")
+    end
+    ```
 
 ---
 
 ### `error()` → String
-
-جلب آخر رسالة خطأ.
-
-```dz
-print(db.error())
-```
+*   **Description:** Returns the last error message string returned by the database engine.
+    ```dz
+    print(db.error())
+    ```
 
 ---
 
 ### `errno()` → Number
-
-جلب آخر رقم خطأ.
-
-```dz
-print(db.errno())
-```
+*   **Description:** Returns the last error code integer.
+    ```dz
+    print(db.errno())
+    ```
 
 ---
 
 ### `serverInfo()` → String
-
-معلومات إصدار خادم MySQL.
-
-```dz
-print(db.serverInfo())
-```
+*   **Description:** Returns server version string.
+    ```dz
+    print(db.serverInfo())
+    ```
 
 ---
 
 ### `hostInfo()` → String
-
-معلومات عن نوع الاتصال بالخادم.
-
-```dz
-print(db.hostInfo())
-```
+*   **Description:** Returns a string describing connection type (e.g., `"Localhost via UNIX socket"` or TCP details).
+    ```dz
+    print(db.hostInfo())
+    ```
 
 ---
 
 ### `escape(s)` → String
-
-تأمين نص ضد حقن SQL (إفلات الرموز الخاصة).
-
-```dz
-let safe = db.escape(userInput)
-```
+*   **Description:** Escapes special characters in a string for use in SQL statements (manually prevents SQL injection).
+    ```dz
+    let safeValue = db.escape(userInput)
+    ```
 
 ---
 
 ### `query(sql)` → ResultSet | Null
-
-تنفيذ استعلام `SELECT` وإرجاع مجموعة نتائج.
-
-```dz
-let res = db.query("SELECT * FROM users")
-if res != Null:
-    # معالجة النتائج
-end
-```
+*   **Description:** Executes a raw SQL query. Typically used for SELECT statements. Returns a `ResultSet` object or `Null` on failure.
+    ```dz
+    let res = db.query("SELECT * FROM users")
+    ```
 
 ---
 
 ### `safeQuery(sql, params)` → ResultSet | Null
-
-تنفيذ استعلام آمن باستخدام علامات `?` والبارامترات لمنع حقن SQL.
-
-```dz
-let res = db.safeQuery("SELECT * FROM users WHERE age > ? AND city = ?", [18, "Algiers"])
-```
+*   **Description:** Safely executes a parameterized query. Replaces `?` placeholders with properly escaped values.
+    ```dz
+    let res = db.safeQuery("SELECT * FROM users WHERE age > ? AND city = ?", [18, "Algiers"])
+    ```
 
 ---
 
 ### `execute(sql)` → Bool
-
-تنفيذ جملة تعديل (`INSERT`, `UPDATE`, `DELETE`, `CREATE TABLE`, إلخ).
-
-```dz
-let ok = db.execute("INSERT INTO users (name) VALUES ('Riad')")
-```
+*   **Description:** Executes non-SELECT raw SQL statements (INSERT, UPDATE, DELETE, CREATE, etc.). Returns `True` on success, `False` on failure.
+    ```dz
+    let ok = db.execute("INSERT INTO users (name) VALUES ('Riad')")
+    ```
 
 ---
 
 ### `safeExecute(sql, params)` → Bool
-
-تنفيذ عملية تعديل آمنة بالبارامترات.
-
-```dz
-let ok = db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
-```
+*   **Description:** Safely executes non-SELECT parameterized queries.
+    ```dz
+    let ok = db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
+    ```
 
 ---
 
 ### `affectedRows()` → Number
-
-عدد الصفوف المتأثرة بآخر عملية تعديل.
-
-```dz
-let count = db.affectedRows()
-```
+*   **Description:** Returns the number of rows affected by the last INSERT, UPDATE, or DELETE statement.
+    ```dz
+    let count = db.affectedRows()
+    ```
 
 ---
 
 ### `insertId()` → Number
-
-المعرف الذي تولّد تلقائياً (AUTO_INCREMENT) من آخر إدراج.
-
-```dz
-let newId = db.insertId()
-```
+*   **Description:** Returns the AUTO_INCREMENT ID generated by the last INSERT query.
+    ```dz
+    let newId = db.insertId()
+    ```
 
 ---
 
 ### `beginTransaction()` → Bool
-
-بدء معاملة (Transaction).
-
-```dz
-db.beginTransaction()
-```
+*   **Description:** Begins a new SQL transaction.
+    ```dz
+    db.beginTransaction()
+    ```
 
 ---
 
 ### `commit()` → Bool
-
-تثبيت التغييرات وتخزينها نهائياً.
-
-```dz
-db.commit()
-```
+*   **Description:** Commits the current transaction.
+    ```dz
+    db.commit()
+    ```
 
 ---
 
 ### `rollback()` → Bool
-
-التراجع عن التغييرات والعودة للحالة السابقة.
-
-```dz
-db.rollback()
-```
+*   **Description:** Rolls back the current transaction.
+    ```dz
+    db.rollback()
+    ```
 
 ---
 
 ### `raw()` → Resource
-
-استرجاع الموارد الخام لـ C للاستخدام المباشر مع `__native("_mysql")`.
-
-```dz
-let handle = db.raw()
-```
+*   **Description:** Returns the underlying C connection handle resource for direct native `_mysql` calls.
+    ```dz
+    let handle = db.raw()
+    ```
 
 ---
 
 ### `close()`
-
-إغلاق الاتصال وتحرير الموارد.
-
-```dz
-db.close()
-```
+*   **Description:** Closes connection and frees active handle.
+    ```dz
+    db.close()
+    ```
 
 ---
 
-## كلاس `ResultSet`
+## 3. ResultSet Class
 
-لإدارة نتائج الاستعلامات.
+Manages the records returned by `query()` or `safeQuery()`.
 
 ### `numRows()` → Number
-
-عدد الصفوف في النتيجة.
-
-```dz
-print(res.numRows())
-```
-
----
+*   **Description:** Returns the number of rows in the result set.
 
 ### `numFields()` → Number
-
-عدد الأعمدة في النتيجة.
-
-```dz
-print(res.numFields())
-```
-
----
+*   **Description:** Returns the number of columns in each record.
 
 ### `columns()` → Array
-
-مصفوفة بأسماء الأعمدة.
-
-```dz
-let cols = res.columns()
-```
-
----
+*   **Description:** Returns an array of column names.
 
 ### `fetchRow()` → Array | Null
-
-جلب الصف التالي كمصفوفة عادية.
-
-```dz
-let row = res.fetchRow()
-while row != Null:
-    print(row[0])
-    row = res.fetchRow()
-end
-```
-
----
+*   **Description:** Retrieves the next row as a standard indexed array. Returns `Null` if no more records exist.
+    ```dz
+    let row = res.fetchRow()
+    while row != Null:
+        print(row[0])
+        row = res.fetchRow()
+    end
+    ```
 
 ### `fetchAssoc()` → Map | Null
-
-جلب الصف التالي كخريطة (اسم العمود → القيمة).
-
-```dz
-let row = res.fetchAssoc()
-if row != Null:
-    print(row["name"])
-end
-```
-
----
+*   **Description:** Retrieves the next row as an associative map (`{ "columnName": value }`).
+    ```dz
+    let user = res.fetchAssoc()
+    if user != Null:
+        print(user["name"])
+    end
+    ```
 
 ### `fetchAll()` → Array
-
-جلب كل الصفوف المتبقية كمصفوفة من المصفوفات.
-
-```dz
-let rows = res.fetchAll()
-```
-
----
+*   **Description:** Fetches all remaining records as an array of arrays.
 
 ### `fetchAllAssoc()` → Array
-
-جلب كل الصفوف المتبقية كمصفوفة من الخرائط.
-
-```dz
-let users = res.fetchAllAssoc()
-for user in users:
-    print(user["name"])
-end
-```
-
----
+*   **Description:** Fetches all remaining records as an array of maps.
+    ```dz
+    let users = res.fetchAllAssoc()
+    for user in users:
+        print(user["name"])
+    end
+    ```
 
 ### `seek(offset)`
-
-الانتقال إلى صف معين (0-based).
-
-```dz
-res.seek(0)  # العودة للبداية
-```
-
----
+*   **Description:** Shifts the result pointer to a specific row index (0-based).
+    ```dz
+    res.seek(0) # Reset pointer back to the first row
+    ```
 
 ### `close()`
-
-تحرير موارد النتيجة.
-
-```dz
-res.close()
-```
+*   **Description:** Frees memory allocated to the result set.
+    ```dz
+    res.close()
+    ```
 
 ---
 
-## مثال تطبيقي متكامل
+## 4. Complete Code Example
 
 ```dz
 use mysql
@@ -333,20 +254,25 @@ use mysql
 let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
 
 if db.isConnected():
+    # 1. Create table structure
     db.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, age INT)")
 
+    # 2. Insert records safely
     db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Riad", 30])
     db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
 
+    # 3. Query records safely
     let res = db.safeQuery("SELECT * FROM users WHERE age > ?", [20])
-    let users = res.fetchAllAssoc()
-    for user in users:
-        print("ID: " + str(user["id"]) + ", Name: " + user["name"] + ", Age: " + str(user["age"]))
+    if !isNull(res)
+        let users = res.fetchAllAssoc()
+        for user in users:
+            print("ID: " + str(user["id"]) + ", Name: " + user["name"] + ", Age: " + str(user["age"]))
+        end
+        res.close()
     end
-    res.close()
 
     db.close()
 else:
-    print("فشل الاتصال: " + db.error())
+    print("Database connection failed: " + db.error())
 end
 ```

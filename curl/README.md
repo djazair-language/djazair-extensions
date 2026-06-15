@@ -1,288 +1,282 @@
-# التوثيق الشامل لمكتبة Curl في لغة دزاير (Djazair Curl Extension Manual)
+# Djazair Curl Extension Manual
 
-تعتبر إضافة **cURL** الموديول الرسمي والأساسي للاتصالات عبر الشبكة وإجراء طلبات HTTP/HTTPS في لغة دزاير. تعتمد هذه الإضافة على تغليف مكتبة **libcurl** العريقة، مما يمنحها موثوقية عالية وأداءً فائقاً مع دعم كامل للبروتوكولات الآمنة SSL، وإدارة الكوكيز (Cookies)، والتعامل مع خوادم الوكيل (Proxies)، ورفع الملفات، والمصادقة المتقدمة.
-
----
-
-## 📋 جدول المحتويات
-1. [التثبيت والتهيئة (Installation & Setup)](#1-التثبيت-والتهيئة-installation--setup)
-2. [دليل الاستدعاء والبدء (Importing & Quick Start)](#2-دليل-الاستدعاء-والبدء-importing--quick-start)
-3. [مرجع كلاس Curl التفصيلي (Class Reference)](#3-مرجع-كلاس-curl-التفصيلي-class-reference)
-4. [دليل الثوابت الكامل (Constants Reference)](#4-دليل-الثوابت-الكامل-constants-reference)
-5. [حلول المشاكل وإدارة الأمان (SSL & Windows Caveats)](#5-حلول-المشاكل-وإدارة-الأمان-ssl--windows-caveats)
-6. [حالات استخدام متقدمة (Advanced Recipes)](#6-حالات-استخدام-متقدمة-advanced-recipes)
-    - [تحميل ملف من الويب وحفظه محلياً](#أ-تحميل-ملف-من-الويب-وحفظه-محلياً)
-    - [إرسال طلب POST مع ترويسات وبيانات JSON](#ب-إرسال-طلب-post-مع-ترويسات-وبيان-json)
-    - [إرسال واستقبال الكوكيز (Cookies Management)](#ج-إرسال-واستقبال-الكوكيز-cookies-management)
-    - [الاتصال عبر خادم وكيل (Proxy Connection)](#د-الاتصال-عبر-خادم-وكيل-proxy-connection)
+The **cURL** extension is the official, high-performance module for executing network requests and HTTP/HTTPS communications in the Djazair programming language. Powered by a native binding to the robust **libcurl** library, it supports secure SSL protocols, cookie management, proxies, custom HTTP methods, and detailed transfer info.
 
 ---
 
-## 1. التثبيت والتهيئة (Installation & Setup)
+## 📋 Table of Contents
+1. [Installation & Setup](#1-installation--setup)
+2. [Importing & Quick Start](#2-importing--quick-start)
+3. [Class Reference](#3-class-reference)
+4. [Constants Reference](#4-constants-reference)
+5. [SSL & Windows Certificate Caveats](#5-ssl--windows-certificate-caveats)
+6. [Advanced Recipes](#6-advanced-recipes)
+    - [Downloading a File to Disk](#a-downloading-a-file-to-disk)
+    - [Sending a POST Request with JSON Payload](#b-sending-a-post-request-with-json-payload)
+    - [Managing Cookies](#c-managing-cookies)
+    - [Connecting Through a Proxy](#d-connecting-through-a-proxy)
 
-### التنزيل عبر مدير الحزم DPM
-لتثبيت الإضافة في مشروعك، افتح ترمينال دزاير وشغّل الأمر:
+---
+
+## 1. Installation & Setup
+
+### Install via DPM (Package Manager)
+To add the curl extension to your project, run the following DPM command:
 ```bash
 dpm install curl
 ```
 
-### البناء والتجميع (Compiling the DLL)
-تتضمن الإضافة كود C أصلياً (`src/curl.c` و `src/curl_native.c`) يحتاج إلى ترجمة لإنتاج مكتبة الربط الديناميكي `curl.dll`. 
-يمكنك تجميعها تلقائياً عبر:
+### Building the Native Module (DLL compilation)
+Because the module relies on native C code (`src/curl.c` and `src/curl_native.c`), it must be compiled into a dynamic library (`curl.dll`):
 ```bash
 dpm build curl
 ```
-**المتطلبات الأساسية للبناء:**
-1. وجود مترجم C (مثل `gcc` أو `clang`) مضافاً إلى متغيرات البيئة `PATH`.
-2. تثبيت مكتبة `libcurl` على نظام التشغيل (في ويندوز، يُفضل استخدام حزم MSYS2/MinGW).
+**Compilation Prerequisites:**
+1. A C compiler (such as `gcc` or `clang` / MinGW) must be installed and added to your system environment `PATH`.
+2. The `libcurl` library must be installed on your operating system (on Windows, MSYS2/MinGW packages are recommended).
 
 ---
 
-## 2. دليل الاستدعاء والبدء (Importing & Quick Start)
+## 2. Importing & Quick Start
 
-لاستيراد الإضافة، استخدم الكلمة المفتاحية `use`:
+To import the curl module, use the `use` keyword:
 ```djazair
 use curl
 ```
-بعد الاستيراد، يمكنك إنشاء كائن جديد من كلاس `Curl`:
+After importing, you can instantiate the `Curl` class:
 ```djazair
 let client = curl.Curl()
 ```
 
 ---
 
-## 3. مرجع كلاس Curl التفصيلي (Class Reference)
+## 3. Class Reference
 
-### كلاس `curl.Curl`
-الكائن المسؤول عن تهيئة وإرسال واستقبال الطلبات.
+### Class `curl.Curl`
+The main class responsible for managing and executing HTTP connections.
 
 #### `init()`
-*   **الوصف:** تهيئ المقبض الأساسي لـ cURL (`easy handle`).
-*   **نوع الإرجاع:** `void`.
-*   **الأخطاء المحتملة:** ترمي استثناء `"CurlError"` إذا لم تكن مكتبة `libcurl` مثبتة أو غير قابلة للتحميل.
+*   **Description:** Initializes a new cURL easy handle.
+*   **Return Type:** `void`.
+*   **Throws:** Throws a `"CurlError"` if `libcurl` is not installed or cannot be loaded.
 
 #### `setopt(option, value)`
-*   **الوصف:** تعيين خيارات الطلب المحددة.
-*   **المعاملات:**
-    *   `option` (رقم): ثابت الخيار المراد تعيينه (انظر قسم الثوابت).
-    *   `value` (نص أو رقم أو منطقي): القيمة المراد تمريرها للخيار.
-*   **نوع الإرجاع:** `Bool` (`True` عند النجاح، `False` عند الفشل).
-*   **تنبيه:** ترمي استثناء `ValueError` إذا كانت القيمة `Null`، أو `TypeError` إذا كانت القيمة من نوع غير مدعوم.
+*   **Description:** Sets specific easy handle options.
+*   **Parameters:**
+    *   `option` (Number): The numeric constant of the option to set (see Constants Reference).
+    *   `value` (String | Number | Bool): The value to assign to the option.
+*   **Return Type:** `Bool` (`True` on success, `False` on failure).
+*   **Throws:** Throws `ValueError` if the value is `Null`, or `TypeError` if the type is unsupported.
 
 #### `setHeaders(headersList)`
-*   **الوصف:** تعيين ترويسات الطلب (HTTP Headers).
-*   **المعاملات:**
-    *   `headersList` (مصفوفة): قائمة من النصوص بالصيغة `"Key: Value"`.
-*   **نوع الإرجاع:** `Bool`.
-*   **مثال:** `c.setHeaders(["Accept: application/json", "Authorization: Bearer my_token"])`
+*   **Description:** Sets custom HTTP headers for the request.
+*   **Parameters:**
+    *   `headersList` (Array): A list of strings in the format `"Key: Value"`.
+*   **Return Type:** `Bool`.
+*   **Example:** `client.setHeaders(["Accept: application/json", "Authorization: Bearer my_token"])`
 
 #### `perform()`
-*   **الوصف:** تنفيذ طلب الاتصال بشكل متزامن.
-*   **نوع الإرجاع:** `String` (يحتوي على جسم الاستجابة/الـ Response Body)، أو `Null` في حال فشل الاتصال.
+*   **Description:** Synchronously executes the network request.
+*   **Return Type:** `String` containing the response body, or `Null` if the connection fails.
 
 #### `getInfo(info)`
-*   **الوصف:** استرجاع معلومات الأداء والاتصال بعد اكتمال الطلب بنجاح.
-*   **المعاملات:**
-    *   `info` (رقم): ثابت المعلومة المطلوبة (مثل `curl.CURL_INFO_RESPONSE_CODE`).
-*   **نوع الإرجاع:** `String` أو `Number` بحسب نوع المعلومة.
+*   **Description:** Retrieves connection and transfer metadata after execution.
+*   **Parameters:**
+    *   `info` (Number): The numeric constant of the metadata to retrieve (e.g., `curl.CURL_INFO_RESPONSE_CODE`).
+*   **Return Type:** `String` or `Number` depending on the type of info requested.
 
 #### `getResponseHeaders()`
-*   **الوصف:** جلب الترويسات التي أرسلها خادم الويب في استجابته للطلب الحالي.
-*   **نوع الإرجاع:** `Map` (خريطة مفتاحها اسم الترويسة بالصيغة الصغيرة وقيمتها محتواها).
+*   **Description:** Returns the HTTP response headers sent by the server.
+*   **Return Type:** `Map` (lowercase header names as keys, header values as map values).
 
 #### `getError()`
-*   **الوصف:** جلب آخر رسالة خطأ بشرية مسجلة من محرك cURL عند فشل طلب الـ `perform()`.
-*   **نوع الإرجاع:** `String`.
+*   **Description:** Returns the last human-readable error message recorded by cURL if `perform()` fails.
+*   **Return Type:** `String`.
 
 #### `cleanup()`
-*   **الوصف:** إغلاق المقبض وتحرير موارد الذاكرة المخصصة للاتصال.
-*   **نوع الإرجاع:** `void`.
-*   **ملاحظة:** يجب استدعاء هذه الدالة دائماً في قسم `finally` لتجنب تسريب الذاكرة (Memory Leaks).
+*   **Description:** Closes the easy handle and frees all allocated memory.
+*   **Return Type:** `void`.
+*   **Note:** Always invoke this method in a `finally` block to prevent memory leaks.
 
 ---
 
-## 4. دليل الثوابت الكامل (Constants Reference)
+## 4. Constants Reference
 
-توفر المكتبة مجموعة كبيرة من الثوابت المدمجة لإعداد خيارات الاتصال وجلب المعلومات:
+The extension exposes the following constants for setting options and retrieving transfer metadata:
 
-### خيارات تعيين الطلب والمنافذ (`CURL_OPT_*`)
-| الثابت | القيمة الرقمية | الوصف |
+### Request and Connection Options (`CURL_OPT_*`)
+| Constant | Numeric Value | Description |
 | :--- | :--- | :--- |
-| `curl.CURL_OPT_URL` | `10002` | تعيين عنوان URL المستهدف. |
-| `curl.CURL_OPT_USERAGENT` | `10018` | تحديد نص الـ User-Agent للطلب. |
-| `curl.CURL_OPT_TIMEOUT` | `13` | الحد الأقصى لانتظار الطلب بالثواني. |
-| `curl.CURL_OPT_CONNECTTIMEOUT` | `78` | وقت انتظار إنشاء الاتصال بالخادم بالثواني. |
-| `curl.CURL_OPT_FOLLOWLOCATION` | `52` | تتبع التحويلات التلقائية (301, 302 redirects) إذا كانت `True`. |
-| `curl.CURL_OPT_MAXREDIRS` | `68` | الحد الأقصى لمرات التحويل المتتابعة المسموح بها. |
-| `curl.CURL_OPT_PROXY` | `10004` | عنوان خادم الوكيل (البروكسي) المطلوب العبور منه. |
-| `curl.CURL_OPT_USERPWD` | `10005` | المصادقة الأساسية بالصيغة `"user:password"`. |
+| `curl.CURL_OPT_URL` | `10002` | Sets the target URL. |
+| `curl.CURL_OPT_USERAGENT` | `10018` | Sets the request's User-Agent string. |
+| `curl.CURL_OPT_TIMEOUT` | `13` | Sets the maximum time in seconds the request can take. |
+| `curl.CURL_OPT_CONNECTTIMEOUT` | `78` | Sets the maximum connection timeout in seconds. |
+| `curl.CURL_OPT_FOLLOWLOCATION` | `52` | Follow HTTP redirects (3xx) if set to `True`. |
+| `curl.CURL_OPT_MAXREDIRS` | `68` | Sets the maximum number of redirects to follow. |
+| `curl.CURL_OPT_PROXY` | `10004` | Sets the proxy server URL. |
+| `curl.CURL_OPT_USERPWD` | `10005` | Basic authentication string in format `"user:password"`. |
 
-### خيارات الأمان والـ SSL
-| الثابت | القيمة الرقمية | الوصف |
+### SSL and Security Options
+| Constant | Numeric Value | Description |
 | :--- | :--- | :--- |
-| `curl.CURL_OPT_SSL_VERIFYPEER` | `64` | التحقق من صحة شهادة SSL الخاصة بالخادم (`True` أو `False`). |
-| `curl.CURL_OPT_SSL_VERIFYHOST` | `81` | التحقق من مطابقة المضيف للشهادة (قيمة `2` للتفعيل الكامل، `0` للإلغاء). |
-| `curl.CURL_OPT_CAINFO` | `10065` | مسار ملف شهادات CA الموثوقة محلياً. |
+| `curl.CURL_OPT_SSL_VERIFYPEER` | `64` | Verify the peer's SSL certificate (`True` or `False`). |
+| `curl.CURL_OPT_SSL_VERIFYHOST` | `81` | Verify the hostname in the SSL certificate (`2` to enable, `0` to disable). |
+| `curl.CURL_OPT_CAINFO` | `10065` | Path to local Certificate Authority (CA) bundle. |
 
-### خيارات الـ Cookies وطرق الـ HTTP
-| الثابت | القيمة الرقمية | الوصف |
+### Cookie and Custom Methods
+| Constant | Numeric Value | Description |
 | :--- | :--- | :--- |
-| `curl.CURL_OPT_POST` | `47` | تحويل نوع الطلب إلى POST. |
-| `curl.CURL_OPT_POSTFIELDS` | `10015` | البيانات المرفقة بطلب الـ POST. |
-| `curl.CURL_OPT_CUSTOMREQUEST` | `10036` | طريقة مخصصة للطلب (مثال: `"PUT"`, `"DELETE"`, `"PATCH"`). |
-| `curl.CURL_OPT_COOKIE` | `10022` | إرسال نصوص الكوكيز مباشرة في الترويسة. |
-| `curl.CURL_OPT_COOKIEFILE` | `10031` | قراءة الكوكيز من ملف محلي محدد. |
-| `curl.CURL_OPT_COOKIEJAR` | `10082` | كتابة الكوكيز الجديدة التي يرسلها الخادم إلى ملف محلي محدد. |
+| `curl.CURL_OPT_POST` | `47` | Sets request method to POST. |
+| `curl.CURL_OPT_POSTFIELDS` | `10015` | Payload data attached to a POST request. |
+| `curl.CURL_OPT_CUSTOMREQUEST` | `10036` | Sets a custom HTTP method (e.g., `"PUT"`, `"DELETE"`, `"PATCH"`). |
+| `curl.CURL_OPT_COOKIE` | `10022` | Send raw Cookie strings in the headers. |
+| `curl.CURL_OPT_COOKIEFILE` | `10031` | Read session cookies from a local file. |
+| `curl.CURL_OPT_COOKIEJAR` | `10082` | Write new cookies received from the server to a local file. |
 
-### معلومات جلب الأداء واستجابة الخادم (`CURL_INFO_*`)
-| الثابت | القيمة الرقمية | الوصف |
+### Transfer Information (`CURL_INFO_*`)
+| Constant | Numeric Value | Description |
 | :--- | :--- | :--- |
-| `curl.CURL_INFO_RESPONSE_CODE` | `2097154` | كود الاستجابة HTTP (مثال: 200, 404, 500). |
-| `curl.CURL_INFO_CONTENT_TYPE` | `1048594` | نوع المحتوى المُعاد (Content-Type header). |
-| `curl.CURL_INFO_TOTAL_TIME` | `3145731` | الوقت الإجمالي بالثواني المستغرق في تنفيذ الاتصال. |
-| `curl.CURL_INFO_SIZE_DOWNLOAD` | `3145736` | حجم البيانات المحملة بالبايت. |
+| `curl.CURL_INFO_RESPONSE_CODE` | `2097154` | The HTTP status code received (e.g., 200, 404, 500). |
+| `curl.CURL_INFO_CONTENT_TYPE` | `1048594` | Value of the Content-Type response header. |
+| `curl.CURL_INFO_TOTAL_TIME` | `3145731` | Total time elapsed for the transfer in seconds. |
+| `curl.CURL_INFO_SIZE_DOWNLOAD` | `3145736` | Size of downloaded data in bytes. |
 
 ---
 
-## 5. حلول المشاكل وإدارة الأمان (SSL & Windows Caveats)
+## 5. SSL & Windows Certificate Caveats
 
-### مشكلة شهادات الأمان (SSL Trust Anchors) على نظام ويندوز:
-على أنظمة تشغيل ويندوز، قد يفشل الطلب ويرمي خطأ شبيه بـ:
+On Windows, requests might fail due to lack of trusted certificates, throwing an error like:
 `error adding trust anchors from file: .../ca-bundle.crt`
-يحدث هذا لأن نسخة libcurl لا تملك إمكانية الوصول التلقائي لمخزن شهادات الأمان لنظام التشغيل.
+This happens when `libcurl` cannot access your OS certificate vault automatically.
 
-#### **الحل الأول (الآمن للإنتاج):**
-تحميل ملف الشهادات المعتمد `cacert.pem` من الموقع الرسمي لـ cURL وتعيينه للاتصال:
+#### **Solution 1 (Production - Secure):**
+Download the official CA certificate bundle `cacert.pem` from curl's site and set its path:
 ```djazair
-c.setopt(curl.CURL_OPT_CAINFO, "C:/path/to/cacert.pem")
+client.setopt(curl.CURL_OPT_CAINFO, "C:/path/to/cacert.pem")
 ```
 
-#### **الحل الثاني (للتطوير والاختبار المحلي فقط):**
-تعطيل التحقق من شهادة الـ SSL لحل المشكلة فوراً (تنبيه: لا تستخدم هذا في بيئة الإنتاج الفعلي):
+#### **Solution 2 (Development - Bypassing verification):**
+Disable peer and host SSL verification (Warning: do not use this in production):
 ```djazair
-c.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
-c.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
+client.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
+client.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
 ```
 
 ---
 
-## 6. حالات استخدام متقدمة (Advanced Recipes)
+## 6. Advanced Recipes
 
-### أ. تحميل ملف من الويب وحفظه محلياً
-يوضح هذا المثال كيفية جلب ملف صورة من الويب وكتابتها في ملف محلي باستخدام موديول `file` القياسي:
+### A. Downloading a File to Disk
+This example shows how to download a file and write it to a local path using the standard `file` module:
 ```djazair
 use curl
 use file
 
-let c = curl.Curl()
+let client = curl.Curl()
 try
-    c.setopt(curl.CURL_OPT_URL, "https://httpbin.org/image/png")
-    c.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False) # تجاوز شهادة SSL مؤقتاً
-    c.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
+    client.setopt(curl.CURL_OPT_URL, "https://httpbin.org/image/png")
+    client.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False) # Bypass SSL locally
+    client.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
     
-    # تنفيذ الطلب
-    let imgData = c.perform()
-    if !isNull(imgData) and c.getInfo(curl.CURL_INFO_RESPONSE_CODE) == 200
-        # حفظ كملف ثنائي
+    let imgData = client.perform()
+    if !isNull(imgData) and client.getInfo(curl.CURL_INFO_RESPONSE_CODE) == 200
         file.write("downloaded_image.png", imgData)
         print("Image downloaded and saved successfully!")
     else
-        print("Failed to download image: " + c.getError())
+        print("Failed to download image: " + client.getError())
     end
 catch e
     print("Error: " + str(e))
 finally
-    c.cleanup()
+    client.cleanup()
 end
 ```
 
-### ب. إرسال طلب POST مع ترويسات وبيانات JSON
+### B. Sending a POST Request with JSON Payload
 ```djazair
 use curl
 
-let c = curl.Curl()
+let client = curl.Curl()
 try
-    c.setopt(curl.CURL_OPT_URL, "https://httpbin.org/post")
-    c.setopt(curl.CURL_OPT_POST, True)
-    c.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
-    c.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
+    client.setopt(curl.CURL_OPT_URL, "https://httpbin.org/post")
+    client.setopt(curl.CURL_OPT_POST, True)
+    client.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
+    client.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
     
-    # تعيين الترويسات والبيانات
-    c.setHeaders([
+    client.setHeaders([
         "Content-Type: application/json",
         "Accept: application/json"
     ])
-    c.setopt(curl.CURL_OPT_POSTFIELDS, "{\"title\": \"Djazair Tutorial\", \"completed\": false}")
+    client.setopt(curl.CURL_OPT_POSTFIELDS, "{\"title\": \"Djazair Tutorial\", \"completed\": false}")
     
-    let response = c.perform()
+    let response = client.perform()
     if !isNull(response)
-        print("HTTP Status: " + str(c.getInfo(curl.CURL_INFO_RESPONSE_CODE)))
+        print("HTTP Status: " + str(client.getInfo(curl.CURL_INFO_RESPONSE_CODE)))
         print("Response Body: " + response)
     else
-        print("Failed: " + c.getError())
+        print("Failed: " + client.getError())
     end
 catch e
     print("Error: " + str(e))
 finally
-    c.cleanup()
+    client.cleanup()
 end
 ```
 
-### ج. إرسال واستقبال الكوكيز (Cookies Management)
-مفيد جداً عند محاكاة تسجيل الدخول أو الحفاظ على الجلسة النشطة بين الطلبات المتتالية:
+### C. Managing Cookies
+Useful for maintaining session state between consecutive requests:
 ```djazair
 use curl
 
-let c = curl.Curl()
+let client = curl.Curl()
 try
-    c.setopt(curl.CURL_OPT_URL, "https://httpbin.org/cookies/set?session_token=dz123456")
-    c.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
-    c.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
+    client.setopt(curl.CURL_OPT_URL, "https://httpbin.org/cookies/set?session_token=dz123456")
+    client.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
+    client.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
     
-    # تحديد ملف حفظ الكوكيز المستقبلة وقراءتها مجدداً
-    c.setopt(curl.CURL_OPT_COOKIEJAR, "./cookies.txt")
-    c.setopt(curl.CURL_OPT_COOKIEFILE, "./cookies.txt")
+    # Enable cookie engine and save them to a file
+    client.setopt(curl.CURL_OPT_COOKIEJAR, "./cookies.txt")
+    client.setopt(curl.CURL_OPT_COOKIEFILE, "./cookies.txt")
     
-    let res = c.perform()
+    let res = client.perform()
     print("Set Cookie Response: " + res)
     
-    # الطلب الثاني: سيقوم تلقائياً بإرسال الكوكيز المحفوظة في الملف
-    c.setopt(curl.CURL_OPT_URL, "https://httpbin.org/cookies")
-    let res2 = c.perform()
+    # Second request will automatically read from cookies.txt and attach session details
+    client.setopt(curl.CURL_OPT_URL, "https://httpbin.org/cookies")
+    let res2 = client.perform()
     print("Sent Cookies Verified By Server: " + res2)
 catch e
     print("Error: " + str(e))
 finally
-    c.cleanup()
+    client.cleanup()
 end
 ```
 
-### د. الاتصال عبر خادم وكيل (Proxy Connection)
-لإجبار كافّة الطلبات على العبور من خلال بروكسي محدد:
+### D. Connecting Through a Proxy
 ```djazair
 use curl
 
-let c = curl.Curl()
+let client = curl.Curl()
 try
-    c.setopt(curl.CURL_OPT_URL, "https://httpbin.org/get")
-    c.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
-    c.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
+    client.setopt(curl.CURL_OPT_URL, "https://httpbin.org/get")
+    client.setopt(curl.CURL_OPT_SSL_VERIFYPEER, False)
+    client.setopt(curl.CURL_OPT_SSL_VERIFYHOST, False)
     
-    # تعيين عنوان الوكيل والمنفذ
-    c.setopt(curl.CURL_OPT_PROXY, "http://127.0.0.1:8080")
+    # Set proxy address and port
+    client.setopt(curl.CURL_OPT_PROXY, "http://127.0.0.1:8080")
     
-    # تعيين بيانات المصادقة للبروكسي إذا تطلب الأمر
-    # c.setopt(curl.CURL_OPT_PROXYUSERPWD, "user:pass")
+    # Optional: proxy authentication
+    # client.setopt(curl.CURL_OPT_PROXYUSERPWD, "user:pass")
     
-    let body = c.perform()
+    let body = client.perform()
     if !isNull(body)
         print("Fetched via Proxy successfully!")
     else
-        print("Proxy failed: " + c.getError())
+        print("Proxy failed: " + client.getError())
     end
 catch e
     print("Error: " + str(e))
 finally
-    c.cleanup()
+    client.cleanup()
 end
 ```
