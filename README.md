@@ -8,26 +8,13 @@
 
 **Official extensions, modules, and packages for the Djazair Programming Language.**
 
-[Installation](#-installation) · [Available Extensions](#-available-extensions) · [Contributing](#-contributing)
+[Installation](#-installation) · [Contributing](#-contributing)
 
 </div>
 
 ---
 
 This repository is a collection of official native extensions and libraries for the **Djazair** programming language. They extend the core capabilities of the language to support databases, web development, desktop GUIs, networking, and game development.
-
----
-
-## 📦 Available Extensions
-
-| Package Name | Category | Description |
-| :--- | :--- | :--- |
-| [**`curl`**](curl) | Networking | HTTP client based on libcurl for making web requests. |
-| [**`dweb`**](dweb) | Web | Full-featured MVC web framework with routing, controllers, sessions, and database helpers. |
-| [**`mysql`**](mysql) | Database | Native connector to interface with MySQL databases. |
-| [**`raylib`**](raylib) | Game Dev | Native bindings for Raylib to build 2D/3D games and multimedia applications. |
-| [**`sqlite`**](sqlite) | Database | Lightweight, native sqlite database wrapper. |
-| [**`webview`**](webview) | GUI | Desktop application shell to build HTML/JS-based GUIs. |
 
 ---
 
