@@ -1,0 +1,29 @@
+# camera.dz — Raylib Camera2D class for Djazair
+let rl = __native("_raylib")
+
+class Camera2D
+    init()
+        self.offset_x = 0.0
+        self.offset_y = 0.0
+        self.target_x = 0.0
+        self.target_y = 0.0
+        self.rotation = 0.0
+        self.zoom = 1.0
+    end
+
+    begin()
+        rl.beginMode2D(self)
+    end
+
+    finish()
+        rl.endMode2D()
+    end
+
+    toWorld(screenX, screenY)
+        return rl.getScreenToWorld2D(screenX, screenY, self)
+    end
+
+    toScreen(worldX, worldY)
+        return rl.getWorldToScreen2D(worldX, worldY, self)
+    end
+end

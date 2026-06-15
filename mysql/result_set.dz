@@ -1,0 +1,93 @@
+# result_set.dz — MySQL ResultSet module for Djazair
+let _m = __dynamic("mysql")
+
+class ResultSet
+    init(res)
+        self.res = res
+        self._cols = Null
+    end
+
+    numRows()
+        if !isNull(self.res)
+            return _m.numRows(self.res)
+        end
+        return 0
+    end
+
+    numFields()
+        if !isNull(self.res)
+            return _m.numFields(self.res)
+        end
+        return 0
+    end
+
+    # Get column names as array
+    columns()
+        if isNull(self.res)
+            return []
+        end
+        if isNull(self._cols)
+            self._cols = _m.columnNames(self.res)
+        end
+        return self._cols
+    end
+
+    # Fetch next row as Array [val0, val1, ...]
+    fetchRow()
+        if !isNull(self.res)
+            return _m.fetchRow(self.res)
+        end
+        return Null
+    end
+
+    # Fetch next row as Map {"col": val, ...}
+    fetchAssoc()
+        if !isNull(self.res)
+            return _m.fetchAssoc(self.res)
+        end
+        return Null
+    end
+
+    # Fetch ALL rows as array of arrays
+    fetchAll()
+        let rows = []
+        if isNull(self.res)
+            return rows
+        end
+        let row = _m.fetchRow(self.res)
+        while !isNull(row)
+            rows.append(row)
+            row = _m.fetchRow(self.res)
+        end
+        return rows
+    end
+
+    # Fetch ALL rows as array of Maps
+    fetchAllAssoc()
+        let rows = []
+        if isNull(self.res)
+            return rows
+        end
+        let row = _m.fetchAssoc(self.res)
+        while !isNull(row)
+            rows.append(row)
+            row = _m.fetchAssoc(self.res)
+        end
+        return rows
+    end
+
+    # Seek to row offset (0-based)
+    seek(offset)
+        if !isNull(self.res)
+            _m.dataSeek(self.res, offset)
+        end
+    end
+
+    # Free result from memory
+    close()
+        if !isNull(self.res)
+            _m.freeResult(self.res)
+            self.res = Null
+        end
+    end
+end

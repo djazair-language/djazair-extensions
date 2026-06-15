@@ -1,0 +1,25 @@
+let _native = __native("_webview")
+
+fn menuCreate(label)
+    return _native.menuCreate(label)
+end
+
+fn menuAddItem(menu, label, callback)
+    _native.menuAddItem(menu, label, callback)
+end
+
+fn menuAddSeparator(menu)
+    _native.menuAddSeparator(menu)
+end
+
+fn menuCreateSubmenu(menu, label)
+    return _native.menuCreateSubmenu(menu, label)
+end
+
+fn menuSetCallback(menu, index, callback)
+    _native.menuSetCallback(menu, index, callback)
+end
+
+fn menuPopup(handle, menu)
+    _native.menuPopup(handle, menu)
+end

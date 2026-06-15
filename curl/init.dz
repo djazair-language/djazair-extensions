@@ -1,0 +1,134 @@
+# curl/init.dz — libcurl HTTP Extension
+# Provides the Curl class wrapping libcurl's easy interface.
+# Supports HTTP methods, headers, authentication, SSL options,
+# proxy, cookies, and uploads. Reports detailed timing and response info.
+#
+# Installation: requires building the project with WITH_CURL=1
+# Example: make WITH_CURL=1
+
+use assert
+let _curl = __dynamic("curl")
+
+# ── cURL Option Constants ──
+
+# Connection options
+let CURL_OPT_URL             = 10002
+let CURL_OPT_PROXY           = 10004
+let CURL_OPT_USERPWD         = 10005
+let CURL_OPT_PROXYUSERPWD    = 10006
+let CURL_OPT_USERAGENT       = 10018
+# Redirect options
+let CURL_OPT_FOLLOWLOCATION  = 52
+let CURL_OPT_MAXREDIRS       = 68
+# Timeout options
+let CURL_OPT_TIMEOUT         = 13
+let CURL_OPT_CONNECTTIMEOUT  = 78
+# SSL options
+let CURL_OPT_SSL_VERIFYPEER  = 64
+let CURL_OPT_SSL_VERIFYHOST  = 81
+let CURL_OPT_CAINFO          = 10065
+# HTTP method options
+let CURL_OPT_POST            = 47
+let CURL_OPT_HTTPGET         = 80
+let CURL_OPT_NOBODY          = 44
+let CURL_OPT_CUSTOMREQUEST   = 10036
+let CURL_OPT_POSTFIELDS      = 10015
+# Header options
+let CURL_OPT_HTTPHEADER      = 10023
+let CURL_OPT_REFERER         = 10016
+let CURL_OPT_COOKIE          = 10022
+let CURL_OPT_COOKIEFILE      = 10031
+let CURL_OPT_COOKIEJAR       = 10082
+# Authentication options
+let CURL_OPT_HTTPAUTH        = 107
+let CURL_OPT_USERNAME        = 10173
+let CURL_OPT_PASSWORD        = 10174
+let CURL_HTTPAUTH_BASIC      = 1
+let CURL_HTTPAUTH_DIGEST     = 2
+let CURL_HTTPAUTH_BEARER     = 8
+# Upload options
+let CURL_OPT_UPLOAD          = 46
+let CURL_OPT_INFILESIZE      = 14
+# Performance info constants
+let CURL_INFO_RESPONSE_CODE  = 2097154
+let CURL_INFO_CONTENT_TYPE   = 1048594
+let CURL_INFO_EFFECTIVE_URL  = 1048577
+let CURL_INFO_TOTAL_TIME     = 3145731
+let CURL_INFO_NAMELOOKUP_TIME= 3145732
+let CURL_INFO_SIZE_DOWNLOAD  = 3145736
+
+class Curl
+    # Initializes a new libcurl easy handle.
+    # Throws CurlError if libcurl is not available on the system.
+    init()
+        self.handle = _curl.curlInit()
+        if isNull(self.handle)
+            throw "CurlError: Failed to initialize libcurl handle. Is libcurl installed?"
+        end
+    end
+
+    # Sets a libcurl option. Option constants are defined above.
+    # value must be a string, number, or boolean.
+    setopt(option, value)
+        assert.number(option, "curl.setopt: option")
+        assert.notNull(self.handle, "curl.setopt: handle")
+        if isNull(value)
+            throw "ValueError: curl.setopt: value cannot be Null for option ${option}"
+        end
+        if !isString(value) and !isNumber(value) and !isBool(value)
+            throw "TypeError: curl.setopt: value must be a string, number, or boolean (got ${type(value)})"
+        end
+        return _curl.curlSetOpt(self.handle, option, value)
+    end
+
+    # Sets HTTP headers from an array of "Name: Value" strings.
+    setHeaders(headersList)
+        assert.array(headersList, "curl.setHeaders: headersList")
+        assert.notNull(self.handle, "curl.setHeaders: handle")
+        let i = 0
+        for h in headersList
+            if !isString(h)
+                throw "TypeError: curl.setHeaders: element at index ${i} must be a string, got ${type(h)}"
+            end
+            i += 1
+        end
+        return _curl.curlSetHeaders(self.handle, headersList)
+    end
+
+    # Performs the HTTP request synchronously.
+    # Returns the response body as a string, or Null on failure.
+    perform()
+        assert.notNull(self.handle, "curl.perform: handle")
+        return _curl.curlPerform(self.handle)
+    end
+
+    # Retrieves performance info after a transfer.
+    # Uses the CURL_INFO_* constants defined above.
+    getInfo(info)
+        assert.number(info, "curl.getInfo: info")
+        assert.notNull(self.handle, "curl.getInfo: handle")
+        if info <= 0
+            throw "ValueError: curl.getInfo: info must be a valid CURLINFO constant (got ${info})"
+        end
+        return _curl.curlGetInfo(self.handle, info)
+    end
+
+    # Returns the response headers as a Map { "Header-Name": "value" }.
+    getResponseHeaders()
+        assert.notNull(self.handle, "curl.getResponseHeaders: handle")
+        return _curl.curlGetResponseHeaders(self.handle)
+    end
+
+    # Returns the last error message string, or empty string if no error.
+    getError()
+        assert.notNull(self.handle, "curl.getError: handle")
+        return _curl.curlGetError(self.handle)
+    end
+
+    # Cleans up and releases the libcurl handle.
+    cleanup()
+        if isNull(self.handle) return end
+        _curl.curlCleanup(self.handle)
+        self.handle = Null
+    end
+end

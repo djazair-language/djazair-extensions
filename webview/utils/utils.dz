@@ -1,0 +1,157 @@
+use json as *
+use datetime
+use file
+
+# Global config variables
+let _logLevel = 2 # Default: WARN
+let _logColors = True
+let _logFile = Null
+let _logTimeFormat = "%H:%M:%S"
+
+# Keep track of initial time for high-resolution timestamps
+let _initialTs = datetime.timestamp()
+let _initialTicks = datetime.ticks()
+
+# ANSI Terminal Colors using escape character
+let ESC = chr(27)
+let COLOR_RESET   = ESC + "[0m"
+let COLOR_GRAY    = ESC + "[90m"
+let COLOR_CYAN    = ESC + "[36m"
+let COLOR_GREEN   = ESC + "[32m"
+let COLOR_YELLOW  = ESC + "[33m"
+let COLOR_RED     = ESC + "[31m"
+let COLOR_MAGENTA = ESC + "[35m"
+
+# Configures the global webview logging level
+fn setLogLevel(level)
+    let l = str(level).lower()
+    if l == "none" or l == "0"
+        _logLevel = 0
+    elif l == "error" or l == "1"
+        _logLevel = 1
+    elif l == "warn" or l == "2"
+        _logLevel = 2
+    elif l == "info" or l == "3"
+        _logLevel = 3
+    elif l == "debug" or l == "4"
+        _logLevel = 4
+    end
+end
+
+# Enable or disable colorized logs in the console
+fn setLogColors(enable)
+    _logColors = enable
+end
+
+# Sets a file to log to. Clean logs will be appended here.
+fn setLogFile(filePath)
+    _logFile = filePath
+    if !isNull(filePath)
+        try
+            file.create(filePath)
+        catch err
+            # Suppress errors to avoid crashing on launch
+        end
+    end
+end
+
+# Sets the pattern for timestamp format (e.g. "%Y-%m-%d %H:%M:%S")
+fn setLogTimeFormat(pattern)
+    _logTimeFormat = pattern
+end
+
+# Pad utility to align logs perfectly
+fn _padRight(s, width)
+    let res = str(s)
+    if res.length() >= width return res end
+    while res.length() < width
+        res = res + " "
+    end
+    return res
+end
+
+# Format timestamp using monotonic ticks to resolve sub-second precision
+fn _getTimestamp()
+    let elapsed = (datetime.ticks() - _initialTicks) / 1000.0
+    let currentTs = _initialTs + elapsed
+    let dt = datetime.fromTimestamp(currentTs)
+    let ms = int((currentTs - int(currentTs)) * 1000)
+    let msStr = str(ms)
+    while msStr.length() < 3
+        msStr = "0" + msStr
+    end
+    return "${dt.format(_logTimeFormat)}.${msStr}"
+end
+
+# Format log message - keep strings clean, format structures as JSON
+fn _formatMessage(msg)
+    if type(msg) == "String"
+        return msg
+    else
+        return stringify(msg)
+    end
+end
+
+# System logger for internal webview events with severity levels and colors
+fn sysLog(component, message, level = "info")
+    let lvlNum = 3
+    let lvlStr = "INFO"
+    let color = COLOR_GREEN
+    
+    let l = str(level).lower()
+    if l == "debug" or l == "4"
+        lvlNum = 4
+        lvlStr = "DEBUG"
+        color = COLOR_GRAY
+    elif l == "info" or l == "3"
+        lvlNum = 3
+        lvlStr = "INFO"
+        color = COLOR_CYAN
+    elif l == "warn" or l == "2"
+        lvlNum = 2
+        lvlStr = "WARN"
+        color = COLOR_YELLOW
+    elif l == "error" or l == "1"
+        lvlNum = 1
+        lvlStr = "ERROR"
+        color = COLOR_RED
+    elif l == "fatal" or l == "0"
+        lvlNum = 0
+        lvlStr = "FATAL"
+        color = COLOR_MAGENTA
+    end
+    
+    if lvlNum <= _logLevel
+        let ts = _getTimestamp()
+        let lvlPad = _padRight(lvlStr, 5)
+        let compPad = _padRight(component, 8)
+        let msgStr = _formatMessage(message)
+        
+        let rawLog = "[${ts}] [${lvlStr}] [${component}] ${msgStr}"
+        
+        if _logColors
+            let formattedConsole = "[${COLOR_GRAY}${ts}${COLOR_RESET}] [${color}${lvlPad}${COLOR_RESET}] [${COLOR_GREEN}${compPad}${COLOR_RESET}] ${msgStr}"
+            print(formattedConsole)
+        else
+            print(rawLog)
+        end
+        
+        if !isNull(_logFile)
+            try
+                file.append(_logFile, "${rawLog}\n")
+            catch err
+                # Suppress write errors to avoid recursive crashes
+            end
+        end
+    end
+end
+
+# Helper to get an option with a fallback
+fn getOpt(opts, key, fallback)
+    if opts.has(key)
+        return opts[key]
+    else
+        return fallback
+    end
+end
+

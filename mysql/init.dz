@@ -1,0 +1,7 @@
+# init.dz — MySQL Hybrid & Protected Library for Djazair
+import "result_set.dz" as rs
+import "connection.dz" as conn
+
+let ResultSet = rs.ResultSet
+let Connection = conn.Connection
+

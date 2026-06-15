@@ -1,0 +1,21 @@
+let _native = __native("_webview")
+
+fn trayCreate(label, iconPath)
+    return _native.trayCreate(label, iconPath)
+end
+
+fn traySetIcon(handle, iconPath)
+    _native.traySetIcon(handle, iconPath)
+end
+
+fn traySetTooltip(handle, tooltip)
+    _native.traySetTooltip(handle, tooltip)
+end
+
+fn trayDestroy(handle)
+    _native.trayDestroy(handle)
+end
+
+fn trayShowBalloon(handle, title, message, timeout)
+    _native.trayShowBalloon(handle, title, message, timeout)
+end

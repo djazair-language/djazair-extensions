@@ -1,0 +1,86 @@
+use json as *
+import "../utils/utils.dz" as *
+import "assets.dz" as *
+
+let _native = __native("_webview")
+
+# Initializes the IPC bridge between Djazair and the Webview JavaScript environment.
+fn _initBridge(app, win)
+    sysLog("Bridge", "Initializing IPC bridge...")
+    # Setup native dispatcher for handling all incoming messages
+    _native.windowSetDispatcher(win._handle, fn(name, req)
+        return _onDispatch(app, name, req)
+    end)
+
+    # Setup error callback
+    _native.windowSetErrorCallback(win._handle, fn(err)
+        sysLog("Bridge", "Error received: ${err}", "error")
+        if !isNull(app._errorCallback)
+            app._errorCallback(err)
+        end
+    end)
+
+    # Bind the core invocation channel
+    _native.windowBind(win._handle, "__dz_invoke", Null)
+
+    # Inject the Djazair JavaScript API payload
+    win.initJs(readWebviewAsset("bridge_client.js"))
+end
+
+# Handles incoming dispatch calls from the native webview.
+# Return values are serialized through stringify() to ensure valid JSON
+# (value_to_json_result in C++ passes JSON-looking strings through raw).
+fn _onDispatch(app, name, req)
+    sysLog("Bridge", "Received dispatch: ${name}, req: ${req}", "debug")
+    let args = parse(req)
+
+    if name == "__dz_invoke"
+        let channel = args[0]
+        let payload = args[1]
+        let handler = app._bridgeHandlers[channel]
+
+        if !isNull(handler)
+            return stringify(handler(payload))
+        end
+    else
+        let handler = app._bridgeHandlers[name]
+
+        if !isNull(handler)
+            return stringify(handler(args))
+        end
+    end
+end
+
+# Creates the Bridge object exposed to the application.
+fn createBridge(app, win)
+    let bridge = {}
+
+    # Register a handler for a specific channel
+    bridge.on = fn(channel, handler)
+        sysLog("Bridge", "Registered handler for channel: ${channel}", "debug")
+        app._bridgeHandlers[channel] = handler
+    end
+
+    # Send data to a JS channel
+    bridge.send = fn(channel, data)
+        sysLog("Bridge", "Sending to JS channel: ${channel}", "debug")
+        let jsCmd = "if (window.djazair) window.djazair.send(${stringify(channel)}, ${stringify(data)});"
+        win.eval(jsCmd)
+    end
+
+    # Evaluate code and optionally return via __dz_eval (if supported)
+    bridge.invoke = fn(jsCode)
+        sysLog("Bridge", "Invoking JS code via eval", "debug")
+        let jsCmd = "__dz_invoke('__dz_eval', (${jsCode}))"
+        win.eval(jsCmd)
+    end
+
+    # Expose a native binding directly
+    bridge.expose = fn(name, handler)
+        sysLog("Bridge", "Exposed native binding: ${name}", "debug")
+        app._bridgeHandlers[name] = handler
+        _native.windowBind(win._handle, name, Null)
+    end
+
+    return bridge
+end

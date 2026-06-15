@@ -1,0 +1,148 @@
+# upload/file_upload.dz — Multipart File Upload Handler
+#
+# Usage:
+#   app.post("/upload", fn(req, res)
+#       let upload = FileUpload(req, {
+#           "dest":    "./uploads",
+#           "maxSize": 5 * 1024 * 1024,
+#           "allowed": [".jpg", ".png", ".pdf"]
+#       })
+#       let f = upload.file("avatar")
+#       if f.isValid()
+#           f.save()
+#           res.json({"path": f.savedPath})
+#       else
+#           res.status(422).json({"error": f.error})
+#       end
+#   end)
+
+use file
+use path
+use datetime
+use os
+use dir
+use bytes
+
+# ─── UploadedFile ─────────────────────────────────────────────────────────────
+class UploadedFile
+    init(field_name, data, options)
+        self.fieldName   = field_name
+        self.filename    = data.get("filename", "")
+        self.contentType = data.get("contentType", "application/octet-stream")
+        self.content     = data.get("content", "")
+        self.size        = self.content.length()
+        self.savedPath   = Null
+        self.error       = Null
+        self._options    = options
+
+        # Validate on construction
+        self._validate()
+    end
+
+    _validate()
+        if self.filename == ""
+            self.error = "No file provided for field '${self.fieldName}'"
+            return
+        end
+
+        let max_size = self._options.get("maxSize", 10 * 1024 * 1024) # 10MB default
+        if self.size > max_size
+            self.error = "File '${self.filename}' exceeds max size of ${max_size} bytes (got ${self.size})"
+            return
+        end
+
+        let allowed = self._options.get("allowed", Null)
+        if !isNull(allowed) and isArray(allowed)
+            let ext = path.extname(self.filename).lower()
+            let ok = False
+            for a in allowed
+                if a.lower() == ext
+                    ok = True
+                    break
+                end
+            end
+            if !ok
+                self.error = "File extension '${ext}' is not allowed"
+                return
+            end
+        end
+    end
+
+    isValid()
+        return isNull(self.error)
+    end
+
+    # Save the file to dest directory with a unique name
+    save(custom_name = Null)
+        if !self.isValid()
+            return False
+        end
+
+        let dest = self._options.get("dest", "./uploads")
+
+        # Create dest directory if it doesn't exist
+        if !file.exists(dest)
+            dir.createAll(dest)
+        end
+
+        let save_name = ""
+        if !isNull(custom_name) and custom_name != ""
+            save_name = custom_name
+        else
+            let ts = str(datetime.now().timestamp()).replace(".", "_")
+            let ext = path.extname(self.filename)
+            let base = path.basename(self.filename, ext)
+            save_name = "${ts}_${base}${ext}"
+        end
+
+        let save_path = path.join(dest, save_name)
+
+        try
+            file.writeBytes(save_path, bytes.fromString(self.content))
+            self.savedPath = save_path
+            return True
+        catch e
+            self.error = "Failed to save file: ${str(e)}"
+            return False
+        end
+    end
+end
+
+# ─── FileUpload ───────────────────────────────────────────────────────────────
+class FileUpload
+    init(req, options = {})
+        if isNull(options)
+            options = {}
+        end
+        self._files   = req.files
+        self._options = options
+        self._parsed  = {}
+
+        # Pre-wrap all files from req.files
+        if isMap(self._files)
+            let keys = self._files.keys()
+            for k in keys
+                self._parsed[k] = UploadedFile(k, self._files[k], options)
+            end
+        end
+    end
+
+    # Get a single uploaded file by form field name
+    file(field_name)
+        let f = self._parsed.get(field_name, Null)
+        if isNull(f)
+            return UploadedFile(field_name, {}, self._options)
+        end
+        return f
+    end
+
+    # Get all uploaded files as a Map of UploadedFile instances
+    all()
+        return self._parsed
+    end
+
+    # Check if a specific field has a file
+    has(field_name)
+        return self._parsed.has(field_name)
+    end
+end

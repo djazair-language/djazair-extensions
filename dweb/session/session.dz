@@ -1,0 +1,200 @@
+# session/session.dz — In-Memory Session Management
+# Generates a unique session ID per browser, stores data in a server-side Map.
+# The session ID is sent to the browser as an HttpOnly cookie.
+#
+# Usage:
+#   let sessions = SessionStore()
+#   app.middleware(sessions.middleware())
+#
+#   # In a route handler:
+#   req.session["user"] = "Riad"   # set data
+#   req.session.save()             # persist changes
+#   req.session.destroy()          # log out
+#
+# TTL: sessions expire after `ttl` seconds (default 3600 = 1 hour).
+
+use datetime
+
+fn _generateId()
+    let chars = "abcdef0123456789"
+    let id = ""
+    let t = datetime.now().timestamp()
+    let seed = t * 1000000
+    let i = 0
+    while i < 32
+        let idx = (seed + i * 7919) % 16
+        if idx < 0 then idx = -idx end
+        id += chars.slice(idx, idx + 1)
+        i += 1
+    end
+    return id
+end
+
+# ─── PerRequestSession — passed to req.session ───────────────────────────────
+class PerRequestSession
+    init(store, sid, data)
+        self._store = store
+        self._sid   = sid
+        self._data  = data
+        self._dirty = False
+        self._destroyed = False
+    end
+
+    # Get a value (req.session["key"])
+    get(key, fallback = Null)
+        return self._data.get(key, fallback)
+    end
+
+    # Set a value (req.session["key"] = val requires save())
+    set(key, val)
+        self._data[key] = val
+        self._dirty = True
+    end
+
+    # Check if key exists
+    has(key)
+        return self._data.has(key)
+    end
+
+    # Persist changes back to the store
+    save()
+        if !self._destroyed
+            self._store._write(self._sid, self._data)
+            self._dirty = False
+        end
+    end
+
+    # Remove all session data and invalidate the session ID
+    destroy()
+        self._store._delete(self._sid)
+        self._data = {}
+        self._destroyed = True
+    end
+
+    # Regenerate session ID (protect against session fixation)
+    regenerate()
+        self._store._delete(self._sid)
+        self._sid = _generateId()
+        self._store._write(self._sid, self._data)
+        return self._sid
+    end
+
+    id()
+        return self._sid
+    end
+
+    isDestroyed()
+        return self._destroyed
+    end
+end
+
+# ─── SessionStore — central storage ──────────────────────────────────────────
+class SessionStore
+    init(options = {})
+        if isNull(options)
+            options = {}
+        end
+        self._sessions = {}             # sid → {data, expires}
+        self._ttl      = options.get("ttl", 3600)
+        self._cookie   = options.get("cookie", "dsid")
+        self._secure   = options.get("secure", False)
+    end
+
+    # Internal: write session data with expiry
+    _write(sid, data)
+        let now = datetime.now().timestamp()
+        self._sessions[sid] = {
+            "data":    data,
+            "expires": now + self._ttl
+        }
+    end
+
+    # Internal: read session data (returns Null if expired or missing)
+    _read(sid)
+        if isNull(sid) or sid == ""
+            return Null
+        end
+        let entry = self._sessions.get(sid, Null)
+        if isNull(entry)
+            return Null
+        end
+        let now = datetime.now().timestamp()
+        if now > entry["expires"]
+            self._sessions.remove(sid)
+            return Null
+        end
+        return entry["data"]
+    end
+
+    # Internal: delete a session
+    _delete(sid)
+        if self._sessions.has(sid)
+            self._sessions.pop(sid)
+        end
+    end
+
+    # Purge all expired sessions (call periodically if needed)
+    gc()
+        let now = datetime.now().timestamp()
+        let keys = self._sessions.keys()
+        for k in keys
+            let entry = self._sessions.get(k, Null)
+            if !isNull(entry) and now > entry["expires"]
+                self._sessions.remove(k)
+            end
+        end
+    end
+
+    # Returns the middleware function to plug into app.middleware()
+    middleware()
+        let store = self
+        return fn(req, res, next)
+            # Read session ID from Cookie header
+            let sid = req.cookies.get(store._cookie, Null)
+            let session_data = Null
+            if !isNull(sid)
+                session_data = store._read(sid)
+            end
+
+            # Create or resume session
+            let is_new = False
+            if isNull(sid) or isNull(session_data)
+                sid = _generateId()
+                session_data = {}
+                is_new = True
+            end
+
+            # Attach PerRequestSession to request
+            req.session = PerRequestSession(store, sid, session_data)
+
+            # Pre-set cookie for new sessions BEFORE calling next()
+            # so it's available even on redirect responses
+            if is_new
+                store._write(sid, session_data)
+                let cookie_str = store._cookie + "=" + sid + "; Path=/; HttpOnly; SameSite=Strict"
+                if store._secure
+                    cookie_str += "; Secure"
+                end
+                res.header("Set-Cookie", cookie_str)
+            end
+
+            next()
+
+            # After handler: update cookie if data was modified
+            if !req.session.isDestroyed()
+                if req.session._dirty
+                    req.session.save()
+                    let cookie_str = store._cookie + "=" + req.session.id() + "; Path=/; HttpOnly; SameSite=Strict"
+                    if store._secure
+                        cookie_str += "; Secure"
+                    end
+                    res.header("Set-Cookie", cookie_str)
+                end
+            else
+                # Session destroyed: clear cookie
+                let exp_cookie = store._cookie + "=; Path=/; HttpOnly; Max-Age=0"
+                res.header("Set-Cookie", exp_cookie)
+            end
+        end
+    end
+end

@@ -1,0 +1,122 @@
+import "../bridge/bridge.dz" as *
+import "../window/window.dz" as *
+import "../utils/utils.dz" as *
+
+use json as *
+let _native = __native("_webview")
+
+class App
+    init(options = {})
+        let defaults = {
+            "title": "Djazair App",
+            "width": 1024,
+            "height": 768,
+            "x": -1, "y": -1,
+            "resizable": True,
+            "frameless": False,
+            "minWidth": 400,
+            "minHeight": 300,
+            "maxWidth": 0,
+            "maxHeight": 0,
+            "closable": True,
+            "debug": False
+        }
+        for key in defaults.keys()
+            if options.has(key)
+                defaults[key] = options[key]
+            end
+        end
+        self._onReady = Null
+        self._onQuit = Null
+        self._quitting = False
+        self._bridgeHandlers = {}
+        self._debug = defaults["debug"]
+        if self._debug
+            setLogLevel("debug")
+        else
+            setLogLevel("error")
+        end
+        sysLog("App", "Creating window...")
+        let win = createWindow(self, defaults)
+        self.window = win
+        sysLog("App", "Initializing bridge...")
+        self.bridge = createBridge(self, win)
+        _initBridge(self, win)
+        if self._debug
+            sysLog("App", "Debug mode enabled, opening DevTools...")
+            win.initJs(readWebviewAsset("debug_console.js"))
+            self.bridge.on("__console", fn(args)
+                let typeStr = args[0]
+                let msg = args[1]
+                let lvl = "info"
+                if typeStr == "error"
+                    lvl = "error"
+                elif typeStr == "warn"
+                    lvl = "warn"
+                elif typeStr == "log"
+                    lvl = "debug"
+                elif typeStr == "info"
+                    lvl = "info"
+                end
+                sysLog("Webview", msg, lvl)
+            end)
+            win.openDevTools()
+        end
+        sysLog("App", "Application initialized successfully.")
+    end
+
+    run()
+        sysLog("App", "Running application event loop.")
+        if !isNull(self._onReady)
+            self._onReady()
+        end
+        _native.appRun()
+    end
+
+    quit()
+        if self._quitting return end
+        sysLog("App", "Quitting application...")
+        self._quitting = True
+        if !isNull(self._onQuit)
+            self._onQuit()
+        end
+        if !isNull(self.window) and !isNull(self.window._handle)
+            closeWindow(self.window)
+        end
+        _native.appQuit()
+    end
+
+
+    close()
+        sysLog("App", "Closing application window...")
+        if !isNull(self.window)
+            closeWindow(self.window)
+        end
+    end
+
+    isValid()
+        return !isNull(self.window) and !isNull(self.window._handle)
+    end
+
+    onReady(cb)
+        self._onReady = cb
+    end
+
+    onQuit(cb)
+        self._onQuit = cb
+    end
+
+    setDebug(enable)
+        self._debug = enable
+        if enable
+            setLogLevel("debug")
+            sysLog("App", "Debug mode set to: True")
+            if !isNull(self.window)
+                self.window.openDevTools()
+            end
+        else
+            setLogLevel("error")
+            sysLog("App", "Debug mode set to: False")
+        end
+    end
+end

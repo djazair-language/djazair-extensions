@@ -1,0 +1,352 @@
+# template/engine.dz — Core Template Engine (AST-based)
+# Supports:
+#   {% if expr %}...{% elif expr %}...{% else %}...{% endif %}
+#   {% for index, item in list %}...{% endfor %}
+#   {{ key }}   — HTML-escaped output (XSS-safe)
+#   {{{ key }}} — Raw unescaped output (trusted HTML)
+# Expressions support deep access (user.profile.name) and logic (==, !=, >, <, >=, <=, and, or, not)
+import "../utils/utils.dz" as utils
+
+# ─── Tokenizer ─────────────────────────────────────────────────────────────
+fn _tokenize(html)
+    let tokens = []
+    let current_pos = 0
+    let len = html.length()
+
+    while current_pos < len
+        let remaining = html.slice(current_pos)
+        let next_block = remaining.index("{%")
+        if next_block != -1
+            next_block += current_pos
+        end
+        
+        let next_print_raw = remaining.index("{{{")
+        if next_print_raw != -1
+            next_print_raw += current_pos
+        end
+        
+        let next_print_esc = remaining.index("{{")
+        if next_print_esc != -1
+            next_print_esc += current_pos
+        end
+
+        if next_print_esc == next_print_raw
+            next_print_esc = -1
+        elif next_print_raw != -1 and next_print_esc != -1 and next_print_esc < next_print_raw
+            # Keep both, the min_idx will pick next_print_esc
+        end
+
+        let min_idx = -1
+        let tag_type = ""
+        
+        if next_block != -1
+            min_idx = next_block
+            tag_type = "block"
+        end
+
+        if next_print_raw != -1 and (min_idx == -1 or next_print_raw < min_idx)
+            min_idx = next_print_raw
+            tag_type = "raw"
+        end
+
+        if next_print_esc != -1 and (min_idx == -1 or next_print_esc < min_idx)
+            min_idx = next_print_esc
+            tag_type = "esc"
+        end
+
+        if min_idx == -1
+            let text = html.slice(current_pos)
+            if text != ""
+                tokens.append({"type": "text", "val": text})
+            end
+            break
+        end
+
+        if min_idx > current_pos
+            tokens.append({"type": "text", "val": html.slice(current_pos, min_idx)})
+        end
+
+        if tag_type == "block"
+            let end_idx = html.slice(min_idx).index("%}")
+            if end_idx == -1
+                tokens.append({"type": "text", "val": html.slice(min_idx)})
+                break
+            end
+            end_idx += min_idx
+            let content = html.slice(min_idx + 2, end_idx).strip()
+            if content.startsWith("if ")
+                tokens.append({"type": "if", "cond": content.slice(3).strip()})
+            elif content.startsWith("elif ")
+                tokens.append({"type": "elif", "cond": content.slice(5).strip()})
+            elif content == "else"
+                tokens.append({"type": "else"})
+            elif content == "endif"
+                tokens.append({"type": "endif"})
+            elif content.startsWith("for ")
+                let parts = content.slice(4).split(" in ")
+                if parts.length() >= 2
+                    tokens.append({"type": "for", "item": parts[0].strip(), "list": parts[1].strip()})
+                else
+                    tokens.append({"type": "text", "val": html.slice(min_idx, end_idx + 2)})
+                end
+            elif content == "endfor"
+                tokens.append({"type": "endfor"})
+            else
+                tokens.append({"type": "text", "val": html.slice(min_idx, end_idx + 2)})
+            end
+            current_pos = end_idx + 2
+
+        elif tag_type == "raw"
+            let end_idx = html.slice(min_idx).index("}}}")
+            if end_idx == -1
+                tokens.append({"type": "text", "val": html.slice(min_idx)})
+                break
+            end
+            end_idx += min_idx
+            let content = html.slice(min_idx + 3, end_idx).strip()
+            tokens.append({"type": "print_raw", "expr": content})
+            current_pos = end_idx + 3
+
+        elif tag_type == "esc"
+            let end_idx = html.slice(min_idx).index("}}")
+            if end_idx == -1
+                tokens.append({"type": "text", "val": html.slice(min_idx)})
+                break
+            end
+            end_idx += min_idx
+            let content = html.slice(min_idx + 2, end_idx).strip()
+            tokens.append({"type": "print_esc", "expr": content})
+            current_pos = end_idx + 2
+        end
+    end
+
+    return tokens
+end
+
+# ─── Parser ────────────────────────────────────────────────────────────────
+fn _parse(tokens)
+    let root = []
+    let stack = [{"type": "root", "body": root}]
+
+    for t in tokens
+        let top = stack[stack.length() - 1]
+        let current_body = top["body"]
+
+        if t["type"] == "text" or t["type"] == "print_raw" or t["type"] == "print_esc"
+            current_body.append(t)
+        
+        elif t["type"] == "if"
+            let branch = {"cond": t["cond"], "body": []}
+            let node = {
+                "type": "if_chain",
+                "branches": [branch],
+                "else_body": Null
+            }
+            current_body.append(node)
+            stack.append({"type": "if", "node": node, "body": branch["body"]})
+
+        elif t["type"] == "elif"
+            if top["type"] == "if"
+                let branch = {"cond": t["cond"], "body": []}
+                top["node"]["branches"].append(branch)
+                top["body"] = branch["body"]
+            end
+
+        elif t["type"] == "else"
+            if top["type"] == "if"
+                top["node"]["else_body"] = []
+                top["body"] = top["node"]["else_body"]
+            end
+
+        elif t["type"] == "endif"
+            if top["type"] == "if"
+                stack.pop()
+            end
+
+        elif t["type"] == "for"
+            let node = {
+                "type": "for",
+                "item": t["item"],
+                "list": t["list"],
+                "body": []
+            }
+            current_body.append(node)
+            stack.append({"type": "for", "node": node, "body": node["body"]})
+
+        elif t["type"] == "endfor"
+            if top["type"] == "for"
+                stack.pop()
+            end
+        end
+    end
+
+    return root
+end
+
+# ─── Evaluator ─────────────────────────────────────────────────────────────
+fn _resolveVar(path, data)
+    if path == "true" or path == "True" return True end
+    if path == "false" or path == "False" return False end
+    if path == "null" or path == "Null" return Null end
+    let num_val = num(path)
+    if !isNull(num_val) and str(num_val) == path return num_val end
+    if path.startsWith("\"") and path.endsWith("\"") return path.slice(1, path.length() - 1) end
+    if path.startsWith("'") and path.endsWith("'") return path.slice(1, path.length() - 1) end
+
+    let parts = path.split(".")
+    let current = data
+    for p in parts
+        let clean_p = p.strip()
+        if isMap(current)
+            current = current.get(clean_p, Null)
+        else
+            return Null
+        end
+        if isNull(current)
+            return Null
+        end
+    end
+    return current
+end
+
+fn _evalExpr(expr_str, data)
+    let s = expr_str.strip()
+
+    if s.startsWith("not ")
+        return !_evalExpr(s.slice(4), data)
+    end
+
+    let or_idx = s.index(" or ")
+    if or_idx != -1
+        let left = _evalExpr(s.slice(0, or_idx), data)
+        if left return True end
+        return _evalExpr(s.slice(or_idx + 4), data)
+    end
+
+    let and_idx = s.index(" and ")
+    if and_idx != -1
+        let left = _evalExpr(s.slice(0, and_idx), data)
+        if !left return False end
+        return _evalExpr(s.slice(and_idx + 5), data)
+    end
+
+    let ops = ["==", "!=", ">=", "<=", ">", "<"]
+    for op in ops
+        let idx = s.index(" " + op + " ")
+        if idx != -1
+            let left_str = s.slice(0, idx).strip()
+            let right_str = s.slice(idx + op.length() + 2).strip()
+            let left_val = _resolveVar(left_str, data)
+            let right_val = _resolveVar(right_str, data)
+
+            if op == "==" return str(left_val) == str(right_val) end
+            if op == "!=" return str(left_val) != str(right_val) end
+
+            let ln = num(left_val)
+            let rn = num(right_val)
+            if !isNull(ln) and !isNull(rn)
+                if op == ">" return ln > rn end
+                if op == "<" return ln < rn end
+                if op == ">=" return ln >= rn end
+                if op == "<=" return ln <= rn end
+            end
+            
+            if isString(left_val) and isString(right_val)
+                if op == ">" return left_val > right_val end
+                if op == "<" return left_val < right_val end
+                if op == ">=" return left_val >= right_val end
+                if op == "<=" return left_val <= right_val end
+            end
+
+            return False
+        end
+    end
+
+    let val = _resolveVar(s, data)
+    if !isNull(val) and val != False and val != "" and val != 0
+        return True
+    end
+    return False
+end
+
+# ─── Renderer ──────────────────────────────────────────────────────────────
+fn _renderAst(nodes, data)
+    let result = ""
+    for n in nodes
+        if n["type"] == "text"
+            result += n["val"]
+        elif n["type"] == "print_raw"
+            let val = _resolveVar(n["expr"].strip(), data)
+            if !isNull(val)
+                result += str(val)
+            end
+        elif n["type"] == "print_esc"
+            let val = _resolveVar(n["expr"].strip(), data)
+            if !isNull(val)
+                result += utils.htmlEscape(str(val))
+            end
+        elif n["type"] == "if_chain"
+            let matched = False
+            for branch in n["branches"]
+                if _evalExpr(branch["cond"], data)
+                    result += _renderAst(branch["body"], data)
+                    matched = True
+                    break
+                end
+            end
+            if !matched and !isNull(n["else_body"])
+                result += _renderAst(n["else_body"], data)
+            end
+        elif n["type"] == "for"
+            let list_val = _resolveVar(n["list"], data)
+            if !isNull(list_val) and isArray(list_val)
+                let item_decl = n["item"]
+                let has_index = False
+                let index_var = ""
+                let val_var = item_decl
+                let comma_idx = item_decl.index(",")
+                if comma_idx != -1
+                    index_var = item_decl.slice(0, comma_idx).strip()
+                    val_var = item_decl.slice(comma_idx + 1).strip()
+                    has_index = True
+                end
+
+                let i = 0
+                for item in list_val
+                    let prev_val = data.get(val_var, Null)
+                    let prev_idx = Null
+                    if has_index
+                        prev_idx = data.get(index_var, Null)
+                        data[index_var] = i
+                    end
+                    
+                    data[val_var] = item
+                    
+                    result += _renderAst(n["body"], data)
+                    
+                    if isNull(prev_val)
+                        data.pop(val_var)
+                    else
+                        data[val_var] = prev_val
+                    end
+                    
+                    if has_index
+                        if prev_idx == -1
+                            data.pop(index_var)
+                        else
+                            data[index_var] = prev_idx
+                        end
+                    end
+                    i += 1
+                end
+            end
+        end
+    end
+    return result
+end
+
+fn renderTemplate(html, data)
+    let tokens = _tokenize(html)
+    let ast = _parse(tokens)
+    return _renderAst(ast, data)
+end

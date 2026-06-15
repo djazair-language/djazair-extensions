@@ -1,0 +1,440 @@
+# db/query_builder.dz — Fluent SQL Query Builder
+# Works with both MySQL and SQLite via the shared LazyConnection API.
+# All user-supplied values are escaped to prevent SQL injection.
+#
+# Usage:
+#   let db = dweb.db.sqlite("./app.db")
+#   let qb = QueryBuilder(db)    # or db.table("users")
+#
+#   # SELECT
+#   let users = qb.table("users")
+#       .select(["id", "name"])
+#       .where("active", 1)
+#       .orderBy("name")
+#       .limit(10)
+#       .get()
+#
+#   # INSERT → returns insert ID
+#   let id = qb.table("users").insert({"name": "Riad", "email": "r@a.dz"})
+#
+#   # UPDATE → returns True/False
+#   qb.table("users").where("id", 1).update({"name": "New"})
+#
+#   # DELETE → returns True/False
+#   qb.table("users").where("id", 1).delete()
+#
+#   # Aggregate
+#   let total = qb.table("users").where("active", 1).count()
+#   let found = qb.table("users").where("email", "r@a.dz").exists()
+#   let row   = qb.table("users").where("id", 1).first()
+
+class QueryBuilder
+    init(conn)
+        self._conn     = conn
+        self._table    = Null
+        self._selects  = []
+        self._wheres   = []
+        self._orders   = []
+        self._limit    = Null
+        self._offset   = Null
+    end
+
+    # ─── Clone helper — returns fresh QB pointing to same connection ──────────
+    _clone()
+        let q = QueryBuilder(self._conn)
+        q._table   = self._table
+        for s in self._selects  q._selects.append(s) end
+        for w in self._wheres   q._wheres.append(w)  end
+        for o in self._orders   q._orders.append(o)  end
+        q._limit   = self._limit
+        q._offset  = self._offset
+        return q
+    end
+
+    # Reset builder state (for reuse)
+    _reset()
+        self._table   = Null
+        self._selects = []
+        self._wheres  = []
+        self._orders  = []
+        self._limit   = Null
+        self._offset  = Null
+        return self
+    end
+
+    # ─── Fluent setters ───────────────────────────────────────────────────────
+
+    table(name)
+        self._table = name
+        return self
+    end
+
+    select(columns)
+        if isArray(columns)
+            for c in columns
+                self._selects.append(c)
+            end
+        elif isString(columns)
+            self._selects.append(columns)
+        end
+        return self
+    end
+
+    # where("field", value)        → WHERE field = 'value'
+    # where("field", ">", value)   → WHERE field > 'value'
+    where(field, op_or_val, val = Null)
+        if isNull(val)
+            self._wheres.append({"field": field, "op": "=", "val": op_or_val})
+        else
+            self._wheres.append({"field": field, "op": str(op_or_val), "val": val})
+        end
+        return self
+    end
+
+    # WHERE field IN (v1, v2, ...)
+    whereIn(field, values)
+        self._wheres.append({"field": field, "op": "IN", "val": values})
+        return self
+    end
+
+    # WHERE field BETWEEN low AND high
+    whereBetween(field, low, high)
+        self._wheres.append({"field": field, "op": "BETWEEN", "val": [low, high]})
+        return self
+    end
+
+    # WHERE field IS NULL
+    whereNull(field)
+        self._wheres.append({"field": field, "op": "IS NULL", "val": Null})
+        return self
+    end
+
+    # WHERE field IS NOT NULL
+    whereNotNull(field)
+        self._wheres.append({"field": field, "op": "IS NOT NULL", "val": Null})
+        return self
+    end
+
+    orderBy(field, direction = "ASC")
+        self._orders.append({"field": field, "dir": direction.upper()})
+        return self
+    end
+
+    orderByDesc(field)
+        return self.orderBy(field, "DESC")
+    end
+
+    limit(n)
+        self._limit = n
+        return self
+    end
+
+    offset(n)
+        self._offset = n
+        return self
+    end
+
+    # ─── SQL Assembly ─────────────────────────────────────────────────────────
+
+    _escapeVal(val)
+        if isNull(val)
+            return "NULL"
+        end
+        return "'" + self._conn.escape(str(val)) + "'"
+    end
+
+    _buildWhere()
+        if self._wheres.length() == 0
+            return ""
+        end
+        let parts = []
+        for w in self._wheres
+            let f = w["field"]
+            let op = w["op"]
+            let v = w["val"]
+
+            if op == "IS NULL"
+                parts.append("`${f}` IS NULL")
+            elif op == "IS NOT NULL"
+                parts.append("`${f}` IS NOT NULL")
+            elif op == "IN"
+                if isArray(v)
+                    let escaped = []
+                    for item in v
+                        escaped.append(self._escapeVal(item))
+                    end
+                    let joined = ""
+                    for i, e in escaped
+                        if i > 0
+                            joined += ", "
+                        end
+                        joined += e
+                    end
+                    parts.append("`${f}` IN (${joined})")
+                end
+            elif op == "BETWEEN"
+                if isArray(v) and v.length() >= 2
+                    parts.append("`${f}` BETWEEN ${self._escapeVal(v[0])} AND ${self._escapeVal(v[1])}")
+                end
+            else
+                parts.append("`${f}` ${op} ${self._escapeVal(v)}")
+            end
+        end
+        let clause = ""
+        for i, p in parts
+            if i > 0
+                clause += " AND "
+            end
+            clause += p
+        end
+        return " WHERE " + clause
+    end
+
+    _buildSelect()
+        if self._selects.length() == 0
+            return "*"
+        end
+        let cols = ""
+        for i, c in self._selects
+            if i > 0
+                cols += ", "
+            end
+            cols += "`${c}`"
+        end
+        return cols
+    end
+
+    _buildOrder()
+        if self._orders.length() == 0
+            return ""
+        end
+        let parts = []
+        for o in self._orders
+            parts.append("`${o["field"]}` ${o["dir"]}")
+        end
+        let clause = ""
+        for i, p in parts
+            if i > 0
+                clause += ", "
+            end
+            clause += p
+        end
+        return " ORDER BY " + clause
+    end
+
+    _buildLimit()
+        let s = ""
+        if !isNull(self._limit)
+            s += " LIMIT " + str(self._limit)
+        end
+        if !isNull(self._offset)
+            s += " OFFSET " + str(self._offset)
+        end
+        return s
+    end
+
+    # ─── Terminal methods ─────────────────────────────────────────────────────
+
+    # Execute SELECT → Array of Maps
+    get()
+        let sql = "SELECT " + self._buildSelect() + " FROM `${self._table}`"
+        sql += self._buildWhere()
+        sql += self._buildOrder()
+        sql += self._buildLimit()
+        let rs = self._conn.query(sql)
+        self._reset()
+        if isNull(rs) return [] end
+        let rows = []
+        let row = rs.fetchAssoc()
+        while !isNull(row)
+            rows.append(row)
+            row = rs.fetchAssoc()
+        end
+        return rows
+    end
+
+    # Execute SELECT → first row only (or Null)
+    first()
+        self.limit(1)
+        let rows = self.get()
+        if rows.length() == 0
+            return Null
+        end
+        return rows[0]
+    end
+
+    # COUNT(*) → Number
+    count()
+        let sql = "SELECT COUNT(*) as `_count` FROM `${self._table}`"
+        sql += self._buildWhere()
+        let rs = self._conn.query(sql)
+        self._reset()
+        if isNull(rs) return 0 end
+        let row = rs.fetchAssoc()
+        if isNull(row) return 0 end
+        return num(row.get("_count", 0))
+    end
+
+    # EXISTS → Boolean
+    exists()
+        return self.count() > 0
+    end
+
+    # INSERT Map → insert ID (Number)
+    insert(data)
+        let cols = ""
+        let vals = ""
+        let keys = data.keys()
+        for i, k in keys
+            if i > 0
+                cols += ", "
+                vals += ", "
+            end
+            cols += "`${k}`"
+            vals += self._escapeVal(data[k])
+        end
+        let sql = "INSERT INTO `${self._table}` (${cols}) VALUES (${vals})"
+        self._reset()
+        self._conn.execute(sql)
+        return self._conn.insertId()
+    end
+
+    # INSERT or ignore duplicates
+    insertIgnore(data)
+        let cols = ""
+        let vals = ""
+        let keys = data.keys()
+        for i, k in keys
+            if i > 0
+                cols += ", "
+                vals += ", "
+            end
+            cols += "`${k}`"
+            vals += self._escapeVal(data[k])
+        end
+        let sql = "INSERT OR IGNORE INTO `${self._table}` (${cols}) VALUES (${vals})"
+        self._reset()
+        return self._conn.execute(sql)
+    end
+
+    # UPDATE → True/False
+    update(data)
+        let sets = ""
+        let keys = data.keys()
+        for i, k in keys
+            if i > 0
+                sets += ", "
+            end
+            sets += "`${k}` = ${self._escapeVal(data[k])}"
+        end
+        let sql = "UPDATE `${self._table}` SET ${sets}"
+        sql += self._buildWhere()
+        self._reset()
+        return self._conn.execute(sql)
+    end
+
+    # DELETE → True/False
+    delete()
+        let sql = "DELETE FROM `${self._table}`"
+        sql += self._buildWhere()
+        self._reset()
+        return self._conn.execute(sql)
+    end
+
+    # Execute raw SQL → Array of Maps (SELECT) or True/False (non-SELECT)
+    raw(sql)
+        let trimmed = sql.strip().upper()
+        if trimmed.startsWith("SELECT")
+            let rs = self._conn.query(sql)
+            if isNull(rs) return [] end
+            let rows = []
+            let row = rs.fetchAssoc()
+            while !isNull(row)
+                rows.append(row)
+                row = rs.fetchAssoc()
+            end
+            return rows
+        end
+        return self._conn.execute(sql)
+    end
+
+    # ─── Pagination ───────────────────────────────────────────────────────────
+    # Returns a pagination result map:
+    # {
+    #   "data":        [...],   ← the rows for this page
+    #   "total":       50,      ← total matching rows
+    #   "perPage":     10,      ← items per page
+    #   "currentPage": 2,       ← current page (1-indexed)
+    #   "lastPage":    5,       ← total number of pages
+    #   "from":        11,      ← index of first item on this page
+    #   "to":          20,      ← index of last item on this page
+    #   "hasNext":     True,    ← is there a next page?
+    #   "hasPrev":     True,    ← is there a previous page?
+    # }
+    #
+    # Usage:
+    #   let p = Model.where("active", 1).orderBy("id").paginate(page, 10)
+    #   for row in p["data"] ... end
+    #   if p["hasNext"] ... end
+    paginate(page = 1, perPage = 15)
+        # Clamp page to >= 1
+        if page < 1
+            page = 1
+        end
+        if perPage < 1
+            perPage = 1
+        end
+
+        # COUNT query — clone current filters without limit/offset
+        let count_qb = QueryBuilder(self._conn)
+        count_qb._table = self._table
+        for w in self._wheres
+            count_qb._wheres.append(w)
+        end
+        let total = count_qb.count()
+
+        # Calculate last page
+        let lastPage = 1
+        if total > 0
+            lastPage = (total + perPage - 1) / perPage
+            # integer division floor
+            lastPage = num(str(lastPage).split(".")[0])
+        end
+
+        # Clamp current page
+        if page > lastPage
+            page = lastPage
+        end
+
+        let offsetVal = (page - 1) * perPage
+
+        # Apply pagination to current builder
+        self._limit = perPage
+        self._offset = offsetVal
+        let rows = self.get()
+
+        let fromItem = 0
+        let toItem = 0
+        if total > 0
+            fromItem = offsetVal + 1
+            toItem = offsetVal + rows.length()
+        end
+
+        return {
+            "data":        rows,
+            "total":       total,
+            "perPage":     perPage,
+            "currentPage": page,
+            "lastPage":    lastPage,
+            "from":        fromItem,
+            "to":          toItem,
+            "hasNext":     page < lastPage,
+            "hasPrev":     page > 1
+        }
+    end
+end
+
+# ─── DB helper: attach .table() to a connection directly ─────────────────────
+fn table(conn, name)
+    return QueryBuilder(conn).table(name)
+end

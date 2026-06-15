@@ -1,0 +1,56 @@
+# shapes.dz — Raylib Shapes classes for Djazair
+let rl = __native("_raylib")
+
+fn _extractColor(c)
+    if rl.isColor(c)
+        return c.raw
+    end
+    return c
+end
+
+class Circle
+    init(x, y, radius, color)
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.color = color
+    end
+
+    draw()
+        rl.drawCircle(self.x, self.y, self.radius, _extractColor(self.color))
+    end
+
+    drawLines()
+        rl.drawCircleLines(self.x, self.y, self.radius, _extractColor(self.color))
+    end
+
+    checkCollision(other)
+        return rl.checkCollisionCircles(self.x, self.y, self.radius, other.x, other.y, other.radius)
+    end
+end
+
+class Rectangle
+    init(x, y, w, h, color)
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.color = color
+    end
+
+    draw()
+        rl.drawRectangle(self.x, self.y, self.w, self.h, _extractColor(self.color))
+    end
+
+    drawLines()
+        rl.drawRectangleLines(self.x, self.y, self.w, self.h, _extractColor(self.color))
+    end
+
+    drawGradientV(color2)
+        rl.drawRectangleGradientV(self.x, self.y, self.w, self.h, _extractColor(self.color), _extractColor(color2))
+    end
+
+    checkCollision(other)
+        return rl.checkCollisionRecs(self.x, self.y, self.w, self.h, other.x, other.y, other.w, other.h)
+    end
+end

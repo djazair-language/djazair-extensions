@@ -1,0 +1,304 @@
+# init.dz — Raylib Fully Object-Oriented Wrapper for Djazair
+let rl = __dynamic("raylib")
+use assert
+
+import "constants.dz" as const
+import "types.dz" as types
+import "shapes.dz" as shapes
+import "media.dz" as media
+import "camera.dz" as cam
+
+# --- Re-export Constants ---
+let WHITE       = const.WHITE
+let RAYWHITE    = const.RAYWHITE
+let BLACK       = const.BLACK
+let RED         = const.RED
+let GREEN       = const.GREEN
+let BLUE        = const.BLUE
+let YELLOW      = const.YELLOW
+let ORANGE      = const.ORANGE
+let PINK        = const.PINK
+let PURPLE      = const.PURPLE
+let GOLD        = const.GOLD
+let LIME        = const.LIME
+let DARKGRAY    = const.DARKGRAY
+let GRAY        = const.GRAY
+let LIGHTGRAY   = const.LIGHTGRAY
+let MAROON      = const.MAROON
+let DARKGREEN   = const.DARKGREEN
+let DARKBLUE    = const.DARKBLUE
+let DARKPURPLE  = const.DARKPURPLE
+let VIOLET      = const.VIOLET
+let BEIGE       = const.BEIGE
+let BROWN       = const.BROWN
+let MAGENTA     = const.MAGENTA
+let SKYBLUE     = const.SKYBLUE
+let BLANK       = const.BLANK
+
+let KEY_RIGHT   = const.KEY_RIGHT
+let KEY_LEFT    = const.KEY_LEFT
+let KEY_DOWN    = const.KEY_DOWN
+let KEY_UP      = const.KEY_UP
+let KEY_SPACE   = const.KEY_SPACE
+let KEY_ENTER   = const.KEY_ENTER
+let KEY_ESCAPE  = const.KEY_ESCAPE
+let KEY_A       = const.KEY_A
+let KEY_B       = const.KEY_B
+let KEY_C       = const.KEY_C
+let KEY_D       = const.KEY_D
+let KEY_E       = const.KEY_E
+let KEY_F       = const.KEY_F
+let KEY_G       = const.KEY_G
+let KEY_H       = const.KEY_H
+let KEY_I       = const.KEY_I
+let KEY_J       = const.KEY_J
+let KEY_K       = const.KEY_K
+let KEY_L       = const.KEY_L
+let KEY_M       = const.KEY_M
+let KEY_N       = const.KEY_N
+let KEY_O       = const.KEY_O
+let KEY_P       = const.KEY_P
+let KEY_Q       = const.KEY_Q
+let KEY_R       = const.KEY_R
+let KEY_S       = const.KEY_S
+let KEY_T       = const.KEY_T
+let KEY_U       = const.KEY_U
+let KEY_V       = const.KEY_V
+let KEY_W       = const.KEY_W
+let KEY_X       = const.KEY_X
+let KEY_Y       = const.KEY_Y
+let KEY_Z       = const.KEY_Z
+
+let KEY_0       = const.KEY_0
+let KEY_1       = const.KEY_1
+let KEY_2       = const.KEY_2
+let KEY_3       = const.KEY_3
+let KEY_4       = const.KEY_4
+let KEY_5       = const.KEY_5
+let KEY_6       = const.KEY_6
+let KEY_7       = const.KEY_7
+let KEY_8       = const.KEY_8
+let KEY_9       = const.KEY_9
+
+let KEY_BACKSPACE     = const.KEY_BACKSPACE
+let KEY_TAB           = const.KEY_TAB
+let KEY_LEFT_SHIFT    = const.KEY_LEFT_SHIFT
+let KEY_LEFT_CONTROL  = const.KEY_LEFT_CONTROL
+let KEY_LEFT_ALT      = const.KEY_LEFT_ALT
+let KEY_RIGHT_SHIFT   = const.KEY_RIGHT_SHIFT
+let KEY_RIGHT_CONTROL = const.KEY_RIGHT_CONTROL
+let KEY_RIGHT_ALT     = const.KEY_RIGHT_ALT
+let KEY_DELETE        = const.KEY_DELETE
+let KEY_INSERT        = const.KEY_INSERT
+let KEY_HOME          = const.KEY_HOME
+let KEY_END           = const.KEY_END
+let KEY_PAGE_UP       = const.KEY_PAGE_UP
+let KEY_PAGE_DOWN     = const.KEY_PAGE_DOWN
+let KEY_CAPS_LOCK     = const.KEY_CAPS_LOCK
+let KEY_NUM_LOCK      = const.KEY_NUM_LOCK
+let KEY_PRINT_SCREEN  = const.KEY_PRINT_SCREEN
+let KEY_PAUSE         = const.KEY_PAUSE
+
+let KEY_F1  = const.KEY_F1
+let KEY_F2  = const.KEY_F2
+let KEY_F3  = const.KEY_F3
+let KEY_F4  = const.KEY_F4
+let KEY_F5  = const.KEY_F5
+let KEY_F6  = const.KEY_F6
+let KEY_F7  = const.KEY_F7
+let KEY_F8  = const.KEY_F8
+let KEY_F9  = const.KEY_F9
+let KEY_F10 = const.KEY_F10
+let KEY_F11 = const.KEY_F11
+let KEY_F12 = const.KEY_F12
+
+let MOUSE_LEFT_BUTTON   = const.MOUSE_LEFT_BUTTON
+let MOUSE_RIGHT_BUTTON  = const.MOUSE_RIGHT_BUTTON
+let MOUSE_MIDDLE_BUTTON = const.MOUSE_MIDDLE_BUTTON
+
+# --- Re-export Types ---
+let Vector2 = types.Vector2
+let Color   = types.Color
+
+# --- Re-export Shapes ---
+let Circle    = shapes.Circle
+let Rectangle = shapes.Rectangle
+
+# --- Re-export Media ---
+let Texture = media.Texture
+let Text    = media.Text
+let Sound   = media.Sound
+let Audio   = media.Audio
+let Font    = media.Font
+let Music   = media.Music
+
+# --- Re-export Camera ---
+let Camera2D = cam.Camera2D
+
+# --- Internal Helper ---
+fn _extractColor(c)
+    if rl.isColor(c)
+        return c.raw
+    end
+    return c
+end
+
+# --- Standalone API Functions ---
+let initWindow      = rl.init
+let closeWindow     = rl.close
+let shouldClose     = rl.shouldClose
+let setTargetFPS    = rl.setTargetFPS
+let beginDrawing    = rl.beginDrawing
+let drawCircleLines = rl.drawCircleLines
+let drawLine        = rl.drawLine
+let endDrawing      = rl.endDrawing
+
+fn clearBackground(color)
+    rl.clearBackground(_extractColor(color))
+end
+
+fn drawText(text, x, y, size, color)
+    assert.string(text, "text")
+    assert.number(x, "x")
+    assert.number(y, "y")
+    assert.number(size, "size")
+    rl.drawText(text, x, y, size, _extractColor(color))
+end
+
+fn drawRectangle(x, y, w, h, color)
+    rl.drawRectangle(x, y, w, h, _extractColor(color))
+end
+
+fn drawCircle(x, y, radius, color)
+    rl.drawCircle(x, y, radius, _extractColor(color))
+end
+
+fn drawCircleLines(x, y, radius, color)
+    rl.drawCircleLines(x, y, radius, _extractColor(color))
+end
+
+fn drawLine(x1, y1, x2, y2, color)
+    rl.drawLine(x1, y1, x2, y2, _extractColor(color))
+end
+
+fn drawLineEx(x1, y1, x2, y2, thickness, color)
+    rl.drawLineEx(x1, y1, x2, y2, thickness, _extractColor(color))
+end
+
+fn drawRectangleLines(x, y, w, h, color)
+    rl.drawRectangleLines(x, y, w, h, _extractColor(color))
+end
+
+fn drawRectangleGradientV(x, y, w, h, color1, color2)
+    rl.drawRectangleGradientV(x, y, w, h, _extractColor(color1), _extractColor(color2))
+end
+
+fn drawTriangle(v1x, v1y, v2x, v2y, v3x, v3y, color)
+    rl.drawTriangle(v1x, v1y, v2x, v2y, v3x, v3y, _extractColor(color))
+end
+
+fn drawTriangleLines(v1x, v1y, v2x, v2y, v3x, v3y, color)
+    rl.drawTriangleLines(v1x, v1y, v2x, v2y, v3x, v3y, _extractColor(color))
+end
+
+fn drawPoly(x, y, sides, radius, rotation, color)
+    rl.drawPoly(x, y, sides, radius, rotation, _extractColor(color))
+end
+
+fn drawRectangleRounded(x, y, w, h, roundness, segments, color)
+    rl.drawRectangleRounded(x, y, w, h, roundness, segments, _extractColor(color))
+end
+
+fn drawEllipse(centerX, centerY, radiusH, radiusV, color)
+    rl.drawEllipse(centerX, centerY, radiusH, radiusV, _extractColor(color))
+end
+
+let isKeyDown       = rl.isKeyDown
+let isKeyPressed    = rl.isKeyPressed
+let isKeyReleased   = rl.isKeyReleased
+let isKeyUp         = rl.isKeyUp
+let getKeyPressed   = rl.getKeyPressed
+let getCharPressed  = rl.getCharPressed
+let isMouseButtonDown = rl.isMouseButtonDown
+let isMouseButtonReleased = rl.isMouseButtonReleased
+let isMouseButtonUp   = rl.isMouseButtonUp
+let getMouseWheelMove = rl.getMouseWheelMove
+let getMouseX       = rl.getMouseX
+let getMouseY       = rl.getMouseY
+let isMouseButtonPressed = rl.isMouseButtonPressed
+let getScreenWidth  = rl.getScreenWidth
+let getScreenHeight = rl.getScreenHeight
+let getFrameTime    = rl.getFrameTime
+let getFPS          = rl.getFPS
+let setWindowTitle  = rl.setWindowTitle
+let setWindowSize   = rl.setWindowSize
+let getRandomValue  = rl.getRandomValue
+let hideCursor      = rl.hideCursor
+let showCursor      = rl.showCursor
+let getTime         = rl.getTime
+let measureText     = rl.measureText
+let checkCollisionRecs = rl.checkCollisionRecs
+let checkCollisionCircles = rl.checkCollisionCircles
+let beginMode2D     = rl.beginMode2D
+let endMode2D       = rl.endMode2D
+let drawTextureRec  = rl.drawTextureRec
+let drawTextureEx   = rl.drawTextureEx
+let loadFont        = rl.loadFont
+let unloadFont      = rl.unloadFont
+let drawTextEx      = rl.drawTextEx
+let toggleFullscreen = rl.toggleFullscreen
+let isWindowResized = rl.isWindowResized
+let checkCollisionCircleRec = rl.checkCollisionCircleRec
+let checkCollisionPointRec = rl.checkCollisionPointRec
+let getScreenToWorld2D = rl.getScreenToWorld2D
+let getWorldToScreen2D = rl.getWorldToScreen2D
+
+# --- Window class wrapper ---
+class Window
+    init(w, h, title)
+        assert.number(w, "width")
+        assert.number(h, "height")
+        assert.string(title, "title")
+        initWindow(w, h, title)
+        self.width = w
+        self.height = h
+    end
+
+    isOpen()
+        return !shouldClose()
+    end
+
+    begin()
+        beginDrawing()
+    end
+
+    finish()
+        endDrawing()
+    end
+
+    clear(color)
+        clearBackground(color)
+    end
+
+    close()
+        closeWindow()
+    end
+
+    setFPS(fps)
+        setTargetFPS(fps)
+    end
+
+    setTitle(title)
+        setWindowTitle(title)
+    end
+
+    setSize(w, h)
+        setWindowSize(w, h)
+        self.width = w
+        self.height = h
+    end
+
+    getFPS()
+        return getFPS()
+    end
+end

@@ -1,0 +1,5 @@
+let _native = __native("_webview")
+
+fn notificationShow(title, message, subtitle="", sound=False, icon="", timeout=5)
+    _native.notificationShow(title, message, subtitle, sound, icon, timeout)
+end

@@ -1,0 +1,19 @@
+use process
+use file
+use path
+
+let _baseDir = process.scriptDir()
+
+fn readWebviewAsset(name)
+    let candidates = [
+        path.normalize(path.join(_baseDir, "js", name)),
+        "assets/js/" + name,
+        name
+    ]
+    for candidate in candidates
+        if file.exists(candidate)
+            return file.read(candidate)
+        end
+    end
+    throw "WebviewAssetError: cannot find asset '" + name + "'"
+end

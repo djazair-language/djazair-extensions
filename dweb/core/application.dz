@@ -1,0 +1,304 @@
+use http
+use file
+use path
+use process
+
+import "router.dz"         as router_lib
+import "request.dz"        as request_lib
+import "response.dz"       as response_lib
+import "../db/connection.dz"    as db_lib
+import "../db/query_builder.dz" as qb_lib
+import "../session/session.dz"  as session_lib
+import "../csrf/csrf.dz"        as csrf_lib
+import "../flash/flash.dz"      as flash_lib
+
+let MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".txt": "text/plain",
+    ".xml": "application/xml",
+    ".pdf": "application/pdf"
+}
+
+class App
+    init(options = {})
+        if isNull(options) then options = {} end
+        self._router    = router_lib.Router()
+        self.static_routes = {}
+        # Views base directory — templates are resolved relative to this.
+        # Default: directory of the entry script.
+        self._views_dir = options.get("views", process.scriptDir())
+    end
+
+    # Set (or override) the views base directory at runtime.
+    setViews(dir)
+        self._views_dir = dir
+        return self
+    end
+
+    middleware(handler)
+        self._router.middleware(handler)
+    end
+
+    get(path, handler, middlewares = [])
+        self._router.get(path, handler, middlewares)
+    end
+
+    post(path, handler, middlewares = [])
+        self._router.post(path, handler, middlewares)
+    end
+
+    put(path, handler, middlewares = [])
+        self._router.put(path, handler, middlewares)
+    end
+
+    patch(path, handler, middlewares = [])
+        self._router.patch(path, handler, middlewares)
+    end
+
+    delete(path, handler, middlewares = [])
+        self._router.delete(path, handler, middlewares)
+    end
+
+    named(method, path, name)
+        self._router.named(method, path, name)
+    end
+
+    group(prefix, callback)
+        self._router.group(prefix, callback)
+    end
+
+    mount(prefix, subRouter)
+        self._router.mount(prefix, subRouter)
+    end
+
+    url(name, params = {})
+        return self._router.url(name, params)
+    end
+
+    serveStatic(url_prefix, dir_path = ".")
+        self.static_routes[self._normalizeStaticPrefix(url_prefix)] = path.resolve(dir_path)
+    end
+
+    # ─── Database helpers ──────────────────────────────────────────────────────
+    # Returns a lazy MySQL connection configured from a Map.
+    db(config)
+        return db_lib.mysql(config)
+    end
+
+    # Returns a lazy SQLite connection.
+    sqlite(db_path)
+        return db_lib.sqlite(db_path)
+    end
+
+    # Returns a QueryBuilder bound to the given connection.
+    table(conn, name)
+        return qb_lib.table(conn, name)
+    end
+
+    # Returns a new SessionStore (plug into app.middleware).
+    sessions(options = {})
+        return session_lib.SessionStore(options)
+    end
+
+    # Returns the CSRF middleware function.
+    csrf()
+        return csrf_lib.CsrfMiddleware
+    end
+
+    _normalizeStaticPrefix(prefix)
+        if isNull(prefix) or prefix == ""
+            return "/"
+        end
+        let p = str(prefix).replace("\\", "/")
+        if !p.startsWith("/")
+            p = "/" + p
+        end
+        while p.length() > 1 and p.endsWith("/")
+            p = p.slice(0, p.length() - 1)
+        end
+        return p
+    end
+
+    _matchesStaticPrefix(reqPath, prefix)
+        if prefix == "/"
+            return True
+        end
+        return reqPath == prefix or reqPath.startsWith(prefix + "/")
+    end
+
+    _staticRelativePath(reqPath, prefix)
+        let rel = reqPath
+        if prefix != "/"
+            rel = reqPath.slice(prefix.length())
+        end
+        while rel.length() > 0 and rel.startsWith("/")
+            rel = rel.slice(1)
+        end
+        if rel == ""
+            rel = "index.html"
+        end
+        return path.normalize(rel).replace("\\", "/")
+    end
+
+    _contentType(file_path)
+        let ext = path.extname(file_path).lower()
+        return MIME_TYPES.get(ext, "application/octet-stream")
+    end
+
+    _tryServeStatic(req, res)
+        let keys = self.static_routes.keys()
+        for prefix in keys
+            if self._matchesStaticPrefix(req.path, prefix)
+                let base_dir = self.static_routes[prefix]
+                let rel_file = self._staticRelativePath(req.path, prefix)
+                if rel_file.startsWith("../") or rel_file == ".." or rel_file.contains("/../")
+                    res.status(403).html(self._errorPage(403, "Forbidden", "Static file access denied."))
+                    return True
+                end
+                let file_path = path.join(base_dir, rel_file)
+                if !path.isSafe(base_dir, file_path)
+                    res.status(403).html(self._errorPage(403, "Forbidden", "Static file access denied."))
+                    return True
+                end
+                if file.exists(file_path)
+                    let st = file.stat(file_path)
+                    if st["isDirectory"]
+                        let index_path = path.join(file_path, "index.html")
+                        if file.exists(index_path) and !file.stat(index_path)["isDirectory"]
+                            res.header("Content-Type", self._contentType(index_path)).send(file.read(index_path))
+                            return True
+                        end
+                    else
+                        let ctype = self._contentType(file_path)
+                        res.header("Content-Type", ctype)
+                        if ctype.startsWith("text/") or ctype == "application/javascript" or ctype == "application/json" or ctype == "image/svg+xml" or ctype == "application/xml"
+                            res.send(file.read(file_path))
+                        else
+                            res._res.sendBytes(file.readBytes(file_path))
+                        end
+                        return True
+                    end
+                end
+            end
+        end
+        return False
+    end
+
+    _errorPage(code, title, message)
+        let styles = "
+            <style>
+                *{margin:0;padding:0;box-sizing:border-box}
+                body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f16;color:#cdd6f4;height:100vh;display:flex;justify-content:center;align-items:center}
+                .card{background:rgba(30,30,46,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:50px 40px;max-width:520px;width:90%;text-align:center;animation:fadeIn 0.5s ease-out}
+                @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+                .code{font-size:4.5rem;font-weight:800;background:linear-gradient(135deg,#f38ba8,#f9e2af);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
+                h1{font-size:1.3rem;font-weight:700;margin:15px 0 10px}
+                p{color:#a6adc8;font-size:0.9rem;margin-bottom:20px}
+                pre{background:rgba(17,17,27,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:15px;font-size:0.8rem;color:#f38ba8;text-align:left;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+                a{display:inline-block;margin-top:20px;padding:10px 24px;border-radius:8px;background:linear-gradient(135deg,#b4befe,#89b4fa);color:#11111b;font-weight:700;text-decoration:none;font-size:0.85rem}
+            </style>
+        "
+        return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><title>" + str(code) + " " + title + "</title>" + styles + "</head><body><div class=\"card\"><div class=\"code\">" + str(code) + "</div><h1>" + title + "</h1><p>" + message + "</p></div></body></html>"
+    end
+
+    run(port = 8080)
+        let app_instance = self
+        let srv = http.createServer(fn(reqRaw, resRaw)
+            try
+                let req = request_lib.Request(reqRaw)
+                let res = response_lib.Response(resRaw)
+                req.res = res
+                res._req = req
+                res.setBaseDir(app_instance._views_dir)
+
+                if app_instance._tryServeStatic(req, res)
+                    return
+                end
+
+                let matched = app_instance._router._match(req.method, req.path)
+
+                if !isNull(matched)
+                    req.pathParams = matched["params"]
+                end
+
+                let chain = []
+                let global_mws = app_instance._router._middlewares
+                for mw in global_mws
+                    chain.append(mw)
+                end
+
+                if !isNull(matched)
+                    let route_mws = matched["middlewares"]
+                    for mw in route_mws
+                        chain.append(mw)
+                    end
+                end
+
+                if !isNull(matched)
+                    let handler = matched["handler"]
+                    chain.append(fn(request, response, next)
+                        try
+                            if isArray(handler) and handler.length() == 2
+                                let CtrlClass = handler[0]
+                                let methodName = handler[1]
+                                let ctrl_instance = CtrlClass()
+                                ctrl_instance[methodName](request, response)
+                            else
+                                handler(request, response)
+                            end
+                        catch e
+                            let errMsg = str(e)
+                            response.status(500).html(app_instance._errorPage(500, "Internal Server Error", errMsg))
+                        end
+                    end)
+                else
+                    chain.append(fn(request, response, next)
+                        response.status(404).html(app_instance._errorPage(404, "Not Found", "The requested path <strong>" + request.path + "</strong> was not found."))
+                    end)
+                end
+
+                let idx = 0
+                let executeChain = Null
+                executeChain = fn()
+                    if idx < chain.length() and !res.isSent()
+                        let current_idx = idx
+                        idx = idx + 1
+                        let current_mw = chain[current_idx]
+                        try
+                            current_mw(req, res, executeChain)
+                        catch e
+                            if !res.isSent()
+                                let errMsg = str(e)
+                                res.status(500).html(app_instance._errorPage(500, "Internal Server Error", errMsg))
+                            end
+                        end
+                    end
+                end
+                executeChain()
+
+            catch e
+                try
+                    let body = app_instance._errorPage(500, "Internal Server Error", "Dispatcher Exception: " + str(e))
+                    resRaw.status(500, "Internal Server Error")
+                    resRaw.setHeader("Content-Type", "text/html; charset=utf-8")
+                    resRaw.send(body)
+                catch err
+                end
+            end
+        end)
+
+        print("Server listening on http://127.0.0.1:" + str(port))
+        srv.listen(port)
+    end
+end

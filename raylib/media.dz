@@ -1,0 +1,130 @@
+# media.dz — Raylib Textures, Audio and Text classes for Djazair
+let rl = __native("_raylib")
+use assert
+
+fn _extractColor(c)
+    if rl.isColor(c)
+        return c.raw
+    end
+    return c
+end
+
+class Texture
+    init(path)
+        assert.string(path, "path")
+        self.res = rl.loadTexture(path)
+    end
+
+    draw(x, y)
+        rl.drawTexture(self.res, x, y)
+    end
+
+    drawRec(srcX, srcY, srcW, srcH, destX, destY, color)
+        rl.drawTextureRec(self.res, srcX, srcY, srcW, srcH, destX, destY, _extractColor(color))
+    end
+
+    drawEx(destX, destY, rotation, scale, color)
+        rl.drawTextureEx(self.res, destX, destY, rotation, scale, _extractColor(color))
+    end
+
+    unload()
+        rl.unloadTexture(self.res)
+    end
+end
+
+class Text
+    init(content, size, color)
+        self.content = content
+        self.size = size
+        self.color = color
+    end
+
+    draw(x, y)
+        rl.drawText(self.content, x, y, self.size, _extractColor(self.color))
+    end
+end
+
+class Sound
+    init(path)
+        assert.string(path, "path")
+        self.res = rl.loadSound(path)
+    end
+
+    play()
+        rl.playSound(self.res)
+    end
+
+    unload()
+        rl.unloadSound(self.res)
+    end
+end
+
+class Audio
+    init()
+        rl.initAudio()
+    end
+
+    close()
+        rl.closeAudio()
+    end
+end
+
+class Font
+    init(path)
+        assert.string(path, "path")
+        self.res = rl.loadFont(path)
+    end
+
+    draw(text, x, y, size, spacing, color)
+        assert.string(text, "text")
+        assert.number(x, "x")
+        assert.number(y, "y")
+        assert.number(size, "size")
+        assert.number(spacing, "spacing")
+        rl.drawTextEx(self.res, text, x, y, size, spacing, _extractColor(color))
+    end
+
+    unload()
+        rl.unloadFont(self.res)
+    end
+end
+
+class Music
+    init(path)
+        assert.string(path, "path")
+        self.res = rl.loadMusicStream(path)
+    end
+
+    play()
+        rl.playMusicStream(self.res)
+    end
+
+    update()
+        rl.updateMusicStream(self.res)
+    end
+
+    stop()
+        rl.stopMusicStream(self.res)
+    end
+
+    pause()
+        rl.pauseMusicStream(self.res)
+    end
+
+    resume()
+        rl.resumeMusicStream(self.res)
+    end
+
+    isPlaying()
+        return rl.isMusicStreamPlaying(self.res)
+    end
+
+    setVolume(vol)
+        assert.number(vol, "vol")
+        rl.setMusicVolume(self.res, vol)
+    end
+
+    unload()
+        rl.unloadMusicStream(self.res)
+    end
+end

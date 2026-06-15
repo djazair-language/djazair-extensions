@@ -1,0 +1,270 @@
+let _native = __native("_webview")
+use process
+use path
+import "../utils/utils.dz" as *
+
+fn createWindow(app, options)
+    sysLog("Window", "Creating native window with title: ${options["title"]}")
+    let h = _native.windowCreate(
+        options["title"], options["width"], options["height"],
+        options["x"], options["y"], options["frameless"], options["resizable"],
+        options["minWidth"], options["minHeight"],
+        options["maxWidth"], options["maxHeight"]
+    )
+    if isNull(h)
+        throw "Failed to create window"
+    end
+
+    let obj = {}
+    obj._handle = h
+    obj._onClose = Null
+    obj._onMove = Null
+    obj._onResize = Null
+    obj._onFocus = Null
+    obj._onBlur = Null
+    obj._onMaximize = Null
+    obj._onMinimize = Null
+    obj._onRestore = Null
+    obj._onNavigate = Null
+    obj._onTitleChange = Null
+    obj._onLoad = Null
+    obj._loaded = False
+
+    let hostName = "djazair.local"
+    let scriptDir = process.scriptDir()
+    let mapped = False
+    try
+        mapped = _native.windowSetVirtualHostMapping(h, hostName, scriptDir)
+    catch err
+        sysLog("Window", "Virtual host mapping not supported or failed: ${err}", "warn")
+    end
+    obj._virtualHostMapped = mapped
+    obj._virtualHostName = hostName
+
+    _native.windowSetCloseCallback(h, fn()
+        sysLog("Window", "Window closed by user")
+        try
+            if !isNull(obj._onClose)
+                obj._onClose()
+            end
+        catch err
+            sysLog("Window", "Error in onClose callback: ${err}", "error")
+        end
+        app.quit()
+    end)
+
+    obj.setTitle = fn(t)
+        _native.windowSetTitle(h, t)
+    end
+
+    obj.title = fn()
+        return _native.windowGetTitle(h)
+    end
+
+    obj.setSize = fn(w, ht)
+        _native.windowSetSize(h, w, ht)
+    end
+
+    obj.getSize = fn()
+        return _native.windowGetSize(h)
+    end
+
+    obj.setPosition = fn(x, y)
+        _native.windowSetPosition(h, x, y)
+    end
+
+    obj.getPosition = fn()
+        return _native.windowGetPosition(h)
+    end
+
+    obj.minimize = fn()     _native.windowMinimize(h) end
+    obj.maximize = fn()     _native.windowMaximize(h) end
+    obj.restore = fn()      _native.windowRestore(h) end
+    obj.hide = fn()         _native.windowHide(h) end
+    obj.show = fn()          _native.windowShow(h) end
+    obj.focus = fn()        _native.windowFocus(h) end
+    obj.isMaximized = fn()  return _native.windowIsMaximized(h) end
+    obj.isMinimized = fn()  return _native.windowIsMinimized(h) end
+    obj.isVisible = fn()    return _native.windowIsVisible(h) end
+
+    obj.setResizable = fn(r)
+        _native.windowSetResizable(h, r)
+    end
+
+    obj.setMinimumSize = fn(w, ht)
+        _native.windowSetMinSize(h, w, ht)
+    end
+
+    obj.setMaximumSize = fn(w, ht)
+        _native.windowSetMaxSize(h, w, ht)
+    end
+
+    obj.setBackgroundColor = fn(r, g, b, a = 255)
+        _native.windowSetBackgroundColor(h, r, g, b, a)
+    end
+
+    let isLocalPath = fn(p)
+        if "://" in p return False end
+        if p.slice(0, 6) == "about:" return False end
+        if p.slice(0, 5) == "data:" return False end
+        return True
+    end
+
+    obj.navigate = fn(url)
+        if isLocalPath(url)
+            if obj._virtualHostMapped
+                let mappedPath = url.replace("\\", "/")
+                if mappedPath.slice(0, 1) == "/"
+                    mappedPath = mappedPath.slice(1)
+                end
+                let localUrl = "http://${obj._virtualHostName}/${mappedPath}"
+                sysLog("Window", "Navigating to local virtual host: ${localUrl}")
+                _native.windowNavigate(h, localUrl)
+            else
+                let absolutePath = path.resolve(path.join(process.scriptDir(), url))
+                absolutePath = absolutePath.replace("\\", "/")
+                if absolutePath.slice(0, 1) != "/"
+                    absolutePath = "/" + absolutePath
+                end
+                let localUrl = "file://" + absolutePath
+                sysLog("Window", "Navigating to local file URL: ${localUrl}")
+                _native.windowNavigate(h, localUrl)
+            end
+        else
+            sysLog("Window", "Navigating to: ${url}")
+            _native.windowNavigate(h, url)
+        end
+    end
+
+    obj.setHtml = fn(html)
+        sysLog("Window", "Setting HTML content...", "debug")
+        _native.windowSetHtml(h, html)
+    end
+
+    obj.eval = fn(jsCode)
+        sysLog("Window", "Evaluating JS code...", "debug")
+        _native.windowEval(h, jsCode)
+    end
+
+    obj.initJs = fn(jsCode)
+        _native.windowInit(h, jsCode)
+    end
+
+    obj.reload = fn()          _native.windowReload(h) end
+    obj.goBack = fn()          _native.windowGoBack(h) end
+    obj.goForward = fn()       _native.windowGoForward(h) end
+    obj.canGoBack = fn()       return _native.windowCanGoBack(h) end
+    obj.canGoForward = fn()    return _native.windowCanGoForward(h) end
+    obj.setZoomLevel = fn(l)   _native.windowSetZoomLevel(h, l) end
+    obj.zoomLevel = fn()       return _native.windowGetZoomLevel(h) end
+    obj.openDevTools = fn()    _native.windowOpenDevTools(h) end
+    obj.getUrl = fn()          return _native.windowGetUrl(h) end
+    obj.setContextMenuEnabled = fn(e) _native.windowSetContextMenu(h, e) end
+    obj.isLoaded = fn()        return obj._loaded end
+
+    obj.onClose = fn(cb)
+        obj._onClose = cb
+    end
+
+    obj.onMove = fn(cb)
+        obj._onMove = cb
+        _native.windowSetMoveCallback(h, fn(x, y)
+            if !isNull(obj._onMove)
+                obj._onMove(x, y)
+            end
+        end)
+    end
+
+    obj.onResize = fn(cb)
+        obj._onResize = cb
+        _native.windowSetResizeCallback(h, fn(width, height)
+            if !isNull(obj._onResize)
+                obj._onResize(width, height)
+            end
+        end)
+    end
+
+    obj.onFocus = fn(cb)
+        obj._onFocus = cb
+        _native.windowSetFocusCallback(h, fn()
+            if !isNull(obj._onFocus)
+                obj._onFocus()
+            end
+        end)
+    end
+
+    obj.onBlur = fn(cb)
+        obj._onBlur = cb
+        _native.windowSetBlurCallback(h, fn()
+            if !isNull(obj._onBlur)
+                obj._onBlur()
+            end
+        end)
+    end
+
+    obj.onMaximize = fn(cb)
+        obj._onMaximize = cb
+        _native.windowSetMaximizeCallback(h, fn()
+            if !isNull(obj._onMaximize)
+                obj._onMaximize()
+            end
+        end)
+    end
+
+    obj.onMinimize = fn(cb)
+        obj._onMinimize = cb
+        _native.windowSetMinimizeCallback(h, fn()
+            if !isNull(obj._onMinimize)
+                obj._onMinimize()
+            end
+        end)
+    end
+
+    obj.onRestore = fn(cb)
+        obj._onRestore = cb
+        _native.windowSetRestoreCallback(h, fn()
+            if !isNull(obj._onRestore)
+                obj._onRestore()
+            end
+        end)
+    end
+
+    obj.onNavigate = fn(cb)
+        obj._onNavigate = cb
+        _native.windowSetNavigateCallback(h, fn(url)
+            if !isNull(obj._onNavigate)
+                obj._onNavigate(url)
+            end
+        end)
+    end
+
+    obj.onTitleChange = fn(cb)
+        obj._onTitleChange = cb
+        _native.windowSetTitleCallback(h, fn(title)
+            if !isNull(obj._onTitleChange)
+                obj._onTitleChange(title)
+            end
+        end)
+    end
+
+    obj.onLoad = fn(cb)
+        obj._onLoad = cb
+        _native.windowSetLoadCallback(h, fn()
+            sysLog("Window", "Window content fully loaded")
+            obj._loaded = True
+            if !isNull(obj._onLoad)
+                obj._onLoad()
+            end
+        end)
+    end
+
+    return obj
+end
+
+fn closeWindow(win)
+    if isNull(win._handle) return end
+    sysLog("Window", "Destroying native window handle...")
+    _native.windowSetCloseCallback(win._handle, Null)
+    _native.windowDestroy(win._handle)
+    win._handle = Null
+end

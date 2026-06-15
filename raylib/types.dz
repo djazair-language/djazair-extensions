@@ -1,0 +1,31 @@
+# types.dz — Raylib helper types for Djazair
+
+class Vector2
+    init(x, y)
+        self.x = x
+        self.y = y
+    end
+
+    add(other)
+        return Vector2(self.x + other.x, self.y + other.y)
+    end
+
+    sub(other)
+        return Vector2(self.x - other.x, self.y - other.y)
+    end
+
+    scale(factor)
+        return Vector2(self.x * factor, self.y * factor)
+    end
+end
+
+class Color
+    init(r, g, b, a)
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+        # Raw data for C layer
+        self.raw = [r, g, b, a]
+    end
+end

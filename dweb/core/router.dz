@@ -1,0 +1,165 @@
+import "route.dz" as route_lib
+
+class Router
+    init()
+        self._exact = {
+            "GET": {}, "POST": {}, "PUT": {},
+            "PATCH": {}, "DELETE": {}, "OPTIONS": {}
+        }
+        self._pattern = {
+            "GET": [], "POST": [], "PUT": [],
+            "PATCH": [], "DELETE": [], "OPTIONS": []
+        }
+        self._namedRoutes = {}
+        self._middlewares = []
+    end
+
+    middleware(handler)
+        self._middlewares.append(handler)
+    end
+
+    get(path, handler, middlewares = [])
+        self._register("GET", path, handler, Null, middlewares)
+    end
+
+    post(path, handler, middlewares = [])
+        self._register("POST", path, handler, Null, middlewares)
+    end
+
+    put(path, handler, middlewares = [])
+        self._register("PUT", path, handler, Null, middlewares)
+    end
+
+    patch(path, handler, middlewares = [])
+        self._register("PATCH", path, handler, Null, middlewares)
+    end
+
+    delete(path, handler, middlewares = [])
+        self._register("DELETE", path, handler, Null, middlewares)
+    end
+
+    named(method, path, name)
+        if self._exact.has(method) and self._exact[method].has(path)
+            let r = self._exact[method][path]
+            r.name = name
+            self._namedRoutes[name] = r
+        else
+            for r in self._pattern[method]
+                if r.path == path
+                    r.name = name
+                    self._namedRoutes[name] = r
+                    break
+                end
+            end
+        end
+    end
+
+    _register(method, path, handler, name = Null, middlewares = [])
+        let r = route_lib.Route(method, path, handler, name, middlewares)
+        if r.paramNames.length() == 0
+            self._exact[method][path] = r
+        else
+            self._pattern[method].append(r)
+        end
+        if !isNull(name)
+            self._namedRoutes[name] = r
+        end
+    end
+
+    _match(method, path)
+        if !self._exact.has(method)
+            return Null
+        end
+        if self._exact[method].has(path)
+            let r = self._exact[method][path]
+            return {"handler": r.handler, "params": {}, "middlewares": r.middlewares}
+        end
+        for r in self._pattern[method]
+            let params = r.matches(path)
+            if !isNull(params)
+                return {"handler": r.handler, "params": params, "middlewares": r.middlewares}
+            end
+        end
+        return Null
+    end
+
+    group(prefix, callback)
+        let sub = Router()
+        callback(sub)
+        let methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        for method in methods
+            let exactKeys = sub._exact[method].keys()
+            for k in exactKeys
+                let r = sub._exact[method][k]
+                let mergedPath = prefix + r.path
+                let merged = route_lib.Route(r.method, mergedPath, r.handler, r.name, r.middlewares)
+                if merged.paramNames.length() == 0
+                    self._exact[method][mergedPath] = merged
+                else
+                    self._pattern[method].append(merged)
+                end
+                if !isNull(r.name)
+                    self._namedRoutes[r.name] = merged
+                end
+            end
+            for r in sub._pattern[method]
+                let mergedPath = prefix + r.path
+                let merged = route_lib.Route(r.method, mergedPath, r.handler, r.name, r.middlewares)
+                self._pattern[method].append(merged)
+                if !isNull(r.name)
+                    self._namedRoutes[r.name] = merged
+                end
+            end
+            for mw in sub._middlewares
+                self._middlewares.append(mw)
+            end
+        end
+    end
+
+    mount(prefix, subRouter)
+        let methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        for method in methods
+            let exactKeys = subRouter._exact[method].keys()
+            for k in exactKeys
+                let r = subRouter._exact[method][k]
+                let mergedPath = prefix + r.path
+                let merged = route_lib.Route(r.method, mergedPath, r.handler, r.name, r.middlewares)
+                if merged.paramNames.length() == 0
+                    self._exact[method][mergedPath] = merged
+                else
+                    self._pattern[method].append(merged)
+                end
+                if !isNull(r.name)
+                    self._namedRoutes[r.name] = merged
+                end
+            end
+            for r in subRouter._pattern[method]
+                let mergedPath = prefix + r.path
+                let merged = route_lib.Route(r.method, mergedPath, r.handler, r.name, r.middlewares)
+                self._pattern[method].append(merged)
+                if !isNull(r.name)
+                    self._namedRoutes[r.name] = merged
+                end
+            end
+            for mw in subRouter._middlewares
+                self._middlewares.append(mw)
+            end
+        end
+    end
+
+    url(name, params = {})
+        if isNull(params)
+            params = {}
+        end
+        let r = self._namedRoutes.get(name, Null)
+        if isNull(r)
+            return Null
+        end
+        let result = r.path
+        for p in r.paramNames
+            let val = params.get(p, "")
+            result = result.replace(":" + p, val)
+        end
+        return result
+    end
+end
