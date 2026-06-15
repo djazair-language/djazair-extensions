@@ -1,6 +1,7 @@
 {
     "name": "sqlite",
     "version": "0.1.0",
+    "source": "https://github.com/djazair-language/djazair-sqlite",
     "developer": {
         "name": "Harizi Riyadh",
         "email": "hariziriaydh@gmail.com"

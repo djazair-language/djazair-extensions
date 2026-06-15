@@ -1,6 +1,7 @@
 {
     "name": "dweb",
     "version": "0.1.0",
+    "source": "https://github.com/djazair-language/djazair-dweb",
     "require": {"mysql": "*", "sqlite": "*"},
     "developer": {
         "name": "Harizi Riyadh",

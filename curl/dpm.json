@@ -1,6 +1,7 @@
 {
     "name": "curl",
     "version": "0.1.0",
+    "source": "https://github.com/djazair-language/djazair-curl",
     "developer": {
         "name": "Harizi Riyadh",
         "email": "hariziriaydh@gmail.com"
