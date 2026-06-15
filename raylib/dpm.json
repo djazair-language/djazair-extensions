@@ -1,7 +1,7 @@
 {
     "name": "raylib",
     "version": "0.1.0",
-    "source": "https://github.com/djazair-language/djazair-raylib",
+    "source": "https://github.com/djazair-language/djazair-extensions",
     "developer": {
         "name": "Harizi Riyadh",
         "email": "hariziriaydh@gmail.com"
