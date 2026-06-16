@@ -1,0 +1,23 @@
+# Build artifacts
+*.dll
+*.so
+*.o
+*.obj
+*.exe
+*.lib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# dweb
+dweb/
+
+# DPM dependencies
+dpm_modules/
