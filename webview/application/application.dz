@@ -28,6 +28,7 @@ class App
         end
         self._onReady = Null
         self._onQuit = Null
+        self._errorCallback = Null
         self._quitting = False
         self._bridgeHandlers = {}
         self._debug = defaults["debug"]
@@ -103,6 +104,10 @@ class App
 
     onQuit(cb)
         self._onQuit = cb
+    end
+
+    onError(cb)
+        self._errorCallback = cb
     end
 
     setDebug(enable)

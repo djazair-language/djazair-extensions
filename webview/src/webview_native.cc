@@ -88,7 +88,6 @@ struct WindowContext {
 // -----------------------------------------------------
 static std::mutex g_ctx_mtx;
 static std::unordered_map<int, WindowContext*> g_contexts;
-static int g_active_id = 0;
 static int g_next_id = 100;
 static djazairVM* g_last_vm = nullptr;
 
@@ -323,8 +322,9 @@ extern "C" DJAZAIR_FUNC(nativeAppRun) {
     WindowContext* active_ctx = nullptr;
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
-        auto it = g_contexts.find(g_active_id);
-        if (it != g_contexts.end()) active_ctx = it->second;
+        if (!g_contexts.empty()) {
+            active_ctx = g_contexts.begin()->second;
+        }
     }
     if (active_ctx && active_ctx->wv) {
         active_ctx->wv->run();
@@ -421,7 +421,6 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
         g_contexts[c->id] = c;
-        g_active_id = c->id;
     }
     hook_window_close(c);
 
@@ -485,7 +484,6 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
         g_contexts.erase(id);
-        if (g_active_id == id) g_active_id = 0;
     }
     return djazair_null();
 }
@@ -1510,6 +1508,12 @@ extern "C" DJAZAIR_FUNC(nativeTraySetIcon) {
     return djazair_null();
 }
 
+extern "C" DJAZAIR_FUNC(nativeTraySetMenu) {
+    djazair_check_args(2, argCount);
+    djazair_check_num(0); djazair_check_num(1);
+    return djazair_null();
+}
+
 extern "C" DJAZAIR_FUNC(nativeTraySetTooltip) {
     djazair_check_args(2, argCount);
     djazair_check_num(0); djazair_check_str(1);
@@ -1632,6 +1636,7 @@ static NativeMethod webview_methods[] = {
     // Tray
     {"trayCreate",           nativeTrayCreate,           2},
     {"traySetIcon",          nativeTraySetIcon,          2},
+    {"traySetMenu",          nativeTraySetMenu,          2},
     {"traySetTooltip",       nativeTraySetTooltip,       2},
     {"trayDestroy",          nativeTrayDestroy,          1},
     {"trayShowBalloon",      nativeTrayShowBalloon,      4},

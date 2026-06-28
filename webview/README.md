@@ -1,5 +1,7 @@
 # Djazair WebView Extension Manual
 
+*(Read this in [Arabic / العربية](README_AR.md))*
+
 The **WebView** extension allows you to build modern desktop applications (Desktop GUI Apps) using web technologies (HTML/CSS/JavaScript) for the frontend user interface, and the Djazair programming language for the backend business logic. Powered by Microsoft Edge **WebView2 Runtime** (using Edge/Chromium) on Windows, it guarantees fast launch times, GPU rendering, and compatibility with modern web standards.
 
 ---
@@ -19,7 +21,7 @@ The **WebView** extension allows you to build modern desktop applications (Deskt
 
 ### Operating System Requirements:
 *   Windows 10 or Windows 11 (fully updated).
-*   **Microsoft Edge WebView2 Runtime** installed on your system (built-in in modern Windows 11 builds, or available as a free download from Microsoft's site).
+*   **Microsoft Edge WebView2 Runtime** installed on your system (built-in in modern Windows 11 builds).
 
 ### Installation via DPM:
 ```bash
@@ -37,25 +39,31 @@ dpm build webview
 
 ## 2. App Class & Event Loop
 
-You instantiate the main application object using `webview.createWindow(options)` which returns an `App` instance.
+Instantiate the main application object using `webview.createWindow(options)`. This allows for creating **Multiple Windows** safely.
 
 **Initialization Options (`options` Map):**
 *   `"title"` (String): The window title. (Default: `"Djazair App"`).
 *   `"width"`, `"height"` (Numbers): Initial window dimensions in pixels. (Default: `1024x768`).
-*   `"x"`, `"y"` (Numbers): Initial window position coordinates (use `-1` for OS default position).
+*   `"x"`, `"y"` (Numbers): Initial window position (use `-1` for OS default position).
 *   `"resizable"` (Bool): Allow the user to manually resize the window. (Default: `True`).
-*   `"frameless"` (Bool): Remove window borders and title bars (useful for fully custom window UI). (Default: `False`).
+*   `"frameless"` (Bool): Remove window borders and title bars (useful for fully custom window UI).
 *   `"minWidth"`, `"minHeight"` (Numbers): Minimum size constraints.
 *   `"closable"` (Bool): Toggle whether the close button is active.
-*   `"debug"` (Bool): Enable developer tools (DevTools) and automatically route `console.log()` messages from JS to the Djazair terminal. (Default: `False`).
+*   `"debug"` (Bool): Enable DevTools and route `console.log()` to the Djazair terminal. (Default: `False`).
 
 ### App Control Methods (`App` methods):
-*   `run()`: Starts the GUI window event loop. This blocks execution of subsequent code until the window closes.
-*   `quit()`: Destroys the window handle and closes the application.
+*   `run()`: Starts the GUI window event loop. This blocks execution. You only need to call this **once**, even if you have multiple windows.
+*   `quit()`: Destroys the window handle and closes the application cleanly.
 *   `close()`: Closes the active window.
 *   `isValid()`: Returns `True` if the window is open and valid.
 *   `onReady(callback)`: Registers a callback triggered before the event loop starts.
 *   `onQuit(callback)`: Registers a callback triggered when exiting the application.
+*   `onError(callback)`: Catches bridge/internal errors programmatically.
+    ```djazair
+    app.onError(fn(err)
+        print("Webview Error: " + err)
+    end)
+    ```
 *   `setDebug(enable)`: Enable or disable developer features at runtime.
 
 ---
@@ -65,7 +73,7 @@ You instantiate the main application object using `webview.createWindow(options)
 Access and configure the active window using `app.window`.
 
 ### Visual and Spatial Controls:
-*   `setTitle(text)` / `title()`: Set or retrieve the window title.
+*   `setTitle(text)` / `title()`: Set or retrieve the window title (Full Unicode Support).
 *   `setSize(width, height)` / `getSize()`: Set or retrieve the window size `[width, height]`.
 *   `setPosition(x, y)` / `getPosition()`: Set or retrieve the window position coordinates `[x, y]`.
 *   `show()` / `hide()`: Show or hide the window.
@@ -89,8 +97,8 @@ Access and configure the active window using `app.window`.
 ### Handling Window Events:
 Listen to window events by passing callback functions:
 *   `onClose(cb)`: Called when the user attempts to close the window.
-*   `onMove(cb)`: Called when the window moves, passes new coordinates: `fn(x, y)`.
-*   `onResize(cb)`: Called when window is resized, passes new dimensions: `fn(width, height)`.
+*   `onMove(cb)`: Called when the window moves: `fn(x, y)`.
+*   `onResize(cb)`: Called when window is resized: `fn(width, height)`.
 *   `onFocus(cb)` / `onBlur(cb)`: Called when window gains/loses focus.
 *   `onMaximize(cb)` / `onMinimize(cb)` / `onRestore(cb)`: Called on state transitions.
 *   `onLoad(cb)`: Called when document has loaded completely.
@@ -126,7 +134,7 @@ Available in the global namespace as `window.djazair`:
     app.bridge.expose("add", fn(args)
         return args[0] + args[1]
     end)
-    // In JS: window.add(5, 12).then(sum => console.log(sum));
+    // In JS: window.add([5, 12]).then(sum => console.log(sum));
     ```
 
 ---
@@ -141,13 +149,14 @@ Build popup menus triggered on right-clicks or button actions:
 *   `webview.menuCreateSubmenu(menu, label)`: Create a nested submenu (returns a submenu handle).
 *   `webview.menuPopup(windowHandle, menu)`: Trigger the menu at the current cursor coordinates. Pass `app.window._handle` as the first argument.
 
-### System Tray Icons
-Add icons in the system notification area (near the clock) for background executions:
-*   `webview.trayCreate(label, iconPath)`: Create tray icon and assign tooltip.
-*   `webview.traySetIcon(tray, iconPath)`: Update tray icon.
-*   `webview.traySetTooltip(tray, text)`: Update mouse-hover tooltip.
-*   `webview.trayShowBalloon(tray, title, message, timeout = 5)`: Launch a balloon tooltip notification.
-*   `webview.trayDestroy(tray)`: Clean up and remove the tray icon.
+### System Tray Icons (Stub API)
+> Note: The Tray system currently exposes the wrapper API but relies on C++ Stubs. The full Win32 implementation is planned for future updates.
+*   `webview.trayCreate(label, iconPath)`
+*   `webview.traySetIcon(tray, iconPath)`
+*   `webview.traySetMenu(tray, menu)`
+*   `webview.traySetTooltip(tray, text)`
+*   `webview.trayShowBalloon(tray, title, message, timeout = 5)`
+*   `webview.trayDestroy(tray)`
 
 ### System Toast Notifications
 Generate Windows 10/11 system notifications that appear in the Action Center:
@@ -157,7 +166,7 @@ Generate Windows 10/11 system notifications that appear in the Action Center:
 
 ## 6. Native System Dialogs
 
-Access native operating system dialogs for files and message boxes:
+Access native operating system dialogs safely formatted for Windows memory logic:
 
 *   `webview.showMessageBox(options)`: Display a message dialog.
     *   *Options:* `"type"` (info / warning / error), `"title"`, `"message"`, `"detail"`, `"buttons"` (ok / yesno / okcancel), `"defaultId"`.
@@ -174,6 +183,8 @@ Access native operating system dialogs for files and message boxes:
 
 ```djazair
 use webview
+use file
+use json
 
 # 1. Initialize Window App and Enable Debugging
 let app = webview.createWindow({
@@ -182,6 +193,11 @@ let app = webview.createWindow({
     "height": 700,
     "debug": True
 })
+
+# Catch internal Webview errors
+app.onError(fn(err)
+    print("Caught webview error: " + err)
+end)
 
 app.onReady(fn()
     print("Application is active and ready.")
@@ -229,8 +245,6 @@ app.onReady(fn()
         })
         if !isNull(savePath)
             print("Saving data to: " + savePath)
-            use file
-            use json
             file.write(savePath, json.stringify(payload))
             return "File exported to " + savePath
         end

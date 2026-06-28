@@ -8,6 +8,10 @@ fn traySetIcon(handle, iconPath)
     _native.traySetIcon(handle, iconPath)
 end
 
+fn traySetMenu(handle, menuHandle)
+    _native.traySetMenu(handle, menuHandle)
+end
+
 fn traySetTooltip(handle, tooltip)
     _native.traySetTooltip(handle, tooltip)
 end
