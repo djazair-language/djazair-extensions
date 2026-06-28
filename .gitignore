@@ -16,8 +16,6 @@
 .DS_Store
 Thumbs.db
 
-# dweb
+# dweb (managed separately)
 dweb/
 
-# DPM dependencies
-dpm_modules/

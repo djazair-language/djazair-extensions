@@ -1,0 +1,4 @@
+use json as *
+let s = "{\"test\": \"Modified Title ✓\"}"
+let obj = parse(s)
+print(obj["test"])

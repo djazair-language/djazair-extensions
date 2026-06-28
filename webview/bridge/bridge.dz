@@ -28,8 +28,18 @@ fn _initBridge(app, win)
 end
 
 # Handles incoming dispatch calls from the native webview.
-# Return values are serialized through stringify() to ensure valid JSON
-# (value_to_json_result in C++ passes JSON-looking strings through raw).
+#
+# All results are wrapped in a { __dz_ok, __dz_data } envelope so that
+# the JS Promise can distinguish success from errors:
+#
+#   Success → { "__dz_ok": true,  "__dz_data": <handler result> }
+#   Error   → { "__dz_ok": false, "__dz_error": "<message>" }
+#
+# value_to_json_result() in C++ passes JSON-looking strings through raw,
+# so stringify() output is transmitted as-is and auto-parsed by webview.h.
+#
+# Handlers receive `payload` already deserialized (plain dict/list/value) —
+# no manual parse() needed. Return any Djazair value — no stringify() needed.
 fn _onDispatch(app, name, req)
     sysLog("Bridge", "Received dispatch: ${name}, req: ${req}", "debug")
     let args = parse(req)
@@ -39,17 +49,33 @@ fn _onDispatch(app, name, req)
         let payload = args[1]
         let handler = app._bridgeHandlers[channel]
 
-        if !isNull(handler)
-            return stringify(handler(payload))
+        if isNull(handler)
+            return stringify({ "__dz_ok": False, "__dz_error": "No handler for channel: " + channel })
+        end
+
+        try
+            let result = handler(payload)
+            return stringify({ "__dz_ok": True, "__dz_data": result })
+        catch err
+            return stringify({ "__dz_ok": False, "__dz_error": "${err}" })
         end
     else
+        # Direct native binding via bridge.expose()
         let handler = app._bridgeHandlers[name]
 
-        if !isNull(handler)
-            return stringify(handler(args))
+        if isNull(handler)
+            return stringify({ "__dz_ok": False, "__dz_error": "No handler for binding: " + name })
+        end
+
+        try
+            let result = handler(args)
+            return stringify({ "__dz_ok": True, "__dz_data": result })
+        catch err
+            return stringify({ "__dz_ok": False, "__dz_error": "${err}" })
         end
     end
 end
+
 
 # Creates the Bridge object exposed to the application.
 fn createBridge(app, win)

@@ -1,0 +1,318 @@
+use webview
+
+# ══════════════════════════════════════════════════════════════════
+#  TEST 06 — Menu, Tray & Notifications
+#  Tests:
+#    • menuCreate / menuAddItem / menuAddSeparator
+#    • menuCreateSubmenu
+#    • menuPopup (right-click triggers native context menu)
+#    • trayCreate / traySetTooltip / trayShowBalloon / trayDestroy
+#    • notificationShow (title, message, subtitle, sound)
+# ══════════════════════════════════════════════════════════════════
+
+let app = webview.createWindow({
+    "title": "TEST 06 — Menu, Tray & Notifications",
+    "width": 900,
+    "height": 650,
+    "debug": True
+})
+
+# Shared state
+let menuClicks = []
+let trayHandle = Null
+
+app.onReady(fn()
+
+    # ── Build Context Menu ────────────────────────────────────────
+    let ctxMenu = webview.menuCreate("Context Menu")
+
+    webview.menuAddItem(ctxMenu, "Option A", fn()
+        menuClicks.append("Option A")
+        app.bridge.send("menuClicked", { "item": "Option A" })
+    end)
+
+    webview.menuAddItem(ctxMenu, "Option B", fn()
+        menuClicks.append("Option B")
+        app.bridge.send("menuClicked", { "item": "Option B" })
+    end)
+
+    webview.menuAddSeparator(ctxMenu)
+
+    let subMenu = webview.menuCreateSubmenu(ctxMenu, "Submenu")
+    webview.menuAddItem(subMenu, "Sub Item 1", fn()
+        menuClicks.append("Sub Item 1")
+        app.bridge.send("menuClicked", { "item": "Sub Item 1" })
+    end)
+    webview.menuAddItem(subMenu, "Sub Item 2", fn()
+        menuClicks.append("Sub Item 2")
+        app.bridge.send("menuClicked", { "item": "Sub Item 2" })
+    end)
+
+    webview.menuAddSeparator(ctxMenu)
+    webview.menuAddItem(ctxMenu, "Quit", fn()
+        app.quit()
+    end)
+
+    # ── Bridge: show context menu ─────────────────────────────────
+    app.bridge.on("showContextMenu", fn(p)
+        webview.menuPopup(app.window._handle, ctxMenu)
+        return True
+    end)
+
+    app.bridge.on("getMenuClicks", fn(p)
+        return menuClicks
+    end)
+
+    app.bridge.on("clearMenuClicks", fn(p)
+        menuClicks.clear()
+        return True
+    end)
+
+    # ── Tray operations ───────────────────────────────────────────
+    app.bridge.on("createTray", fn(p)
+        try
+            trayHandle = webview.trayCreate("Djazair Test", "")
+            return { "ok": True }
+        catch err
+            return { "ok": False, "error": "${err}" }
+        end
+    end)
+
+    app.bridge.on("trayTooltip", fn(p)
+        if isNull(trayHandle)
+            return { "ok": False, "error": "Tray not created" }
+        end
+        webview.traySetTooltip(trayHandle, p["text"])
+        return { "ok": True }
+    end)
+
+    app.bridge.on("trayBalloon", fn(p)
+        if isNull(trayHandle)
+            return { "ok": False, "error": "Tray not created" }
+        end
+        webview.trayShowBalloon(trayHandle, p["title"], p["msg"], 3)
+        return { "ok": True }
+    end)
+
+    app.bridge.on("destroyTray", fn(p)
+        if isNull(trayHandle)
+            return { "ok": False, "error": "No tray to destroy" }
+        end
+        webview.trayDestroy(trayHandle)
+        trayHandle = Null
+        return { "ok": True }
+    end)
+
+    # ── Notification ──────────────────────────────────────────────
+    app.bridge.on("showNotification", fn(p)
+        let subtitle = ""
+        let sound = False
+        if p.has("subtitle")
+            subtitle = p["subtitle"]
+        end
+        if p.has("sound")
+            sound = p["sound"]
+        end
+        webview.notificationShow(
+            p["title"],
+            p["message"],
+            subtitle,
+            sound,
+            "",
+            5
+        )
+        return { "ok": True }
+    end)
+
+    app.window.setHtml("
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body {
+                    font-family: 'Segoe UI', sans-serif;
+                    background: #0d1117;
+                    color: #c9d1d9;
+                    padding: 20px;
+                    user-select: none;
+                }
+                h1 { color: #f0883e; margin-bottom: 14px; font-size: 1.2rem; }
+                h2 { color: #8b949e; font-size: 0.9rem; margin: 12px 0 6px; }
+                .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+                button {
+                    background: #21262d; border: 1px solid #30363d;
+                    color: #f0883e; padding: 9px 14px; border-radius: 6px;
+                    cursor: pointer; font-size: 12px; transition: background 0.15s;
+                }
+                button:hover { background: #30363d; }
+                #log {
+                    background: #161b22; border: 1px solid #30363d;
+                    border-radius: 6px; padding: 12px; height: 280px;
+                    overflow-y: auto; font-size: 12px; line-height: 1.6; font-family: monospace;
+                    margin-top: 10px;
+                }
+                .pass { color: #3fb950; } .fail { color: #f85149; }
+                .info { color: #8b949e; } .click { color: #d2a8ff; }
+                .hint { font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+            </style>
+        </head>
+        <body oncontextmenu='handleRightClick(event)'>
+            <h1>TEST 06 — Menu, Tray & Notifications</h1>
+
+            <p class='hint'>Right-click anywhere on this page to open the native context menu.</p>
+
+            <h2>Context Menu</h2>
+            <div class='row'>
+                <button onclick='handleRightClick(event)'>Open Context Menu</button>
+                <button onclick='testMenuClicks()'>① Assert menu clicks</button>
+                <button onclick='clearClicks()'>Clear Click Log</button>
+            </div>
+
+            <h2>System Tray</h2>
+            <div class='row'>
+                <button onclick='testCreateTray()'>② Create Tray Icon</button>
+                <button onclick='testTrayTooltip()'>③ Set Tray Tooltip</button>
+                <button onclick='testTrayBalloon()'>④ Tray Balloon</button>
+                <button onclick='testDestroyTray()'>⑤ Destroy Tray</button>
+            </div>
+
+            <h2>Notifications</h2>
+            <div class='row'>
+                <button onclick='testNotification()'>⑥ Toast Notification</button>
+                <button onclick='testNotificationSubtitle()'>⑦ Notification + Subtitle</button>
+            </div>
+
+            <div class='row' style='margin-top:8px'>
+                <button onclick='runAll()'>▶ RUN ALL</button>
+                <button onclick='clearLog()'>✕ Clear Log</button>
+            </div>
+
+            <div id='log'><span class='info'>Right-click page or click tests...</span></div>
+
+            <script>
+                var logDiv = document.getElementById('log');
+
+                // Listen for menu click events pushed from Djazair
+                window.djazair.on('menuClicked', function(data) {
+                    write('⬢ Menu clicked: ' + data.item, 'click');
+                });
+
+                function write(msg, cls) {
+                    var ts = new Date().toLocaleTimeString('en',{hour12:false});
+                    logDiv.innerHTML += '<div class=\"'+(cls||'info')+'\">['+ts+'] '+msg+'</div>';
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                }
+                function pass(m)  { write('✔ PASS: '+m, 'pass'); }
+                function fail(m)  { write('✘ FAIL: '+m, 'fail'); }
+                function info(m)  { write('  '+m, 'info'); }
+                function clearLog() { logDiv.innerHTML = ''; }
+                function assert(c, m) { if(c) pass(m); else fail(m); }
+
+                async function handleRightClick(e) {
+                    if (e && e.preventDefault) e.preventDefault();
+                    await window.djazair.invoke('showContextMenu');
+                }
+
+                async function clearClicks() {
+                    await window.djazair.invoke('clearMenuClicks');
+                    info('Click log cleared');
+                }
+
+                async function testMenuClicks() {
+                    info('--- Menu Click Test ---');
+                    var clicks = await window.djazair.invoke('getMenuClicks');
+                    info('Recorded clicks: ' + JSON.stringify(clicks));
+                    assert(Array.isArray(clicks), 'clicks is array');
+                    if (clicks.length > 0) {
+                        pass('Recorded ' + clicks.length + ' menu click(s): ' + clicks.join(', '));
+                    } else {
+                        info('No clicks yet — open context menu and click an item first');
+                    }
+                }
+
+                async function testCreateTray() {
+                    info('--- Create Tray Test ---');
+                    var r = await window.djazair.invoke('createTray');
+                    info('Result: ' + JSON.stringify(r));
+                    if (r.ok) {
+                        pass('Tray icon created (check system tray near clock)');
+                    } else {
+                        fail('Tray creation failed: ' + r.error);
+                    }
+                }
+
+                async function testTrayTooltip() {
+                    info('--- Tray Tooltip Test ---');
+                    var r = await window.djazair.invoke('trayTooltip', { text: 'Djazair Test App v1.0' });
+                    if (r.ok) {
+                        pass('Tooltip set (hover over tray icon to verify)');
+                    } else {
+                        fail('Tooltip failed: ' + r.error);
+                    }
+                }
+
+                async function testTrayBalloon() {
+                    info('--- Tray Balloon Test ---');
+                    var r = await window.djazair.invoke('trayBalloon', {
+                        title: 'Test Balloon',
+                        msg:   'This is a balloon notification from Djazair!'
+                    });
+                    if (r.ok) {
+                        pass('Balloon shown (check system tray)');
+                    } else {
+                        fail('Balloon failed: ' + r.error);
+                    }
+                }
+
+                async function testDestroyTray() {
+                    info('--- Destroy Tray Test ---');
+                    var r = await window.djazair.invoke('destroyTray');
+                    if (r.ok) {
+                        pass('Tray icon destroyed');
+                    } else {
+                        fail('Destroy failed: ' + r.error);
+                    }
+                }
+
+                async function testNotification() {
+                    info('--- Toast Notification Test ---');
+                    var r = await window.djazair.invoke('showNotification', {
+                        title:   'Djazair WebView',
+                        message: 'Test notification fired successfully!'
+                    });
+                    assert(r.ok === true, 'notification sent');
+                }
+
+                async function testNotificationSubtitle() {
+                    info('--- Notification + Subtitle Test ---');
+                    var r = await window.djazair.invoke('showNotification', {
+                        title:    'Djazair Notification',
+                        message:  'Bridge test passed!',
+                        subtitle: 'TEST 06 Suite',
+                        sound:    true
+                    });
+                    assert(r.ok === true, 'notification with subtitle sent');
+                }
+
+                async function runAll() {
+                    clearLog();
+                    info('=== Running all menu/tray/notification tests ===');
+                    info('TIP: Right-click and click a menu item for test ①');
+                    await testCreateTray();
+                    await testTrayTooltip();
+                    await testTrayBalloon();
+                    await testNotification();
+                    await testNotificationSubtitle();
+                    await testMenuClicks();
+                    await testDestroyTray();
+                    info('=== Done ===');
+                }
+            </script>
+        </body>
+        </html>
+    ")
+end)
+
+app.run()

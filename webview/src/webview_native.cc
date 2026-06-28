@@ -555,9 +555,14 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetTitle) {
     GET_WINDOW(0);
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     HWND hwnd = get_hwnd(wc->wv);
-    char buf[256] = {0};
-    GetWindowTextA(hwnd, buf, sizeof(buf) - 1);
-    return djazair_str(vm, buf);
+    int len = GetWindowTextLengthW(hwnd);
+    if (len == 0) return djazair_str(vm, "");
+    std::wstring wbuf(len + 1, L'\0');
+    GetWindowTextW(hwnd, &wbuf[0], len + 1);
+    int utf8_len = WideCharToMultiByte(CP_UTF8, 0, wbuf.c_str(), len, nullptr, 0, nullptr, nullptr);
+    std::string utf8_buf(utf8_len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wbuf.c_str(), len, &utf8_buf[0], utf8_len, nullptr, nullptr);
+    return djazair_str(vm, utf8_buf.c_str());
 #elif defined(WEBVIEW_PLATFORM_LINUX)
     const gchar *title = gtk_window_get_title(GTK_WINDOW(webview_get_window((webview_t)wc->wv)));
     return djazair_str(vm, title ? title : "");
@@ -584,7 +589,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetSize) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     HWND hwnd = get_hwnd(wc->wv);
     RECT r;
-    GetWindowRect(hwnd, &r);
+    GetClientRect(hwnd, &r);
     w = (int)(r.right - r.left); h = (int)(r.bottom - r.top);
 #elif defined(WEBVIEW_PLATFORM_LINUX)
     gtk_window_get_size(GTK_WINDOW(webview_get_window((webview_t)wc->wv)), &w, &h);
@@ -649,6 +654,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowMaximize) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     pump_windows_messages();
     ShowWindow(get_hwnd(wc->wv), SW_MAXIMIZE);
+    wc->wv->dispatch([wc]() { invoke_callback_0(wc, wc->maximize_callback); });
 #elif defined(WEBVIEW_PLATFORM_DARWIN)
     id win = (id)webview_get_window((webview_t)wc->wv);
     objc_msgSend(win, sel_getUid("zoom:"), nil);

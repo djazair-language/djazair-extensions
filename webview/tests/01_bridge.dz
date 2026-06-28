@@ -1,0 +1,282 @@
+use webview
+
+# ══════════════════════════════════════════════════════════════════
+#  TEST 01 — Bridge: Promise-based invoke + auto JSON
+#  Tests:
+#    • bridge.on() registers a handler
+#    • JS invoke() returns a resolved Promise
+#    • Payload deserialized automatically (no parse() needed)
+#    • Return value serialized automatically (no stringify() needed)
+#    • Nested objects / arrays / numbers / booleans / null
+#    • Error propagation (handler throws → JS Promise rejects)
+# ══════════════════════════════════════════════════════════════════
+
+let app = webview.createWindow({
+    "title": "TEST 01 — Bridge Promise + Auto JSON",
+    "width": 900,
+    "height": 650,
+    "debug": True
+})
+
+
+
+        # ── Handler: echo payload back ────────────────────────────────
+        app.bridge.on("echo", fn(payload)
+        return payload
+    end)
+
+    # ── Handler: type inspection ──────────────────────────────────
+    app.bridge.on("getTypes", fn(payload)
+        return {
+            "string":  "hello",
+            "number":  42,
+            "float":   3.14,
+            "bool":    True,
+            "null":    Null,
+            "array":   [1, 2, 3],
+            "nested":  { "a": { "b": { "c": "deep" } } }
+        }
+    end)
+
+    # ── Handler: arithmetic ───────────────────────────────────────
+    app.bridge.on("add", fn(payload)
+        return payload["a"] + payload["b"]
+    end)
+
+    # ── Handler: intentional error ────────────────────────────────
+    app.bridge.on("willFail", fn(payload)
+        throw "Intentional error from Djazair!"
+    end)
+
+    # ── Handler: large array ─────────────────────────────────────
+    app.bridge.on("largeArray", fn(payload)
+        let n = payload["n"]
+        let arr = []
+        let i = 0
+        while i < n
+            arr.append(i * i)
+            i = i + 1
+        end
+        return arr
+    end)
+
+    # ── Handler: string operations ────────────────────────────────
+    app.bridge.on("reverseStr", fn(payload)
+        let s = payload["text"]
+        return s.reverse()
+    end)
+
+    # ── Handler: push notification FROM Djazair ───────────────────
+    app.bridge.on("startPush", fn(payload)
+        let count = 0
+        while count < 5
+            app.bridge.send("pushEvent", {
+                "tick": count,
+                "msg":  "Server push #${count}"
+            })
+            count = count + 1
+        end
+        return { "sent": 5 }
+    end)
+
+    app.window.setHtml("
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Bridge Tests</title>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body {
+                    font-family: 'Segoe UI', monospace;
+                    background: #0d1117;
+                    color: #c9d1d9;
+                    padding: 20px;
+                }
+                h1 { color: #58a6ff; margin-bottom: 16px; font-size: 1.3rem; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                button {
+                    background: #21262d;
+                    border: 1px solid #30363d;
+                    color: #58a6ff;
+                    padding: 10px 14px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    text-align: left;
+                    transition: background 0.15s;
+                }
+                button:hover { background: #30363d; }
+                #log {
+                    margin-top: 16px;
+                    background: #161b22;
+                    border: 1px solid #30363d;
+                    border-radius: 6px;
+                    padding: 12px;
+                    height: 320px;
+                    overflow-y: auto;
+                    font-size: 12px;
+                    line-height: 1.6;
+                }
+                .pass { color: #3fb950; }
+                .fail { color: #f85149; }
+                .info { color: #8b949e; }
+                .push { color: #d2a8ff; }
+            </style>
+        </head>
+        <body>
+            <h1>TEST 01 — Bridge: Promise + Auto JSON</h1>
+            <div class='grid'>
+                <button onclick='testEcho()'>① Echo (object round-trip)</button>
+                <button onclick='testTypes()'>② All JSON types</button>
+                <button onclick='testAdd()'>③ Arithmetic via bridge</button>
+                <button onclick='testError()'>④ Error → rejected Promise</button>
+                <button onclick='testLargeArray()'>⑤ Large array (n=500)</button>
+                <button onclick='testString()'>⑥ String reverse</button>
+                <button onclick='testPush()'>⑦ Push events (bridge.send)</button>
+                <button onclick='testOff()'>⑧ off() — remove listener</button>
+                <button onclick='runAll()'>▶ RUN ALL TESTS</button>
+                <button onclick='clearLog()'>✕ Clear</button>
+            </div>
+            <div id='log'><span class='info'>Click a test to begin...</span></div>
+
+            <script>
+                var log = document.getElementById('log');
+                function write(msg, cls) {
+                    var ts = new Date().toLocaleTimeString('en', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    log.innerHTML += '<div class=\"' + (cls||'info') + '\">[' + ts + '] ' + msg + '</div>';
+                    log.scrollTop = log.scrollHeight;
+                }
+                function pass(msg) { write('✔ PASS: ' + msg, 'pass'); }
+                function fail(msg) { write('✘ FAIL: ' + msg, 'fail'); }
+                function info(msg) { write('  ' + msg, 'info'); }
+                function clearLog() { log.innerHTML = ''; }
+
+                function assert(cond, msg) {
+                    if (cond) pass(msg); else fail(msg);
+                }
+
+                // ① Echo
+                async function testEcho() {
+                    info('--- Echo Test ---');
+                    var payload = { name: 'Djazair', version: 1, active: true, tags: ['a','b'] };
+                    var result = await window.djazair.invoke('echo', payload);
+                    info('ECHO RESULT: ' + JSON.stringify(result));
+                    assert(result && result.name === 'Djazair',     'name preserved');
+                    assert(result && result.version === 1,          'number preserved');
+                    assert(result && result.active === true,        'boolean preserved');
+                    assert(result && result.tags && result.tags[0] === 'a', 'array[0] preserved');
+                    assert(result && result.tags && result.tags[1] === 'b', 'array[1] preserved');
+                }
+
+                // ② All types
+                async function testTypes() {
+                    info('--- Type Test ---');
+                    var r = await window.djazair.invoke('getTypes');
+                    assert(r.string === 'hello',                  'string');
+                    assert(r.number === 42,                       'integer');
+                    assert(Math.abs(r.float - 3.14) < 0.001,     'float');
+                    assert(r.bool === true,                       'bool');
+                    assert(r.null === null,                       'null');
+                    assert(Array.isArray(r.array) && r.array.length === 3, 'array');
+                    assert(r.nested.a.b.c === 'deep',             'nested object');
+                }
+
+                // ③ Arithmetic
+                async function testAdd() {
+                    info('--- Arithmetic Test ---');
+                    var r = await window.djazair.invoke('add', { a: 17, b: 25 });
+                    assert(r === 42, '17 + 25 = ' + r);
+                    var r2 = await window.djazair.invoke('add', { a: -100, b: 200 });
+                    assert(r2 === 100, '-100 + 200 = ' + r2);
+                }
+
+                // ④ Error handling
+                async function testError() {
+                    info('--- Error Test ---');
+                    try {
+                        await window.djazair.invoke('willFail');
+                        fail('Should have thrown');
+                    } catch(e) {
+                        assert(e instanceof Error,               'got Error object');
+                        assert(e.message.indexOf('Intentional') >= 0, 'message contains error text: ' + e.message);
+                    }
+                }
+
+                // ⑤ Large array
+                async function testLargeArray() {
+                    info('--- Large Array Test (n=500) ---');
+                    var t0 = Date.now();
+                    var r = await window.djazair.invoke('largeArray', { n: 500 });
+                    var ms = Date.now() - t0;
+                    assert(Array.isArray(r),       'got array');
+                    assert(r.length === 500,        'length = 500');
+                    assert(r[0] === 0,              'r[0] = 0');
+                    assert(r[1] === 1,              'r[1] = 1');
+                    assert(r[10] === 100,           'r[10] = 100 (10^2)');
+                    assert(r[499] === 499*499,      'r[499] = ' + (499*499));
+                    info('Completed in ' + ms + 'ms');
+                }
+
+                // ⑥ String reverse
+                async function testString() {
+                    info('--- String Test ---');
+                    var r = await window.djazair.invoke('reverseStr', { text: 'Djazair' });
+                    assert(r === 'riazajD', 'reversed: ' + r);
+                    var r2 = await window.djazair.invoke('reverseStr', { text: '' });
+                    assert(r2 === '', 'empty string reversed');
+                }
+
+                // ⑦ Push events
+                async function testPush() {
+                    info('--- Push Event Test ---');
+                    var received = [];
+                    var handler = function(data) { received.push(data); };
+                    window.djazair.on('pushEvent', handler);
+
+                    var r = await window.djazair.invoke('startPush');
+                    assert(r.sent === 5, 'server reported 5 sent');
+
+                    // Give eval() a tick to fire
+                    await new Promise(res => setTimeout(res, 100));
+                    assert(received.length === 5,          'received 5 push events');
+                    assert(received[0].tick === 0,         'tick 0 ok');
+                    assert(received[4].tick === 4,         'tick 4 ok');
+                    assert(received[2].msg === 'Server push #2', 'msg content ok');
+
+                    window.djazair.off('pushEvent', handler);
+                    info('Listener removed via off()');
+                }
+
+                // ⑧ off()
+                async function testOff() {
+                    info('--- off() Test ---');
+                    var hits = 0;
+                    var cb = function() { hits++; };
+                    window.djazair.on('testOff', cb);
+                    window.djazair.send('testOff', {});  // simulate 1 hit
+                    window.djazair.off('testOff', cb);
+                    window.djazair.send('testOff', {});  // should NOT hit
+                    assert(hits === 1, 'listener fired exactly once, then removed');
+                }
+
+                async function runAll() {
+                    clearLog();
+                    info('=== Running all bridge tests ===');
+                    await testEcho();
+                    await testTypes();
+                    await testAdd();
+                    await testError();
+                    await testLargeArray();
+                    await testString();
+                    await testPush();
+                    await testOff();
+                    info('=== Done ===');
+                }
+
+            </script>
+        </body>
+        </html>
+    ")
+
+app.run()

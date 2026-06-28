@@ -15,7 +15,7 @@
   function forward(level) {
     return function() {
       var text = toText(arguments);
-      try { window.djazair.invoke("__console", level, text); } catch(e) {}
+      try { window.djazair.invoke("__console", [level, text]); } catch(e) {}
       original[level].apply(console, arguments);
     };
   }

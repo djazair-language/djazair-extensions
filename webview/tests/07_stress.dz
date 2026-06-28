@@ -1,0 +1,313 @@
+use webview
+use json as *
+
+# ══════════════════════════════════════════════════════════════════
+#  TEST 07 — Stress & Performance
+#  Tests:
+#    • High-frequency invoke() calls (100 rapid calls)
+#    • Large JSON payload transfer (10,000 item array)
+#    • Deeply nested objects (20 levels)
+#    • Concurrent concurrent invokes (Promise.all)
+#    • Rapid bridge.send() push events (200 push events)
+#    • Unicode / special characters in strings
+#    • Binary-safe string transfer (newlines, quotes, backslashes)
+# ══════════════════════════════════════════════════════════════════
+
+let app = webview.createWindow({
+    "title": "TEST 07 — Stress & Performance",
+    "width": 950,
+    "height": 700,
+    "debug": False  # disable debug to maximize perf
+})
+
+app.onReady(fn()
+
+    # ── Handler: rapid ping ───────────────────────────────────────
+    let pingCount = 0
+    app.bridge.on("ping", fn(p)
+        pingCount = pingCount + 1
+        return { "pong": pingCount, "echo": p }
+    end)
+
+    # ── Handler: large array generation ──────────────────────────
+    app.bridge.on("genArray", fn(p)
+        let n = p["n"]
+        let arr = []
+        let i = 0
+        while i < n
+            arr.append({ "id": i, "val": i * 3.14, "label": "item_${i}" })
+            i = i + 1
+        end
+        return arr
+    end)
+
+    # ── Handler: deep nest ────────────────────────────────────────
+    app.bridge.on("deepNest", fn(p)
+        let depth = p["depth"]
+        let obj = { "leaf": True }
+        let i = 0
+        while i < depth
+            obj = { "level": i, "child": obj }
+            i = i + 1
+        end
+        return obj
+    end)
+
+    # ── Handler: echo large payload ───────────────────────────────
+    app.bridge.on("echoLarge", fn(p)
+        return p
+    end)
+
+    # ── Handler: unicode test ─────────────────────────────────────
+    app.bridge.on("unicodeRound", fn(p)
+        return {
+            "arabic":   p["arabic"],
+            "emoji":    p["emoji"],
+            "chinese":  p["chinese"],
+            "special":  p["special"]
+        }
+    end)
+
+    # ── Handler: rapid push flood ─────────────────────────────────
+    app.bridge.on("floodPush", fn(p)
+        let n = p["n"]
+        let i = 0
+        while i < n
+            app.bridge.send("flood", { "i": i, "ts": i })
+            i = i + 1
+        end
+        return { "sent": n }
+    end)
+
+    # ── Handler: reset ping counter ───────────────────────────────
+    app.bridge.on("resetPing", fn(p)
+        pingCount = 0
+        return True
+    end)
+
+    app.window.setHtml(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: 'Segoe UI', monospace; background: #0d1117; color: #c9d1d9; padding: 20px; }
+                h1 { color: #ffa657; margin-bottom: 14px; font-size: 1.2rem; }
+                .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+                button {
+                    background: #21262d; border: 1px solid #30363d;
+                    color: #ffa657; padding: 9px 12px; border-radius: 6px;
+                    cursor: pointer; font-size: 12px; transition: background 0.15s;
+                }
+                button:hover { background: #30363d; }
+                button:disabled { opacity: 0.4; cursor: not-allowed; }
+                #log {
+                    background: #161b22; border: 1px solid #30363d;
+                    border-radius: 6px; padding: 12px; height: 380px;
+                    overflow-y: auto; font-size: 12px; line-height: 1.6; font-family: monospace;
+                }
+                .pass { color: #3fb950; } .fail { color: #f85149; }
+                .info { color: #8b949e; } .perf { color: #ffa657; }
+            </style>
+        </head>
+        <body>
+            <h1>TEST 07 — Stress & Performance</h1>
+            <div class='grid'>
+                <button id='b1' onclick='testRapid()'>① 100 rapid invokes</button>
+                <button id='b2' onclick='testConcurrent()'>② 20 concurrent (Promise.all)</button>
+                <button id='b3' onclick='testLargeArray()'>③ 1000-item array transfer</button>
+                <button id='b4' onclick='testDeepNest()'>④ 20-level deep nesting</button>
+                <button id='b5' onclick='testLargePayload()'>⑤ Large payload echo</button>
+                <button id='b6' onclick='testUnicode()'>⑥ Unicode / special chars</button>
+                <button id='b7' onclick='testFloodPush()'>⑦ 200 push events flood</button>
+                <button id='b8' onclick='testBinaryStr()'>⑧ Binary-safe strings</button>
+                <button onclick='runAll()'>▶ RUN ALL</button>
+                <button onclick='clearLog()'>✕ Clear</button>
+            </div>
+            <div id='log'><span class='info'>Stress tests — may take a few seconds...</span></div>
+
+            <script>
+                var logDiv = document.getElementById('log');
+                var floodReceived = 0;
+
+                window.djazair.on('flood', function(data) {
+                    floodReceived++;
+                });
+
+                function write(msg, cls) {
+                    var ts = new Date().toLocaleTimeString('en',{hour12:false});
+                    logDiv.innerHTML += '<div class=\"'+(cls||'info')+'\">['+ts+'] '+msg+'</div>';
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                }
+                function pass(m)  { write('✔ PASS: '+m, 'pass'); }
+                function fail(m)  { write('✘ FAIL: '+m, 'fail'); }
+                function info(m)  { write('  '+m, 'info'); }
+                function perf(m)  { write('⏱ '+m, 'perf'); }
+                function clearLog() { logDiv.innerHTML = ''; }
+                function assert(c, m) { if(c) pass(m); else fail(m); }
+
+                function disableAll(d) {
+                    ['b1','b2','b3','b4','b5','b6','b7','b8'].forEach(function(id){
+                        document.getElementById(id).disabled = d;
+                    });
+                }
+
+                // ① 100 rapid sequential invokes
+                async function testRapid() {
+                    info('--- Rapid Invoke Test (100×) ---');
+                    disableAll(true);
+                    await window.djazair.invoke('resetPing');
+                    var t0 = Date.now();
+                    for (var i = 0; i < 100; i++) {
+                        var r = await window.djazair.invoke('ping', { seq: i });
+                        if (r.pong !== i + 1) {
+                            fail('ping ' + i + ' got pong ' + r.pong);
+                            disableAll(false);
+                            return;
+                        }
+                    }
+                    var ms = Date.now() - t0;
+                    pass('100 sequential pings OK');
+                    perf('Total: ' + ms + 'ms  |  Avg: ' + (ms/100).toFixed(1) + 'ms/call');
+                    disableAll(false);
+                }
+
+                // ② 20 concurrent invokes
+                async function testConcurrent() {
+                    info('--- Concurrent Invoke Test (Promise.all 20×) ---');
+                    disableAll(true);
+                    var t0 = Date.now();
+                    var promises = [];
+                    for (var i = 0; i < 20; i++) {
+                        promises.push(window.djazair.invoke('ping', { concurrent: i }));
+                    }
+                    var results = await Promise.all(promises);
+                    var ms = Date.now() - t0;
+                    assert(results.length === 20, '20 results received');
+                    var allOk = results.every(function(r){ return typeof r.pong === 'number'; });
+                    assert(allOk, 'all responses have pong field');
+                    perf('20 concurrent invokes in: ' + ms + 'ms');
+                    disableAll(false);
+                }
+
+                // ③ Large array transfer
+                async function testLargeArray() {
+                    info('--- Large Array Transfer (n=1000) ---');
+                    disableAll(true);
+                    var t0 = Date.now();
+                    var arr = await window.djazair.invoke('genArray', { n: 1000 });
+                    var ms = Date.now() - t0;
+                    assert(Array.isArray(arr), 'got array');
+                    assert(arr.length === 1000, 'length = 1000');
+                    assert(arr[0].id === 0, 'arr[0].id = 0');
+                    assert(arr[999].id === 999, 'arr[999].id = 999');
+                    assert(typeof arr[0].label === 'string', 'label is string');
+                    perf('1000-item array in: ' + ms + 'ms  (~' + Math.round(JSON.stringify(arr).length/1024) + ' KB)');
+                    disableAll(false);
+                }
+
+                // ④ Deep nesting (20 levels)
+                async function testDeepNest() {
+                    info('--- Deep Nest Test (20 levels) ---');
+                    disableAll(true);
+                    var r = await window.djazair.invoke('deepNest', { depth: 20 });
+                    // drill down to leaf
+                    var cur = r;
+                    var levels = 0;
+                    while (cur.child) { cur = cur.child; levels++; }
+                    assert(levels === 20, 'drilled 20 levels');
+                    assert(cur.leaf === true, 'leaf found at depth 20');
+                    disableAll(false);
+                }
+
+                // ⑤ Large payload echo
+                async function testLargePayload() {
+                    info('--- Large Payload Echo Test ---');
+                    disableAll(true);
+                    var payload = { items: [] };
+                    for (var i = 0; i < 500; i++) {
+                        payload.items.push({ id: i, name: 'User_' + i, score: Math.random() });
+                    }
+                    var originalSize = JSON.stringify(payload).length;
+                    var t0 = Date.now();
+                    var result = await window.djazair.invoke('echoLarge', payload);
+                    var ms = Date.now() - t0;
+                    assert(Array.isArray(result.items), 'items array preserved');
+                    assert(result.items.length === 500, 'all 500 items echoed');
+                    perf('Echo ' + Math.round(originalSize/1024) + ' KB in ' + ms + 'ms');
+                    disableAll(false);
+                }
+
+                // ⑥ Unicode
+                async function testUnicode() {
+                    info('--- Unicode Round-trip Test ---');
+                    disableAll(true);
+                    var payload = {
+                        arabic:  'مرحبا بالعالم — Djazair 🇩🇿',
+                        emoji:   '🔥💎🚀✅❌🎯',
+                        chinese: '你好世界',
+                        special: 'tab:\\there newline:\\\\n quote:\"'
+                    };
+                    var r = await window.djazair.invoke('unicodeRound', payload);
+                    assert(r.arabic  === payload.arabic,  'arabic preserved: ' + r.arabic);
+                    assert(r.emoji   === payload.emoji,   'emoji preserved: '  + r.emoji);
+                    assert(r.chinese === payload.chinese, 'chinese preserved: '+ r.chinese);
+                    disableAll(false);
+                }
+
+                // ⑦ Flood push events
+                async function testFloodPush() {
+                    info('--- Push Event Flood Test (200 events) ---');
+                    disableAll(true);
+                    floodReceived = 0;
+                    var t0 = Date.now();
+                    var r = await window.djazair.invoke('floodPush', { n: 200 });
+                    assert(r.sent === 200, 'Djazair reported 200 sent');
+                    // Wait for all eval() calls to deliver
+                    await new Promise(res => setTimeout(res, 500));
+                    var ms = Date.now() - t0;
+                    assert(floodReceived === 200, 'JS received ' + floodReceived + '/200 push events');
+                    perf('200 push events in ' + ms + 'ms');
+                    disableAll(false);
+                }
+
+                // ⑧ Binary-safe strings
+                async function testBinaryStr() {
+                    info('--- Binary-safe String Test ---');
+                    disableAll(true);
+                    var tricky = {
+                        a: 'line1\\\\nline2\\\\nline3',
+                        b: 'has "quotes" inside',
+                        c: 'back\\\\\\\\slash',
+                        d: 'null char after: \\\\0',
+                        e: '   spaces   '
+                    };
+                    var r = await window.djazair.invoke('echoLarge', tricky);
+                    assert(r.a === tricky.a, 'newlines preserved');
+                    assert(r.b === tricky.b, 'quotes preserved: ' + r.b);
+                    assert(r.c === tricky.c, 'backslash preserved');
+                    assert(r.e === tricky.e, 'spaces preserved');
+                    disableAll(false);
+                }
+
+                async function runAll() {
+                    clearLog();
+                    info('=== Running all stress tests ===');
+                    await testRapid();
+                    await testConcurrent();
+                    await testLargeArray();
+                    await testDeepNest();
+                    await testLargePayload();
+                    await testUnicode();
+                    await testFloodPush();
+                    await testBinaryStr();
+                    info('=== All stress tests complete ===');
+                }
+            </script>
+        </body>
+        </html>
+    `)
+end)
+
+app.run()

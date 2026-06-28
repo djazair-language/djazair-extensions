@@ -1,0 +1,28 @@
+# Normalize line endings
+* text=auto
+
+# Shell scripts must always use LF (Unix) line endings
+*.sh text eol=lf
+
+# Windows batch files must always use CRLF
+*.bat text eol=crlf
+
+# Source files
+*.c text eol=lf
+*.cc text eol=lf
+*.h text eol=lf
+*.dz text eol=lf
+
+# JSON / Markdown
+*.json text eol=lf
+*.md text eol=lf
+
+# Binary files – do not touch
+*.dll binary
+*.so binary
+*.dylib binary
+*.lib binary
+*.a binary
+*.o binary
+*.png binary
+*.jpg binary
