@@ -1277,7 +1277,40 @@ extern "C" DJAZAIR_FUNC(nativeDialogSaveFile) {
     ofn.lpstrTitle = title;
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
 
-    std::string filterStr = "All Files\0*.*\0";
+    std::string filterStr;
+    Value filters = args[2];
+    int filterLen = djazair_array_len(vm, filters);
+    for (int i = 0; i < filterLen; i++) {
+        Value filter = djazair_array_get(vm, filters, i);
+        Value nameKey = djazair_str(vm, "name");
+        Value extKey = djazair_str(vm, "extensions");
+        Value nameVal = NULL_VAL, extVal = NULL_VAL;
+        djazair_map_get(vm, filter, nameKey, &nameVal);
+        djazair_map_get(vm, filter, extKey, &extVal);
+        const char *fname = IS_STRING(nameVal) ? AS_CSTRING(nameVal) : "Files";
+        filterStr += fname; filterStr += '\0';
+        if (IS_ARRAY(extVal)) {
+            int extLen = djazair_array_len(vm, extVal);
+            for (int j = 0; j < extLen; j++) {
+                Value ext = djazair_array_get(vm, extVal, j);
+                if (IS_STRING(ext)) {
+                    if (j > 0) filterStr += ";";
+                    std::string extStr = AS_CSTRING(ext);
+                    if (extStr.size() >= 2 && extStr.substr(0, 2) == "*.") extStr = extStr.substr(2);
+                    filterStr += "*."; filterStr += extStr;
+                }
+            }
+        }
+        filterStr += '\0';
+    }
+    if (filterStr.empty()) {
+        filterStr = "All Files";
+        filterStr += '\0';
+        filterStr += "*.*";
+        filterStr += '\0';
+    } else {
+        filterStr += '\0';
+    }
     ofn.lpstrFilter = filterStr.data();
 
     if (GetSaveFileNameA(&ofn)) return djazair_str(vm, fileName);
