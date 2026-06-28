@@ -229,6 +229,9 @@ app.onReady(fn()
         })
         if !isNull(savePath)
             print("Saving data to: " + savePath)
+            use file
+            use json
+            file.write(savePath, json.stringify(payload))
             return "File exported to " + savePath
         end
         return "Export cancelled"
