@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 # ─────────────────────────────────────────────
 #  build.sh  –  webview extension for Djazair
 #  Usage: ./build.sh <ROOT>
@@ -42,7 +42,7 @@ case "$OS" in
     MINGW*|MSYS*|CYGWIN*)
         OUT="webview.dll"
         SHARED="-shared"
-        PLATFORM_FLAGS="-Wl,--disable-dynamicbase"
+        PLATFORM_FLAGS="-DUNICODE -D_UNICODE -Wl,--disable-dynamicbase"
         PLATFORM_LIBS="-lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32"
         ;;
     *)

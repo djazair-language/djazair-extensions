@@ -235,7 +235,7 @@ app.onReady(fn()
     end)
 
     # 4. Set Frontend Viewport HTML and Styles
-    app.window.setHtml("
+    app.window.setHtml(`
         <!DOCTYPE html>
         <html>
         <head>
@@ -299,7 +299,7 @@ app.onReady(fn()
                 }
             </style>
         </head>
-        <body oncontextmenu='event.preventDefault(); window.djazair.invoke(\"showContextMenu\")'>
+        <body oncontextmenu='event.preventDefault(); window.djazair.invoke("showContextMenu")'>
             <div class='app-card'>
                 <h1>Djazair OS Sandbox</h1>
                 <p>Right-click anywhere to trigger the native context menu.</p>
@@ -327,7 +327,7 @@ app.onReady(fn()
             </script>
         </body>
         </html>
-    ")
+    `)
 end)
 
 app.run()

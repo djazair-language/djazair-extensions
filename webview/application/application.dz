@@ -80,10 +80,9 @@ class App
         if !isNull(self._onQuit)
             self._onQuit()
         end
-        if !isNull(self.window) and !isNull(self.window._handle)
-            closeWindow(self.window)
-        end
         _native.appQuit()
+        use process
+        process.exit(0)
     end
 
 
