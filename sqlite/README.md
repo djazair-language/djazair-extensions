@@ -20,11 +20,6 @@ To import the SQLite module, use:
 use sqlite
 ```
 
-If you need to interact directly with the lower-level native C API, import the native module:
-```djazair
-let _sqlite = __native("_sqlite")
-```
-
 ---
 
 ## 2. Connection Class
