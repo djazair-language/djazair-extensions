@@ -15,7 +15,7 @@ end
 db.close()
 
 print("--- Valid connection with error handling ---")
-db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+db = mysql.Connection("localhost", "root", "mysql", "test", 3306)
 
 if db.isConnected()
     print("Connected: " + db.serverInfo())

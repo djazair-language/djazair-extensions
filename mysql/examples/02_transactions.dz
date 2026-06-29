@@ -1,7 +1,7 @@
 # 02_transactions.dz — Transaction commit and rollback
 use mysql
 
-let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+let db = mysql.Connection("localhost", "root", "mysql", "test", 3306)
 
 if db.isConnected()
     db.execute("CREATE TABLE IF NOT EXISTS accounts (id INT AUTO_INCREMENT PRIMARY KEY, owner TEXT, balance REAL)")
