@@ -4,12 +4,12 @@ The **SQLite** extension provides a lightweight, local database engine for the D
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 1. [Importing](#1-importing)
 2. [Connection Class](#2-connection-class)
 3. [ResultSet Class](#3-resultset-class)
 4. [Constants](#4-constants)
-5. [Complete Code Example](#5-complete-code-example)
+5. [Complete Example](#5-complete-example)
 
 ---
 
@@ -77,9 +77,11 @@ Retrieves and iterates over rows returned by queries.
 | `sqlite.SQLITE_ROW` | `100` | Indicates the statement step found a new row ready for retrieval. |
 | `sqlite.SQLITE_DONE` | `101` | Indicates the statement step completed execution successfully (no more rows). |
 
+> See the [`examples/`](examples/) directory for runnable demos covering CRUD, transactions, rollback, fetch modes, and error handling.
+
 ---
 
-## 5. Complete Code Example
+## 5. Complete Example
 
 ```djazair
 use sqlite
@@ -87,7 +89,7 @@ use sqlite
 # 1. Open database connection
 let db = sqlite.connect("school.db")
 
-if db.isConnected():
+if db.isConnected()
     # 2. Create tables
     db.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, score REAL)")
     
@@ -104,7 +106,7 @@ if db.isConnected():
         # Read records as maps
         let users = res.fetchAllAssoc()
         let i = 0
-        while i < users.length():
+        while i < users.length()
             let user = users[i]
             print("User [ID: " + str(user["id"]) + ", Name: " + user["name"] + ", Score: " + str(user["score"]) + "]")
             i += 1
@@ -115,7 +117,7 @@ if db.isConnected():
     
     db.close()
     print("Process finished successfully.")
-else:
+else
     print("Failed to connect to database: " + db.error())
 end
 ```
