@@ -1,0 +1,55 @@
+# 03_prepared_statements.dz — Parameterized queries (safeQuery / safeExecute)
+use mysql
+
+let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+
+if db.isConnected()
+    db.execute("CREATE TABLE IF NOT EXISTS products (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, price REAL, qty INT)")
+
+    # Insert with parameters using safeExecute
+    db.safeExecute("INSERT INTO products (name, price, qty) VALUES (?, ?, ?)", ["Laptop", 1200.0, 10])
+    db.safeExecute("INSERT INTO products (name, price, qty) VALUES (?, ?, ?)", ["Mouse", 25.0, 100])
+    db.safeExecute("INSERT INTO products (name, price, qty) VALUES (?, ?, ?)", ["Keyboard", 75.0, 50])
+    db.safeExecute("INSERT INTO products (name, price, qty) VALUES (?, ?, ?)", ["Monitor", 350.0, 20])
+    print("Inserted 4 products")
+
+    # Query with parameters using safeQuery — single placeholder
+    let res = db.safeQuery("SELECT * FROM products WHERE price > ?", [100.0])
+    if !isNull(res)
+        print("Products over $100:")
+        let products = res.fetchAllAssoc()
+        for p in products
+            print("  " + p["name"] + " — $" + str(p["price"]))
+        end
+        res.close()
+    end
+
+    # Query with multiple placeholders
+    res = db.safeQuery("SELECT * FROM products WHERE price BETWEEN ? AND ? AND qty > ?", [50.0, 500.0, 10])
+    if !isNull(res)
+        print("Products between $50-$500 with stock > 10:")
+        let products = res.fetchAllAssoc()
+        for p in products
+            print("  " + p["name"] + " (" + str(p["qty"]) + " in stock)")
+        end
+        res.close()
+    end
+
+    # Update with parameters
+    let ok = db.safeExecute("UPDATE products SET qty = qty + ? WHERE name = ?", [5, "Mouse"])
+    if ok
+        print("Updated Mouse stock, affected: " + str(db.affectedRows()))
+    end
+
+    # Query with LIKE and parameter
+    res = db.safeQuery("SELECT * FROM products WHERE name LIKE ?", ["%key%"])
+    if !isNull(res)
+        let rows = res.fetchAll()
+        print("Products matching '%key%': " + str(rows.length()))
+        res.close()
+    end
+
+    db.close()
+else
+    print("Connection failed: " + db.error())
+end

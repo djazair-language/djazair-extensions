@@ -1,0 +1,60 @@
+# 05_error_handling.dz — Error handling and connection checks
+use mysql
+
+print("--- Attempting invalid connection ---")
+let db = mysql.Connection("invalid_host", "root", "", "testdb", 3306)
+
+if db.isConnected()
+    print("Connected (unexpected)")
+else
+    print("Connection failed as expected")
+    print("Error: " + db.error())
+    print("Errno: " + str(db.errno()))
+end
+
+db.close()
+
+print("--- Valid connection with error handling ---")
+db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+
+if db.isConnected()
+    print("Connected: " + db.serverInfo())
+
+    # Ping check
+    if db.ping()
+        print("Server is reachable")
+    else
+        print("Server unreachable")
+    end
+
+    # Execute invalid SQL to trigger error
+    let ok = db.execute("INVALID SQL STATEMENT")
+    if ok
+        print("Query succeeded (unexpected)")
+    else
+        print("Query failed as expected")
+        print("Error: " + db.error())
+        print("Errno: " + str(db.errno()))
+    end
+
+    # safeQuery on a non-existent table
+    let res = db.safeQuery("SELECT * FROM nonexistent_table WHERE id = ?", [1])
+    if isNull(res)
+        print("safeQuery returned Null — table does not exist")
+        print("Error: " + db.error())
+    end
+
+    # isConnected after error
+    if db.isConnected()
+        print("Connection still active despite errors")
+    end
+
+    db.close()
+
+    # Operations on closed connection
+    if !db.isConnected()
+        print("Connection closed, ping returns: " + str(db.ping()))
+    end
+else
+    print("Connection failed: " + db.error())
+end

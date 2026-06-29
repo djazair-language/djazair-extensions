@@ -1,0 +1,49 @@
+# 01_basic_crud.dz — Basic CRUD operations with MySQL
+use mysql
+
+let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+
+if db.isConnected()
+    print("Connected to MySQL server: " + db.serverInfo())
+    print("Connection info: " + db.hostInfo())
+
+    # Create table
+    let ok = db.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, age INT)")
+    if ok
+        print("Table 'users' created or already exists")
+    else
+        print("Create table failed: " + db.error())
+    end
+
+    # Insert records
+    ok = db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Riad", 30])
+    if ok
+        print("Inserted Riad, ID: " + str(db.insertId()) + ", affected: " + str(db.affectedRows()))
+    else
+        print("Insert failed: " + db.error())
+    end
+
+    db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
+    db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Sarah", 28])
+
+    # Query records
+    let res = db.safeQuery("SELECT * FROM users WHERE age >= ?", [25])
+    if !isNull(res)
+        print("Found " + str(res.numRows()) + " rows, " + str(res.numFields()) + " columns")
+        print("Columns: " + str(res.columns()))
+
+        let users = res.fetchAllAssoc()
+        for user in users
+            print("ID: " + str(user["id"]) + ", Name: " + user["name"] + ", Age: " + str(user["age"]))
+        end
+
+        res.close()
+    else
+        print("Query failed: " + db.error())
+    end
+
+    db.close()
+    print("Connection closed")
+else
+    print("Connection failed: " + db.error())
+end

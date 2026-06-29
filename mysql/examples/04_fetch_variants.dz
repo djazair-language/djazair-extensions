@@ -1,0 +1,62 @@
+# 04_fetch_variants.dz — Different fetch methods and result set navigation
+use mysql
+
+let db = mysql.Connection("localhost", "root", "", "testdb", 3306)
+
+if db.isConnected()
+    db.execute("CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, department TEXT)")
+    db.execute("DELETE FROM employees")
+
+    db.safeExecute("INSERT INTO employees (name, department) VALUES (?, ?)", ["Alice", "Engineering"])
+    db.safeExecute("INSERT INTO employees (name, department) VALUES (?, ?)", ["Bob", "Marketing"])
+    db.safeExecute("INSERT INTO employees (name, department) VALUES (?, ?)", ["Charlie", "Engineering"])
+    db.safeExecute("INSERT INTO employees (name, department) VALUES (?, ?)", ["Diana", "HR"])
+
+    let res = db.query("SELECT * FROM employees ORDER BY id")
+
+    if !isNull(res)
+        print("Total rows: " + str(res.numRows()))
+        print("Total fields: " + str(res.numFields()))
+        print("Column names: " + str(res.columns()))
+
+        # fetchRow — indexed array
+        print("--- fetchRow (indexed arrays) ---")
+        res.seek(0)
+        let row = res.fetchRow()
+        while !isNull(row)
+            print("Row: " + str(row))
+            row = res.fetchRow()
+        end
+
+        # fetchAssoc — associative map
+        print("--- fetchAssoc (associative maps) ---")
+        res.seek(0)
+        let emp = res.fetchAssoc()
+        while !isNull(emp)
+            print(emp["name"] + " — " + emp["department"])
+            emp = res.fetchAssoc()
+        end
+
+        # fetchAll — all rows as array of arrays
+        print("--- fetchAll (all rows) ---")
+        res.seek(0)
+        let all = res.fetchAll()
+        for item in all
+            print(str(item))
+        end
+
+        # fetchAllAssoc — all rows as array of maps
+        print("--- fetchAllAssoc (all rows as maps) ---")
+        res.seek(0)
+        let allAssoc = res.fetchAllAssoc()
+        for item in allAssoc
+            print(item["name"] + " — " + item["department"])
+        end
+
+        res.close()
+    end
+
+    db.close()
+else
+    print("Connection failed: " + db.error())
+end
