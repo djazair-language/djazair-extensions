@@ -1,0 +1,12 @@
+use clipboard
+
+print("Has text: " + str(clipboard.hasText()))
+print("Current: '" + clipboard.getText() + "'")
+
+clipboard.setText("Hello from Djazair!")
+print("Set text: " + str(clipboard.hasText()))
+print("Read back: '" + clipboard.getText() + "'")
+
+clipboard.clear()
+print("After clear - hasText: " + str(clipboard.hasText()))
+print("After clear - text: '" + clipboard.getText() + "'")

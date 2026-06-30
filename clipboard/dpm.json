@@ -1,0 +1,10 @@
+{
+    "name": "clipboard",
+    "version": "0.1.0",
+    "source": "github:djazair-language/djazair-extensions/clipboard",
+    "description": "Clipboard read/write extension for Djazair (Windows)",
+    "developer": {
+        "name": "Harizi Riyadh",
+        "email": "hariziriyadh@gmail.com"
+    }
+}

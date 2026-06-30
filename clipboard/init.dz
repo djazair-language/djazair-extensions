@@ -1,0 +1,8 @@
+# init.dz — Clipboard Extension for Djazair
+use assert
+let _cb = __dynamic("clipboard")
+
+let getText = _cb.getText
+let setText = _cb.setText
+let clear   = _cb.clear
+let hasText = _cb.hasText
