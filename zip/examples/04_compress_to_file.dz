@@ -1,0 +1,34 @@
+use file
+use assert
+use zip
+
+let testFile = "__compress_me.txt"
+let gzFile = "__compress_me.txt.gz"
+let restoredFile = "__restored.txt"
+
+let content = ""
+for i in 0..100
+    content = content + "Line " + str(i) + "\n"
+end
+file.write(testFile, content)
+
+print("Original file size: " + str(file.size(testFile)))
+
+let fileData = file.read(testFile)
+let compressed = zip.gzip(fileData)
+file.write(gzFile, compressed)
+print("Compressed file size: " + str(file.size(gzFile)))
+
+let ratio = float(file.size(gzFile)) / float(file.size(testFile)) * 100.0
+print("Compression ratio: " + str(round(ratio, 1)) + "%")
+
+let gzData = file.read(gzFile)
+let restored = zip.gunzip(gzData)
+file.write(restoredFile, restored)
+print("Restored file size: " + str(file.size(restoredFile)))
+
+assert.equal(file.read(testFile), file.read(restoredFile), "Files should match")
+file.delete(testFile)
+file.delete(gzFile)
+file.delete(restoredFile)
+print("OK: gzip file compression/decompression verified")

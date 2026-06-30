@@ -1,0 +1,12 @@
+use assert
+use zip
+
+let original = "Hello, Djazair! This text will be compressed."
+let compressed = zip.gzip(original)
+let decompressed = zip.gunzip(compressed)
+
+print("Original size: ", original.length())
+print("Compressed size: ", compressed.length())
+print("Decompressed: ", decompressed)
+assert.equal(original, decompressed, "Roundtrip should match")
+print("OK: gzip roundtrip verified")

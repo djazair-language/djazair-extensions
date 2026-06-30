@@ -1,0 +1,10 @@
+{
+    "name": "zip",
+    "version": "0.1.0",
+    "source": "github:djazair-language/djazair-extensions/zip",
+    "description": "Gzip compression and zip archive operations for Djazair (zlib + platform commands)",
+    "developer": {
+        "name": "Harizi Riyadh",
+        "email": "hariziriyadh@gmail.com"
+    }
+}

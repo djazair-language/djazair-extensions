@@ -1,0 +1,7 @@
+use assert
+let _z = __dynamic("zip")
+let gzip   = _z.gzip
+let gunzip = _z.gunzip
+let create = _z.create
+let extract = _z.extract
+let list   = _z.list
