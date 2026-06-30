@@ -2,7 +2,7 @@
 use assert
 let _cb = __dynamic("clipboard")
 
-let getText = _cb.getText
-let setText = _cb.setText
-let clear   = _cb.clear
-let hasText = _cb.hasText
+let paste = _cb.paste
+let copy  = _cb.copy
+let clear = _cb.clear
+let has   = _cb.has

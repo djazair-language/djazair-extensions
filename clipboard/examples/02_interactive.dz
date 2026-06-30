@@ -1,30 +1,22 @@
-# 02_interactive.dz — Copy/paste simulation with clipboard
+# 02_interactive.dz — Copy/paste simulation
 use clipboard
 
-print("=== Clipboard Extension Demo ===")
+print("=== Clipboard Demo ===")
 
-# Store original
-let original = clipboard.getText()
+let original = clipboard.paste()
 print("Original clipboard: '" + original + "'")
 
-# Set some values
-clipboard.setText("Djazair Programming Language")
-print("Copied to clipboard: 'Djazair Programming Language'")
-print("Clipboard has text: " + str(clipboard.hasText()))
+clipboard.copy("Djazair Programming Language")
+print("Copied!")
+print("Has: " + str(clipboard.has()))
+print("Paste: '" + clipboard.paste() + "'")
 
-# Read back
-let value = clipboard.getText()
-print("Read from clipboard: '" + value + "'")
-
-# Clear it
 clipboard.clear()
-print("Cleared clipboard")
-print("Has text after clear: " + str(clipboard.hasText()))
+print("Has after clear: " + str(clipboard.has()))
 
-# Restore original if non-empty
 if original != ""
-    clipboard.setText(original)
-    print("Restored original: '" + clipboard.getText() + "'")
+    clipboard.copy(original)
+    print("Restored: '" + clipboard.paste() + "'")
 end
 
 print("=== Done ===")

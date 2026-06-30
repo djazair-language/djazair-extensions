@@ -1,6 +1,7 @@
 # Djazair Clipboard Extension Manual
 
-The **Clipboard** extension provides system clipboard read and write access for the Djazair programming language. Currently supports Windows (Win32 API).
+The **Clipboard** extension provides system clipboard access for the Djazair programming language.
+Cross-platform support: Windows (Win32 API), macOS (`pbcopy`/`pbpaste`), Linux (`xclip`).
 
 ---
 
@@ -8,7 +9,8 @@ The **Clipboard** extension provides system clipboard read and write access for 
 1. [Installation](#1-installation)
 2. [Quick Start](#2-quick-start)
 3. [API Reference](#3-api-reference)
-4. [Complete Examples](#4-complete-examples)
+4. [Platform Notes](#4-platform-notes)
+5. [Complete Examples](#5-complete-examples)
 
 ---
 
@@ -34,11 +36,11 @@ use clipboard
 ```dz
 use clipboard
 
-clipboard.setText("Hello from Djazair!")
-print(clipboard.getText())
+clipboard.copy("Hello from Djazair!")
+print(clipboard.paste())
 
-if clipboard.hasText()
-    print("Clipboard contains text")
+if clipboard.has()
+    print("Clipboard has text")
 end
 
 clipboard.clear()
@@ -50,68 +52,89 @@ clipboard.clear()
 
 All functions are exported directly from the `clipboard` module.
 
-### `getText()` → String
-Returns the current clipboard text content. Returns empty string `""` if clipboard is empty or contains non-text data.
+### `paste()` → String
+Returns the current clipboard text. Empty string if clipboard is empty or contains non-text data.
 
 ```dz
-let text = clipboard.getText()
+let text = clipboard.paste()
 if text != ""
-    print("Clipboard: " + text)
+    print(text)
 end
 ```
 
-### `setText(text)` → Bool
-Copies a string to the system clipboard. Returns `True` on success, `False` on failure.
+### `copy(text)` → Bool
+Copies a string to the system clipboard. Returns `True` on success.
 
 ```dz
-let ok = clipboard.setText("Hello")
+let ok = clipboard.copy("Hello")
 if ok
-    print("Text copied!")
-else
-    print("Failed to copy")
+    print("Copied!")
 end
 ```
 
 ### `clear()` → Bool
-Empties the clipboard contents. Returns `True` on success.
+Empties the clipboard. Returns `True` on success.
 
 ```dz
 clipboard.clear()
 ```
 
-### `hasText()` → Bool
-Returns `True` if the clipboard currently contains text data.
+### `has()` → Bool
+Returns `True` if the clipboard contains text data.
 
 ```dz
-if clipboard.hasText()
-    print("Clipboard has text: " + clipboard.getText())
+if clipboard.has()
+    print("Text available: " + clipboard.paste())
 end
 ```
 
 ---
 
-## 4. Complete Examples
+## 4. Platform Notes
 
-### 4.1. Basic Copy/Paste
+| Platform | Implementation | Requirement |
+|----------|---------------|-------------|
+| Windows  | Win32 API (`user32.dll`) | None (built-in) |
+| macOS    | `pbcopy` / `pbpaste` | None (built-in) |
+| Linux    | `xclip` | `xclip` package |
 
-```dz
-use clipboard
+On Linux, install `xclip` via your package manager:
 
-clipboard.setText("Djazair Programming Language")
-let value = clipboard.getText()
-print("Read: '" + value + "'")
+```bash
+# Debian / Ubuntu
+sudo apt install xclip
 
-clipboard.clear()
-print("After clear: '" + clipboard.getText() + "'")
+# Fedora
+sudo dnf install xclip
+
+# Arch
+sudo pacman -S xclip
 ```
 
-### 4.2. Unicode and Multi-line
+---
+
+## 5. Complete Examples
+
+### 5.1. Basic Copy/Paste
 
 ```dz
 use clipboard
 
-clipboard.setText("مرحبا بالعالم\nHello World\nこんにちは")
-let text = clipboard.getText()
+clipboard.copy("Djazair Programming Language")
+let value = clipboard.paste()
+print("Paste: '" + value + "'")
+
+clipboard.clear()
+print("After clear: '" + clipboard.paste() + "'")
+```
+
+### 5.2. Unicode and Multi-line
+
+```dz
+use clipboard
+
+clipboard.copy("مرحبا بالعالم\nHello World\nこんにちは")
+let text = clipboard.paste()
 print(text)
 ```
 

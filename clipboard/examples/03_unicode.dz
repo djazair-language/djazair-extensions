@@ -1,11 +1,10 @@
-# 03_unicode.dz — Unicode and multi-line clipboard test
+# 03_unicode.dz — Unicode and multi-line test
 use clipboard
 
-clipboard.setText("مرحبا بالعالم\nHello World\nこんにちは")
+clipboard.copy("مرحبا بالعالم\nHello World\nこんにちは")
 
-let text = clipboard.getText()
+let text = clipboard.paste()
 print("Lines:")
 print(text)
-
 print("---")
-print("Characters: " + str(text.length()))
+print("Length: " + str(text.length()))

@@ -1,12 +1,13 @@
+# 01_basic.dz — Basic clipboard operations
 use clipboard
 
-print("Has text: " + str(clipboard.hasText()))
-print("Current: '" + clipboard.getText() + "'")
+print("Has: " + str(clipboard.has()))
+print("Paste: '" + clipboard.paste() + "'")
 
-clipboard.setText("Hello from Djazair!")
-print("Set text: " + str(clipboard.hasText()))
-print("Read back: '" + clipboard.getText() + "'")
+clipboard.copy("Hello from Djazair!")
+print("After copy - has: " + str(clipboard.has()))
+print("Paste: '" + clipboard.paste() + "'")
 
 clipboard.clear()
-print("After clear - hasText: " + str(clipboard.hasText()))
-print("After clear - text: '" + clipboard.getText() + "'")
+print("After clear - has: " + str(clipboard.has()))
+print("Paste: '" + clipboard.paste() + "'")
