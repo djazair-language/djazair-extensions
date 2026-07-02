@@ -1,7 +1,7 @@
 # 03_input.dz — Keyboard and mouse input handling
 use raylib as rl
 
-let win = rl.Window(800, 600, "Input Handling")
+let win = new rl.Window(800, 600, "Input Handling")
 win.setFPS(60)
 
 let x = 400.0

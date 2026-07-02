@@ -1,15 +1,15 @@
 # 04_camera.dz — Camera2D scrolling with world/screen coordinates
 use raylib as rl
 
-let win = rl.Window(800, 600, "Camera2D Example")
+let win = new rl.Window(800, 600, "Camera2D Example")
 win.setFPS(60)
 
-let camera = rl.Camera2D()
+let camera = new rl.Camera2D()
 camera.offset_x = 400.0
 camera.offset_y = 300.0
 camera.zoom = 1.0
 
-let rect = rl.Rectangle(-100, -50, 200, 100, rl.GREEN)
+let rect = new rl.Rectangle(-100, -50, 200, 100, rl.GREEN)
 let ballX = 0.0
 let ballY = 150.0
 

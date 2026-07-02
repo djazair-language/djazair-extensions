@@ -30,13 +30,13 @@ class Connection
         throw "TypeError: sqlite.escape expected string or number, got " + type(val)
     end
 
-    # Execute a query and return ResultSet (or Null)
+    # Execute a query and return new ResultSet(or Null)
     query(sql)
         assert.string(sql, "sql query")
         if !self.connected return Null end
         let stmt = _s.prepare(self.db, sql)
         if isNull(stmt) return Null end
-        return rs.ResultSet(stmt)
+        return new rs.ResultSet(stmt)
     end
 
     # Safe parameterized query — replaces ? with escaped values
@@ -144,5 +144,5 @@ class Connection
 end
 
 fn connect(path)
-    return Connection(path)
+    return new Connection(path)
 end

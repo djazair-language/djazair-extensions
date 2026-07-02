@@ -1,7 +1,7 @@
 # 02_shapes.dz — Drawing various 2D shapes
 use raylib as rl
 
-let win = rl.Window(800, 600, "Shapes with Djazair")
+let win = new rl.Window(800, 600, "Shapes with Djazair")
 win.setFPS(60)
 
 let cx = 400.0

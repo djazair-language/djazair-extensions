@@ -121,7 +121,7 @@ class Connection
         if isNull(res)
             return Null
         end
-        return rs.ResultSet(res)
+        return new rs.ResultSet(res)
     end
 
     # Execute a non-SELECT statement (INSERT, UPDATE, DELETE, DDL)

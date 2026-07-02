@@ -1,7 +1,7 @@
 # 04_fetch_variants.dz — Different fetch methods and result set navigation
 use mysql
 
-let db = mysql.Connection("localhost", "root", "mysql", "test", 3306)
+let db = new mysql.Connection("localhost", "root", "mysql", "test", 3306)
 
 if db.isConnected()
     db.execute("CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT, department TEXT)")

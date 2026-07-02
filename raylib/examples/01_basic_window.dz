@@ -1,7 +1,7 @@
 # 01_basic_window.dz — Minimal raylib window with text
 use raylib as rl
 
-let win = rl.Window(800, 600, "Djazair + Raylib")
+let win = new rl.Window(800, 600, "Djazair + Raylib")
 win.setFPS(60)
 
 while win.isOpen()

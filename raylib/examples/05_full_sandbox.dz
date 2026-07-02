@@ -1,7 +1,7 @@
 # 05_full_sandbox.dz — Complete interactive demo
 use raylib as rl
 
-let win = rl.Window(800, 600, "Djazair Raylib Sandbox")
+let win = new rl.Window(800, 600, "Djazair Raylib Sandbox")
 win.setFPS(60)
 
 let ballX = 400.0

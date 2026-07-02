@@ -7,15 +7,15 @@ class Vector2
     end
 
     add(other)
-        return Vector2(self.x + other.x, self.y + other.y)
+        return new Vector2(self.x + other.x, self.y + other.y)
     end
 
     sub(other)
-        return Vector2(self.x - other.x, self.y - other.y)
+        return new Vector2(self.x - other.x, self.y - other.y)
     end
 
     scale(factor)
-        return Vector2(self.x * factor, self.y * factor)
+        return new Vector2(self.x * factor, self.y * factor)
     end
 end
 

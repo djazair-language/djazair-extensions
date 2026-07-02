@@ -10,7 +10,7 @@ import "protocol/protocol.dz" as *
 
 fn createWindow(options = {})
     sysLog("App", "Initializing new window application...")
-    return application.App(options)
+    return new application.App(options)
 end
 
 # ── Public Logger API ──
