@@ -4,6 +4,7 @@
 use json as *
 use file
 use path
+use bytes
 import "../helpers/Cookie.dz" as *
 import "../helpers/Utils.dz" as *
 
@@ -28,14 +29,52 @@ class Response
             return self
         end
         self._headers[name.lower()] = value
-        self._http.setHeader(name, value)
         return self
+    end
+
+    # Internal helper to construct and send raw response headers and body
+    _sendRaw(body)
+        if self._sent return end
+        self._sent = True
+
+        let bodyStr = ""
+        if isMap(body) or isArray(body)
+            if !self._headers.has("content-type")
+                self.setHeader("Content-Type", "application/json")
+            end
+            bodyStr = stringify(body)
+        else
+            bodyStr = str(body)
+        end
+
+        # Get status text from underlying builder status text mapping
+        let statusText = self._http._builder.statusText
+
+        let response = "HTTP/1.1 " + str(self._status) + " " + statusText + "\r\n"
+
+        # Add regular headers
+        let hKeys = self._headers.keys()
+        for key in hKeys
+            response += key + ": " + str(self._headers[key]) + "\r\n"
+        end
+
+        # Add all cookies as separate Set-Cookie headers
+        for c in self._cookies
+            let cookieStr = serializeCookie(c["name"], c["value"], c["options"])
+            response += "Set-Cookie: " + cookieStr + "\r\n"
+        end
+
+        response += "Content-Length: " + str(bytes.byteLength(bodyStr)) + "\r\n"
+        response += "Connection: close\r\n"
+        response += "\r\n"
+        response += bodyStr
+
+        self._http._send(response)
     end
 
     send(body)
         self._body = body
-        self._http.send(body)
-        self._sent = True
+        self._sendRaw(body)
         return self
     end
 
@@ -50,15 +89,16 @@ class Response
     end
 
     json(data)
+        self.setHeader("Content-Type", "application/json")
         self._body = stringify(data)
-        self._http.sendJson(data)
-        self._sent = True
+        self._sendRaw(data)
         return self
     end
 
     file(filePath)
         let safePath = path.normalize(filePath)
         if !file.exists(safePath)
+            self._status = 404
             self._http.status(404)
             self.send("File not found")
             return self
@@ -69,6 +109,7 @@ class Response
         try
             self.send(fh.read())
         catch err
+            self._status = 500
             self._http.status(500)
             self.send("Error reading file")
         end
@@ -86,16 +127,14 @@ class Response
     end
 
     redirect(url, code = 302)
-        self._http.redirect(url, code)
-        self._sent = True
+        self.status(code)
+        self.setHeader("Location", url)
+        self._sendRaw("")
         return self
     end
 
     cookie(name, value, options = {})
         self._cookies.append({"name": name, "value": value, "options": options})
-        let cookieStr = serializeCookie(name, value, options)
-        # Use addHeader so multiple Set-Cookie calls don't overwrite each other
-        self._http.addHeader("Set-Cookie", cookieStr)
         return self
     end
 
@@ -124,3 +163,4 @@ class Response
         return self
     end
 end
+

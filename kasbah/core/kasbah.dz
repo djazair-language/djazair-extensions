@@ -119,14 +119,13 @@ class Kasbah
             let res = new Response(httpRes)
 
             # ── Resolve client IP ──
+            # IP is only available via proxy headers (x-forwarded-for, x-real-ip)
+            # The raw TCP client IP is not exposed by the http module
             req.ip = httpReq.header("x-forwarded-for")
-            if isNull(req.ip) || req.ip == ""
+            if req.ip == ""
                 req.ip = httpReq.header("x-real-ip")
             end
-            if isNull(req.ip) || req.ip == ""
-                req.ip = httpReq.remoteAddr
-            end
-            if isNull(req.ip) || req.ip == ""
+            if req.ip == ""
                 req.ip = "unknown"
             end
 
