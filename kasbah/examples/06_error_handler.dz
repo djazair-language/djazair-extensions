@@ -1,0 +1,66 @@
+# Kasbah Example 06 — Global Error Handler (onError)
+# يوضح كيف يعمل معالج الأخطاء العام:
+# - إذا رمى أي Handler أو Middleware خطأً غير معالج
+# - تُستدعى دالة onError() تلقائياً بدلاً من تجميد الخادم
+#
+# Usage:
+#   Run: djazair examples/06_error_handler.dz
+#   Test errors:
+#     http://localhost:8080/crash     ← يرمي خطأً مقصوداً
+#     http://localhost:8080/safe      ← يعمل بشكل طبيعي
+#     http://localhost:8080/divide    ← قسمة على صفر
+#     http://localhost:8080/unknown   ← 404 Not Found
+
+use kasbah
+use datetime
+
+let app = new kasbah.Kasbah({
+    "port": 8080,
+    "logger": True
+})
+
+# ── تسجيل معالج الأخطاء العام ──────────────────────────────
+# يُستدعى تلقائياً عند أي exception غير معالج
+app.onError(fn(err, req, res)
+    # طباعة الخطأ في السجل
+    print("[ERROR] ${req.method} ${req.path} → ${str(err)}")
+
+    # لا ترسل الرد مرتين
+    if res._sent return end
+
+    res.status(500).json({
+        "error": "Internal Server Error",
+        "message": str(err),
+        "path":    req.path,
+        "method":  req.method,
+        "time":    str(datetime.now())
+    })
+end)
+
+# ── المسارات ──────────────────────────────────────────────
+
+app.get("/safe", fn(req, res)
+    res.json({"status": "ok", "message": "This route works fine!"})
+end)
+
+app.get("/crash", fn(req, res)
+    # خطأ مقصود — سيُستدعى onError تلقائياً
+    throw "Something went terribly wrong!"
+end)
+
+app.get("/divide", fn(req, res)
+    let x = 10
+    let y = 0
+    # قسمة على صفر — يرمي exception
+    let result = x / y
+    res.json({"result": result})
+end)
+
+app.get("/null-access", fn(req, res)
+    # وصول إلى خاصية قيمتها Null
+    let obj = Null
+    let val = obj["key"]
+    res.json({"val": val})
+end)
+
+app.listen()

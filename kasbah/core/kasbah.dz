@@ -44,11 +44,43 @@ class Kasbah
         self._bodyParserMw = Null
         self._loggerMw = Null
         self._staticMw = Null
+        # معالج الأخطاء العام — Null يعني استخدام الافتراضي
+        self._errorHandler = Null
     end
 
     middleware(mwFn)
         self._middlewares.append(mwFn)
         return self
+    end
+
+    # تسجيل معالج الأخطاء العام
+    # الدالة تستقبل: (err, req, res)
+    # تُستدعى تلقائياً عند أي exception غير معالج داخل الـ Handlers أو Middlewares
+    onError(handler)
+        self._errorHandler = handler
+        return self
+    end
+
+    # معالجة الخطأ الداخلية — تستدعي _errorHandler أو ترسل 500 افتراضي
+    _handleError(err, req, res)
+        try
+            if !isNull(self._errorHandler)
+                self._errorHandler(err, req, res)
+            else
+                # رد افتراضي إذا لم يسجل المطور معالجاً
+                if !res._sent
+                    res.status(500).json({
+                        "error": "Internal Server Error",
+                        "message": str(err)
+                    })
+                end
+            end
+        catch handlerErr
+            # حتى لو فشل معالج الأخطاء نفسه — نرسل رداً أخيراً
+            if !res._sent
+                res.status(500).text("Internal Server Error")
+            end
+        end
     end
 
     get(pattern, handler)
@@ -89,7 +121,6 @@ class Kasbah
             # ── IP ──
             req.ip = httpReq.header("x-forwarded-for")
             if isNull(req.ip) || req.ip == ""
-                # محاولة الحصول على الـ remoteAddr الحقيقي
                 req.ip = httpReq.header("x-real-ip")
             end
             if isNull(req.ip) || req.ip == ""
@@ -99,12 +130,11 @@ class Kasbah
                 req.ip = "unknown"
             end
 
-            # ── Query String — باستخدام net.URL ──
+            # ── Query String — باستخدام net.URL ——
             let qidx = req.path.index("?")
             if !isNull(qidx) && qidx >= 0
                 let fullPath = req.path
                 req.path = fullPath.slice(0, qidx)
-                # نستخدم net.URL لتحليل الـ Query وفك تشفيرها تلقائياً
                 let parsed = new net.URL("http://x" + fullPath)
                 req._queryMap = parsed.query
             end
@@ -115,44 +145,59 @@ class Kasbah
                 req.cookies = parseCookie(cHeader)
             end
 
-            # ── Middlewares (تم إنشاؤها مسبقاً في listen()) ──
-            if !isNull(self._bodyParserMw)
-                self._bodyParserMw(req, res)
-                if res._sent
-                    self._saveSession(req)
-                    return
+            try
+                # ── BodyParser ──
+                if !isNull(self._bodyParserMw)
+                    self._bodyParserMw(req, res)
+                    if res._sent
+                        self._saveSession(req)
+                        return
+                    end
                 end
-            end
 
-            if !isNull(self._loggerMw)
-                self._loggerMw(req, res)
-            end
-
-            if !isNull(self._sessionMw)
-                self._sessionMw(req, res)
-            end
-
-            if !isNull(self._staticMw)
-                self._staticMw(req, res)
-                if res._sent
-                    self._saveSession(req)
-                    if self._config["logger"] logComplete(req, res) end
-                    return
+                # ── Logger ──
+                if !isNull(self._loggerMw)
+                    self._loggerMw(req, res)
                 end
-            end
 
-            for mw in self._middlewares
-                mw(req, res)
-                if res._sent
-                    self._saveSession(req)
-                    if self._config["logger"] logComplete(req, res) end
-                    return
+                # ── Session ──
+                if !isNull(self._sessionMw)
+                    self._sessionMw(req, res)
                 end
-            end
 
-            let matched = self._router.handle(req, res)
-            if !matched
-                res.status(404).text("Not Found")
+                # ── Static ──
+                if !isNull(self._staticMw)
+                    self._staticMw(req, res)
+                    if res._sent
+                        self._saveSession(req)
+                        if self._config["logger"] logComplete(req, res) end
+                        return
+                    end
+                end
+
+                # ── Middlewares المخصصة ──
+                for mw in self._middlewares
+                    mw(req, res)
+                    if res._sent
+                        self._saveSession(req)
+                        if self._config["logger"] logComplete(req, res) end
+                        return
+                    end
+                end
+
+                # ── Router ──
+                let matched = self._router.handle(req, res)
+                if !matched
+                    res.status(404).json({
+                        "error": "Not Found",
+                        "path": req.path,
+                        "method": req.method
+                    })
+                end
+
+            catch err
+                # أي exception غير معالج يصل هنا
+                self._handleError(err, req, res)
             end
 
             self._saveSession(req)
