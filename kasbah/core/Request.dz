@@ -60,7 +60,7 @@ class Request
     end
 
     # Check if the Content-Type matches the given type (e.g. "json", "form")
-    is(type)
+    contentIs(type)
         let ct = self._http.header("content-type")
         if isNull(ct) || ct == "" return False end
         if type == "json"
@@ -75,3 +75,4 @@ class Request
         return ct.contains(type)
     end
 end
+
