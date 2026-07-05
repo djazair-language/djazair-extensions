@@ -11,7 +11,7 @@
 use kasbah
 use datetime
 
-let app = new kasbah.Kasbah({
+let app = new kasbah.KasbahApp({
     "port": 8080,
     "static": "./public"
 })

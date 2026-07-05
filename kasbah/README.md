@@ -19,7 +19,7 @@ Kasbah is a pure-Dz extension — no native build step needed.
 ```djazair
 use kasbah
 
-let app = new kasbah.Kasbah({"port": 8080})
+let app = new kasbah.KasbahApp({"port": 8080})
 
 app.get("/", fn(req, res)
     res.text("Hello from Kasbah!")
@@ -35,9 +35,9 @@ djazair myserver.dz
 
 ---
 
-## 3. Kasbah (Application Class)
+## 3. KasbahApp (Application Class)
 
-### `new Kasbah(config)`
+### `new KasbahApp(config)`
 
 Creates a new application instance. `config` is a map of options:
 
@@ -52,7 +52,7 @@ Creates a new application instance. `config` is a map of options:
 | `maxBodySize` | `1048576` | Max request body size in bytes |
 
 ```djazair
-let app = new kasbah.Kasbah({
+let app = new kasbah.KasbahApp({
     "port": 8080,
     "bodyParser": True,
     "logger": True,
@@ -360,7 +360,7 @@ GET /index.html 200 0.0012ms
 File-based session storage. Each session is a JSON file in a temp directory. The session ID is set via a signed cookie. Enabled via `"session": True` and `"sessionSecret"`.
 
 ```djazair
-let app = new kasbah.Kasbah({
+let app = new kasbah.KasbahApp({
     "session": True,
     "sessionSecret": "your-secret-key"
 })
@@ -425,7 +425,7 @@ Serializes a cookie name/value pair with options into a `Set-Cookie` header stri
 use kasbah
 use datetime
 
-let app = new kasbah.Kasbah({
+let app = new kasbah.KasbahApp({
     "port": 8080,
     "bodyParser": True,
     "logger": True,

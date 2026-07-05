@@ -7,7 +7,7 @@
 
 use kasbah
 
-let app = new kasbah.Kasbah({
+let app = new kasbah.KasbahApp({
     "port": 8080
 })
 
