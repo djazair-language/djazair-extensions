@@ -64,6 +64,11 @@ class Router
     end
 
     _match(method, path)
+        # تطبيع المسار: حذف الـ trailing slash إن وُجد (ما عدا المسار "/" وحده)
+        if path.length() > 1 && path.endsWith("/")
+            path = path.slice(0, path.length() - 1)
+        end
+
         let pathSegs = path.split("/")
 
         for route in self._routes
@@ -71,7 +76,13 @@ class Router
                 continue
             end
 
-            let patternSegs = route["pattern"].split("/")
+            let pattern = route["pattern"]
+            # تطبيع نمط الـ Route أيضاً
+            if pattern.length() > 1 && pattern.endsWith("/")
+                pattern = pattern.slice(0, pattern.length() - 1)
+            end
+
+            let patternSegs = pattern.split("/")
             if patternSegs.length() != pathSegs.length()
                 continue
             end
@@ -100,3 +111,4 @@ class Router
         return Null
     end
 end
+

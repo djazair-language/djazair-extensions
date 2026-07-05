@@ -3,6 +3,7 @@
 
 # Parse Cookie header string into a key-value map
 # "token=abc123; theme=dark" → {"token": "abc123", "theme": "dark"}
+# Handles values that contain '=' (e.g. base64 tokens)
 fn parseCookie(header)
     let cookies = {}
 
@@ -11,9 +12,14 @@ fn parseCookie(header)
     end
 
     for pair in header.split(";")
-        let kv = pair.strip().split("=")
-        if kv.length() == 2
-            cookies[kv[0].strip()] = kv[1].strip()
+        let trimmed = pair.strip()
+        let eqIdx = trimmed.index("=")
+        if eqIdx > 0
+            let k = trimmed.slice(0, eqIdx).strip()
+            let v = trimmed.slice(eqIdx + 1).strip()
+            if k != ""
+                cookies[k] = v
+            end
         end
     end
 

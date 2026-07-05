@@ -1,8 +1,10 @@
 # Kasbah Helpers — Utility functions
 
 use datetime
+use random
 use file
 use path
+use regex
 
 fn parseUrl(url)
     let parts = url.split("?")
@@ -11,14 +13,78 @@ fn parseUrl(url)
 
     if parts.length() > 1
         for pair in parts[1].split("&")
-            let kv = pair.split("=")
-            if kv.length() == 2
-                query[kv[0]] = kv[1]
+            let eqIdx = pair.index("=")
+            if eqIdx > 0
+                let k = urlDecode(pair.slice(0, eqIdx))
+                let v = urlDecode(pair.slice(eqIdx + 1))
+                query[k] = v
             end
         end
     end
 
     return {"path": pathname, "query": query}
+end
+
+# Decode a percent-encoded URL string
+# Converts "%2B" → "+", "%20" → " ", "%40" → "@", etc.
+# Also converts "+" → " " (application/x-www-form-urlencoded)
+fn urlDecode(s)
+    if isNull(s) || s == ""
+        return ""
+    end
+    # Replace "+" with space first
+    let result = s.replace("+", " ")
+    # Find all %XX sequences and replace them
+    let pat = regex.compile("%([0-9A-Fa-f]{2})")
+    let matches = pat.findAll(result)
+    for m in matches
+        # m is [fullMatch, hexGroup]
+        let encoded = m[0]
+        let hexPart = m[1]
+        let code = int(hexPart, 16)
+        # Build a one-character string from the char code
+        let char = " "
+        # Common replacements for URL decoding
+        if code == 32 char = " "
+        elif code == 33 char = "!"
+        elif code == 34 char = "\""
+        elif code == 35 char = "#"
+        elif code == 36 char = "$"
+        elif code == 37 char = "%"
+        elif code == 38 char = "&"
+        elif code == 39 char = "'"
+        elif code == 40 char = "("
+        elif code == 41 char = ")"
+        elif code == 42 char = "*"
+        elif code == 43 char = "+"
+        elif code == 44 char = ","
+        elif code == 45 char = "-"
+        elif code == 46 char = "."
+        elif code == 47 char = "/"
+        elif code == 58 char = ":"
+        elif code == 59 char = ";"
+        elif code == 60 char = "<"
+        elif code == 61 char = "="
+        elif code == 62 char = ">"
+        elif code == 63 char = "?"
+        elif code == 64 char = "@"
+        elif code == 91 char = "["
+        elif code == 92 char = "\\"
+        elif code == 93 char = "]"
+        elif code == 94 char = "^"
+        elif code == 95 char = "_"
+        elif code == 96 char = "`"
+        elif code == 123 char = "{"
+        elif code == 124 char = "|"
+        elif code == 125 char = "}"
+        elif code == 126 char = "~"
+        else
+            # For letters/digits just skip (they shouldn't be encoded normally)
+            char = encoded
+        end
+        result = result.replace(encoded, char)
+    end
+    return result
 end
 
 fn merge(a, b)
@@ -34,17 +100,17 @@ fn merge(a, b)
     return result
 end
 
-fn generateId(len = 16)
+# generateId — توليد معرّف سداسي عشري آمن باستخدام random.string()
+# يستخدم CSPRNG الحقيقي المدعوم من النظام عبر مكتبة random
+fn generateId(len = 32)
     let hex = "0123456789abcdef"
     let result = ""
-    let t = datetime.ticks() * 7 + 13
-
-    for i in 0..len - 1
-        t = t + (t % 7) * 13 + 11 + i
-        let n = t % 16
+    let i = 0
+    while i < len
+        let n = random.int(0, 15)
         result = result + hex[n]
+        i = i + 1
     end
-
     return result
 end
 

@@ -38,6 +38,10 @@ class Kasbah
         self._middlewares = []
         self._server = Null
         self._sessionMw = Null
+        # تُنشأ مرة واحدة عند الإعداد — لا في كل طلب
+        self._bodyParserMw = Null
+        self._loggerMw = Null
+        self._staticMw = Null
     end
 
     middleware(mwFn)
@@ -80,51 +84,73 @@ class Kasbah
             let req = new Request(httpReq)
             let res = new Response(httpRes)
 
+            # ── IP ──
             req.ip = httpReq.header("x-forwarded-for")
             if isNull(req.ip) || req.ip == ""
-                req.ip = "127.0.0.1"
+                # محاولة الحصول على الـ remoteAddr الحقيقي
+                req.ip = httpReq.header("x-real-ip")
+            end
+            if isNull(req.ip) || req.ip == ""
+                req.ip = httpReq.remoteAddr
+            end
+            if isNull(req.ip) || req.ip == ""
+                req.ip = "unknown"
             end
 
+            # ── Query String (مع URL Decode) ──
             let qidx = req.path.index("?")
             if !isNull(qidx) && qidx >= 0
                 let qs = req.path.slice(qidx + 1)
                 req.path = req.path.slice(0, qidx)
                 for pair in qs.split("&")
-                    let kv = pair.split("=")
-                    if kv.length() == 2
-                        req._queryMap[kv[0]] = kv[1]
+                    let eqIdx = pair.index("=")
+                    if eqIdx > 0
+                        let k = urlDecode(pair.slice(0, eqIdx))
+                        let v = urlDecode(pair.slice(eqIdx + 1))
+                        req._queryMap[k] = v
                     end
                 end
             end
 
+            # ── Cookies ──
             let cHeader = httpReq.header("cookie")
             if cHeader != ""
                 req.cookies = parseCookie(cHeader)
             end
 
-            if self._config["bodyParser"]
-                let bp = bodyParser(self._config["maxBodySize"])
-                bp(req, res)
+            # ── Middlewares (تم إنشاؤها مسبقاً في listen()) ──
+            if !isNull(self._bodyParserMw)
+                self._bodyParserMw(req, res)
+                if res._sent
+                    self._saveSession(req)
+                    return
+                end
             end
 
-            if self._config["logger"]
-                let lg = logger()
-                lg(req, res)
+            if !isNull(self._loggerMw)
+                self._loggerMw(req, res)
             end
 
             if !isNull(self._sessionMw)
                 self._sessionMw(req, res)
             end
 
-            if self._config["static"] != ""
-                let st = serveStatic(self._config["static"])
-                st(req, res)
-                if res._sent return end
+            if !isNull(self._staticMw)
+                self._staticMw(req, res)
+                if res._sent
+                    self._saveSession(req)
+                    if self._config["logger"] logComplete(req, res) end
+                    return
+                end
             end
 
             for mw in self._middlewares
                 mw(req, res)
-                if res._sent return end
+                if res._sent
+                    self._saveSession(req)
+                    if self._config["logger"] logComplete(req, res) end
+                    return
+                end
             end
 
             let matched = self._router.handle(req, res)
@@ -132,16 +158,21 @@ class Kasbah
                 res.status(404).text("Not Found")
             end
 
-            if self._config["session"]
-                let sid = req.get("_sid")
-                let store = req.get("_store")
-                if !isNull(sid) && !isNull(store)
-                    store.write(sid, req.session)
-                end
-            end
+            self._saveSession(req)
 
             if self._config["logger"]
                 logComplete(req, res)
+            end
+        end
+    end
+
+    # دالة مساعدة لحفظ الجلسة — تُستدعى من كل نقطة خروج
+    _saveSession(req)
+        if self._config["session"]
+            let sid = req.get("_sid")
+            let store = req.get("_store")
+            if !isNull(sid) && !isNull(store)
+                store.write(sid, req.session)
             end
         end
     end
@@ -150,9 +181,20 @@ class Kasbah
         if !isNull(port)
             self._config["port"] = port
         end
+
+        # إنشاء الـ middlewares مرة واحدة هنا
+        if self._config["bodyParser"]
+            self._bodyParserMw = bodyParser(self._config["maxBodySize"])
+        end
+        if self._config["logger"]
+            self._loggerMw = logger()
+        end
         if self._config["session"]
             let opts = {"secret": self._config["sessionSecret"]}
             self._sessionMw = session(opts)
+        end
+        if self._config["static"] != ""
+            self._staticMw = serveStatic(self._config["static"])
         end
 
         if message == Null
@@ -168,3 +210,4 @@ class Kasbah
         end
     end
 end
+

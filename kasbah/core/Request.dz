@@ -5,7 +5,7 @@ class Request
     init(httpReq)
         self.method = httpReq.method
         self.path = httpReq.path
-        self.headers = httpReq.headers
+        self.rawHeaders = httpReq.headers  # أُعيدت تسميتها لتجنب التعارض مع دالة header()
         self.body = httpReq.body
         self._http = httpReq
 
@@ -29,9 +29,11 @@ class Request
         return Null
     end
 
-    headers(name)
+    # جلب قيمة header بالاسم — الاسم صار header() (مفرد) بدلاً من headers()
+    header(name)
         return self._http.header(name)
     end
+
 
     cookie(name)
         if self.cookies.has(name) return self.cookies[name] end

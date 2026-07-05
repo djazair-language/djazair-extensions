@@ -6,8 +6,10 @@ use os
 use file
 use dir
 use json
+use regex
 import "../helpers/Utils.dz" as *
 import "../helpers/Cookie.dz" as *
+
 
 # FileStore — persists session data to the filesystem
 class FileStore
@@ -75,7 +77,13 @@ fn session(options = {})
         if !isNull(cookieHeader) && cookieHeader != ""
             let cookies = parseCookie(cookieHeader)
             if cookies.has(cookieName)
-                sid = cookies[cookieName]
+                let rawSid = cookies[cookieName]
+                # ✅ التحقق من الأمان: نقبل فقط الأحرف السداسية العشرية (hex)
+                # هذا يمنع ثغرة Path Traversal إذا حاول المهاجم إرسال "../../../etc"
+                let validSid = regex.fullMatch("[0-9a-f]+", rawSid)
+                if !isNull(validSid)
+                    sid = rawSid
+                end
             end
         end
 
@@ -98,3 +106,4 @@ fn session(options = {})
         req.set("_store", store)
     end
 end
+

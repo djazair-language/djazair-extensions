@@ -65,7 +65,14 @@ class Response
         end
         let ext = path.extname(safePath)
         self.setHeader("Content-Type", mimeType(ext))
-        self.send(file.read(safePath))
+        let fh = file.open(safePath, "rb")
+        try
+            self.send(fh.read())
+        catch err
+            self._http.status(500)
+            self.send("Error reading file")
+        end
+        fh.close()
         return self
     end
 
@@ -87,7 +94,8 @@ class Response
     cookie(name, value, options = {})
         self._cookies.append({"name": name, "value": value, "options": options})
         let cookieStr = serializeCookie(name, value, options)
-        self._http.setHeader("Set-Cookie", cookieStr)
+        # استخدام addHeader بدلاً من setHeader حتى لا تمسح الكوكيز السابقة
+        self._http.addHeader("Set-Cookie", cookieStr)
         return self
     end
 
