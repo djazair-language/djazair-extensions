@@ -6,8 +6,10 @@ use http
 use os
 use file
 use path
+use net
 use datetime
 use json
+
 import "Request.dz" as *
 import "Response.dz" as *
 import "Router.dz" as *
@@ -97,19 +99,14 @@ class Kasbah
                 req.ip = "unknown"
             end
 
-            # ── Query String (مع URL Decode) ──
+            # ── Query String — باستخدام net.URL ──
             let qidx = req.path.index("?")
             if !isNull(qidx) && qidx >= 0
-                let qs = req.path.slice(qidx + 1)
-                req.path = req.path.slice(0, qidx)
-                for pair in qs.split("&")
-                    let eqIdx = pair.index("=")
-                    if eqIdx > 0
-                        let k = urlDecode(pair.slice(0, eqIdx))
-                        let v = urlDecode(pair.slice(eqIdx + 1))
-                        req._queryMap[k] = v
-                    end
-                end
+                let fullPath = req.path
+                req.path = fullPath.slice(0, qidx)
+                # نستخدم net.URL لتحليل الـ Query وفك تشفيرها تلقائياً
+                let parsed = new net.URL("http://x" + fullPath)
+                req._queryMap = parsed.query
             end
 
             # ── Cookies ──

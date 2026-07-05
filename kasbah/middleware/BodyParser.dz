@@ -2,6 +2,7 @@
 # Parses JSON and form-urlencoded request bodies
 
 use json as *
+use net
 import "../helpers/Utils.dz" as *
 
 fn bodyParser(maxBodySize = 1048576)
@@ -35,25 +36,14 @@ fn bodyParser(maxBodySize = 1048576)
                 return
             end
         elif mainType == "application/x-www-form-urlencoded"
-            let data = {}
+            # نستخدم net.URL لتحليل الـ form body وفك تشفيره تلقائياً
             if req.body != ""
-                let pairs = req.body.split("&")
-                for pair in pairs
-                    let eqIdx = pair.index("=")
-                    if eqIdx > 0
-                        # URL Decode المفتاح والقيمة
-                        let k = urlDecode(pair.slice(0, eqIdx))
-                        let v = urlDecode(pair.slice(eqIdx + 1))
-                        if k != ""
-                            data[k] = v
-                        end
-                    elif pair != ""
-                        # مفتاح بدون قيمة
-                        data[urlDecode(pair)] = ""
-                    end
-                end
+                let parsed = new net.URL("http://x?" + req.body)
+                req.body = parsed.query
+            else
+                req.body = {}
             end
-            req.body = data
         end
     end
 end
+
