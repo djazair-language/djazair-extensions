@@ -5,19 +5,19 @@ use file
 use path
 use net
 
-# parseUrl — يستخدم net.URL لتحليل الرابط واستخراج Path والـ Query
+# parseUrl — uses net.URL to parse a URL string into path + query map
 fn parseUrl(url)
     let parsed = new net.URL(url)
     return {"path": parsed.pathname, "query": parsed.query}
 end
 
-# urlDecode — يستخدم net.URL لفك تشفير query string كاملة
-# يقوم بتحليل "?key=value" ثم يعيد قيمة المفتاح المطلوب
+# urlDecode — uses net.URL to decode a percent-encoded string
+# Handles "+" as space and all %XX sequences automatically
 fn urlDecode(s)
     if isNull(s) || s == ""
         return ""
     end
-    # نبني URL وهمي لاستغلال محلل net.URL لفك التشفير
+    # Build a dummy URL and let net.URL handle decoding
     let parsed = new net.URL("http://x?v=" + s)
     let val = parsed.query.get("v", s)
     return val
@@ -36,7 +36,8 @@ fn merge(a, b)
     return result
 end
 
-# generateId — توليد معرّف سداسي عشري آمن (CSPRNG عبر مكتبة random)
+# generateId — generates a secure hex ID of given length
+# Uses the CSPRNG-backed random.int() from the standard library
 fn generateId(len = 32)
     let hex = "0123456789abcdef"
     let result = ""

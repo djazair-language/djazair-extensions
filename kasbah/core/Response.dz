@@ -94,7 +94,7 @@ class Response
     cookie(name, value, options = {})
         self._cookies.append({"name": name, "value": value, "options": options})
         let cookieStr = serializeCookie(name, value, options)
-        # استخدام addHeader بدلاً من setHeader حتى لا تمسح الكوكيز السابقة
+        # Use addHeader so multiple Set-Cookie calls don't overwrite each other
         self._http.addHeader("Set-Cookie", cookieStr)
         return self
     end

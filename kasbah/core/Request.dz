@@ -5,7 +5,7 @@ class Request
     init(httpReq)
         self.method = httpReq.method
         self.path = httpReq.path
-        self.rawHeaders = httpReq.headers  # أُعيدت تسميتها لتجنب التعارض مع دالة header()
+        self.rawHeaders = httpReq.headers  # renamed from 'headers' to avoid conflict with header() method
         self.body = httpReq.body
         self._http = httpReq
 
@@ -29,11 +29,10 @@ class Request
         return Null
     end
 
-    # جلب قيمة header بالاسم — الاسم صار header() (مفرد) بدلاً من headers()
+    # Get a header value by name
     header(name)
         return self._http.header(name)
     end
-
 
     cookie(name)
         if self.cookies.has(name) return self.cookies[name] end
@@ -58,5 +57,21 @@ class Request
         let accept = self._http.header("accept")
         if accept == "" return True end
         return accept.contains(type)
+    end
+
+    # Check if the Content-Type matches the given type (e.g. "json", "form")
+    is(type)
+        let ct = self._http.header("content-type")
+        if isNull(ct) || ct == "" return False end
+        if type == "json"
+            return ct.contains("application/json")
+        end
+        if type == "form"
+            return ct.contains("application/x-www-form-urlencoded")
+        end
+        if type == "multipart"
+            return ct.contains("multipart/form-data")
+        end
+        return ct.contains(type)
     end
 end

@@ -1,15 +1,16 @@
 # Kasbah Example 06 — Global Error Handler (onError)
-# يوضح كيف يعمل معالج الأخطاء العام:
-# - إذا رمى أي Handler أو Middleware خطأً غير معالج
-# - تُستدعى دالة onError() تلقائياً بدلاً من تجميد الخادم
+# Demonstrates how the global error handler works:
+# - If any Handler or Middleware throws an unhandled exception
+# - onError() is automatically invoked instead of freezing the server
 #
 # Usage:
 #   Run: djazair examples/06_error_handler.dz
-#   Test errors:
-#     http://localhost:8080/crash     ← يرمي خطأً مقصوداً
-#     http://localhost:8080/safe      ← يعمل بشكل طبيعي
-#     http://localhost:8080/divide    ← قسمة على صفر
-#     http://localhost:8080/unknown   ← 404 Not Found
+#   Test endpoints:
+#     http://localhost:8080/safe         -> works normally
+#     http://localhost:8080/crash        -> throws an intentional error
+#     http://localhost:8080/divide       -> division by zero
+#     http://localhost:8080/null-access  -> null dereference
+#     http://localhost:8080/unknown      -> 404 Not Found
 
 use kasbah
 use datetime
@@ -19,17 +20,17 @@ let app = new kasbah.Kasbah({
     "logger": True
 })
 
-# ── تسجيل معالج الأخطاء العام ──────────────────────────────
-# يُستدعى تلقائياً عند أي exception غير معالج
+# ── Register global error handler ─────────────────────────────────────────────
+# Called automatically when any unhandled exception occurs during request handling
 app.onError(fn(err, req, res)
-    # طباعة الخطأ في السجل
-    print("[ERROR] ${req.method} ${req.path} → ${str(err)}")
+    # Log error to console
+    print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
 
-    # لا ترسل الرد مرتين
+    # Guard: do not send a response twice
     if res._sent return end
 
     res.status(500).json({
-        "error": "Internal Server Error",
+        "error":   "Internal Server Error",
         "message": str(err),
         "path":    req.path,
         "method":  req.method,
@@ -37,27 +38,27 @@ app.onError(fn(err, req, res)
     })
 end)
 
-# ── المسارات ──────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 app.get("/safe", fn(req, res)
     res.json({"status": "ok", "message": "This route works fine!"})
 end)
 
 app.get("/crash", fn(req, res)
-    # خطأ مقصود — سيُستدعى onError تلقائياً
+    # Intentional throw — onError will be called automatically
     throw "Something went terribly wrong!"
 end)
 
 app.get("/divide", fn(req, res)
     let x = 10
     let y = 0
-    # قسمة على صفر — يرمي exception
+    # Division by zero — triggers an exception
     let result = x / y
     res.json({"result": result})
 end)
 
 app.get("/null-access", fn(req, res)
-    # وصول إلى خاصية قيمتها Null
+    # Null dereference — triggers an exception
     let obj = Null
     let val = obj["key"]
     res.json({"val": val})

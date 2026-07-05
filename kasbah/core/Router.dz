@@ -64,7 +64,7 @@ class Router
     end
 
     _match(method, path)
-        # تطبيع المسار: حذف الـ trailing slash إن وُجد (ما عدا المسار "/" وحده)
+        # Normalize trailing slash — treat "/users" and "/users/" as the same
         if path.length() > 1 && path.endsWith("/")
             path = path.slice(0, path.length() - 1)
         end
@@ -77,7 +77,7 @@ class Router
             end
 
             let pattern = route["pattern"]
-            # تطبيع نمط الـ Route أيضاً
+            # Normalize pattern trailing slash as well
             if pattern.length() > 1 && pattern.endsWith("/")
                 pattern = pattern.slice(0, pattern.length() - 1)
             end
@@ -111,4 +111,3 @@ class Router
         return Null
     end
 end
-

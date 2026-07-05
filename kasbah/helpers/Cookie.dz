@@ -3,7 +3,7 @@
 
 # Parse Cookie header string into a key-value map
 # "token=abc123; theme=dark" → {"token": "abc123", "theme": "dark"}
-# Handles values that contain '=' (e.g. base64 tokens)
+# Handles values that contain '=' (e.g. base64 tokens) by splitting on the first '=' only
 fn parseCookie(header)
     let cookies = {}
 
@@ -26,7 +26,7 @@ fn parseCookie(header)
     return cookies
 end
 
-# Serialize a cookie object into a Set-Cookie header string
+# Serialize a cookie into a Set-Cookie header string
 # Options: domain, path, expires, maxAge, httpOnly, secure, sameSite
 fn serializeCookie(name, value, options = {})
     let parts = [name + "=" + value]

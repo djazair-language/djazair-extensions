@@ -40,11 +40,11 @@ class Kasbah
         self._middlewares = []
         self._server = Null
         self._sessionMw = Null
-        # تُنشأ مرة واحدة عند الإعداد — لا في كل طلب
+        # Middleware instances — created once in listen(), not per request
         self._bodyParserMw = Null
         self._loggerMw = Null
         self._staticMw = Null
-        # معالج الأخطاء العام — Null يعني استخدام الافتراضي
+        # Global error handler — Null means use built-in default
         self._errorHandler = Null
     end
 
@@ -53,21 +53,21 @@ class Kasbah
         return self
     end
 
-    # تسجيل معالج الأخطاء العام
-    # الدالة تستقبل: (err, req, res)
-    # تُستدعى تلقائياً عند أي exception غير معالج داخل الـ Handlers أو Middlewares
+    # Register a global error handler function(err, req, res)
+    # Called automatically whenever an unhandled exception occurs
+    # inside any handler or middleware during request processing.
     onError(handler)
         self._errorHandler = handler
         return self
     end
 
-    # معالجة الخطأ الداخلية — تستدعي _errorHandler أو ترسل 500 افتراضي
+    # Internal: invoke the user error handler or fall back to a default 500 response
     _handleError(err, req, res)
         try
             if !isNull(self._errorHandler)
                 self._errorHandler(err, req, res)
             else
-                # رد افتراضي إذا لم يسجل المطور معالجاً
+                # Default response when no error handler is registered
                 if !res._sent
                     res.status(500).json({
                         "error": "Internal Server Error",
@@ -76,7 +76,7 @@ class Kasbah
                 end
             end
         catch handlerErr
-            # حتى لو فشل معالج الأخطاء نفسه — نرسل رداً أخيراً
+            # Last-resort response if the error handler itself throws
             if !res._sent
                 res.status(500).text("Internal Server Error")
             end
@@ -118,7 +118,7 @@ class Kasbah
             let req = new Request(httpReq)
             let res = new Response(httpRes)
 
-            # ── IP ──
+            # ── Resolve client IP ──
             req.ip = httpReq.header("x-forwarded-for")
             if isNull(req.ip) || req.ip == ""
                 req.ip = httpReq.header("x-real-ip")
@@ -130,7 +130,7 @@ class Kasbah
                 req.ip = "unknown"
             end
 
-            # ── Query String — باستخدام net.URL ——
+            # ── Parse query string via net.URL (handles URL decoding automatically) ──
             let qidx = req.path.index("?")
             if !isNull(qidx) && qidx >= 0
                 let fullPath = req.path
@@ -139,14 +139,14 @@ class Kasbah
                 req._queryMap = parsed.query
             end
 
-            # ── Cookies ──
+            # ── Parse cookies ──
             let cHeader = httpReq.header("cookie")
             if cHeader != ""
                 req.cookies = parseCookie(cHeader)
             end
 
             try
-                # ── BodyParser ──
+                # ── Body parser ──
                 if !isNull(self._bodyParserMw)
                     self._bodyParserMw(req, res)
                     if res._sent
@@ -165,7 +165,7 @@ class Kasbah
                     self._sessionMw(req, res)
                 end
 
-                # ── Static ──
+                # ── Static file serving ──
                 if !isNull(self._staticMw)
                     self._staticMw(req, res)
                     if res._sent
@@ -175,7 +175,7 @@ class Kasbah
                     end
                 end
 
-                # ── Middlewares المخصصة ──
+                # ── User-defined middlewares ──
                 for mw in self._middlewares
                     mw(req, res)
                     if res._sent
@@ -196,7 +196,7 @@ class Kasbah
                 end
 
             catch err
-                # أي exception غير معالج يصل هنا
+                # Any unhandled exception reaches here
                 self._handleError(err, req, res)
             end
 
@@ -208,7 +208,7 @@ class Kasbah
         end
     end
 
-    # دالة مساعدة لحفظ الجلسة — تُستدعى من كل نقطة خروج
+    # Helper: persist session data — called at every exit point
     _saveSession(req)
         if self._config["session"]
             let sid = req.get("_sid")
@@ -224,7 +224,7 @@ class Kasbah
             self._config["port"] = port
         end
 
-        # إنشاء الـ middlewares مرة واحدة هنا
+        # Build middleware instances once here, not inside each request handler
         if self._config["bodyParser"]
             self._bodyParserMw = bodyParser(self._config["maxBodySize"])
         end
@@ -252,4 +252,3 @@ class Kasbah
         end
     end
 end
-
