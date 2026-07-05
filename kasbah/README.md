@@ -44,8 +44,8 @@ Creates a new application instance. `config` is a map of options:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `port` | `3000` | TCP port to listen on |
-| `bodyParser` | `False` | Enable JSON/form body parsing |
-| `logger` | `False` | Enable request logging |
+| `bodyParser` | `True` | Enable JSON/form body parsing |
+| `logger` | `True` | Enable request logging |
 | `session` | `False` | Enable file-based sessions |
 | `sessionSecret` | `""` | Secret key for session ID generation |
 | `static` | `""` | Directory path for static file serving |

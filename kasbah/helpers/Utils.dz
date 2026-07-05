@@ -84,11 +84,42 @@ fn parseContentType(header)
 
     let pLen = parts.length()
     for i in 1..pLen - 1
-        let kv = parts[i].strip().split("=")
-        if kv.length() == 2 && kv[0] == "boundary"
-            result["boundary"] = kv[1]
+        let p = parts[i].strip()
+        if p.slice(0, 9) == "boundary="
+            let b = p.slice(9)
+            if b.length() >= 2 && b[0] == "\"" && b[b.length() - 1] == "\""
+                b = b.slice(1, b.length() - 1)
+            end
+            result["boundary"] = b
         end
     end
 
+    return result
+end
+
+# Parses a Content-Disposition header and extracts name and filename
+# Example: form-data; name="avatar"; filename="photo.png"
+fn parseContentDisposition(header)
+    let parts = header.split(";")
+    let result = {"name": "", "filename": ""}
+    
+    let pLen = parts.length()
+    for i in 1..pLen - 1
+        let p = parts[i].strip()
+        let eqIdx = p.index("=")
+        if eqIdx > 0
+            let key = p.slice(0, eqIdx).strip()
+            let val = p.slice(eqIdx + 1).strip()
+            if val.length() >= 2 && val[0] == "\"" && val[val.length() - 1] == "\""
+                val = val.slice(1, val.length() - 1)
+            end
+            if key == "name"
+                result["name"] = val
+            elif key == "filename"
+                result["filename"] = val
+            end
+        end
+    end
+    
     return result
 end

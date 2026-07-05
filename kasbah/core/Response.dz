@@ -90,8 +90,9 @@ class Response
 
     json(data)
         self.setHeader("Content-Type", "application/json")
-        self._body = stringify(data)
-        self._sendRaw(data)
+        let strData = stringify(data)
+        self._body = strData
+        self._sendRaw(strData)
         return self
     end
 
@@ -119,8 +120,7 @@ class Response
 
     download(filePath, filename = Null)
         if isNull(filename)
-            let parts = filePath.split("/")
-            filename = parts[parts.length() - 1]
+            filename = path.basename(filePath)
         end
         self.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"")
         return self.file(filePath)

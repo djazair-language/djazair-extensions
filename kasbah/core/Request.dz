@@ -13,7 +13,7 @@ class Request
         self.cookies = {}
         self.session = {}
         self.ip = ""
-        self.files = []
+        self.files = {}
         self._state = {}
         self._queryMap = {}
     end

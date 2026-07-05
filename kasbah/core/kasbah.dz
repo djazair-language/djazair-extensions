@@ -9,6 +9,7 @@ use path
 use net
 use datetime
 use json
+use process
 
 import "Request.dz" as *
 import "Response.dz" as *
@@ -241,8 +242,13 @@ class Kasbah
         if message == Null
             print("Kasbah server starting on ${self._config["host"]}:${self._config["port"]}")
         end
-        self._server = http.createServer(self._buildHandler())
-        self._server.listen(self._config["port"])
+        self._server = http.createServer(self._buildHandler(), self._config["maxBodySize"])
+        try
+            self._server.listen(self._config["port"])
+        catch err
+            print("Error: Failed to start server on port ${self._config["port"]} — ${str(err)}")
+            process.exit(1)
+        end
     end
 
     close()
