@@ -86,7 +86,7 @@ Adds a middleware function that runs before route handlers:
 
 ```djazair
 app.middleware(fn(req, res)
-    if req.headers("x-auth") != "admin"
+    if req.header("x-auth") != "admin"
         res.status(401).text("Unauthorized")
     end
 end)
@@ -125,12 +125,12 @@ let q = req.query("q")       # "hello"
 let all = req.query()        # {"q": "hello", "page": "2"}
 ```
 
-### `req.headers(name)`
+### `req.header(name)`
 
 Returns a request header value (case-insensitive). Returns `""` if missing.
 
 ```djazair
-let ct = req.headers("content-type")
+let ct = req.header("content-type")
 ```
 
 ### `req.body`
