@@ -5,6 +5,12 @@ class Router
     init()
         self._routes = []
         self._middlewares = []
+        self._subRouters = []
+    end
+
+    mount(prefix, router)
+        self._subRouters.append({"prefix": prefix, "router": router})
+        return self
     end
 
     middleware(mwFn)
@@ -54,13 +60,40 @@ class Router
         end
 
         let route = self._match(req.method, req.path)
-        if isNull(route)
-            return False
+        if !isNull(route)
+            req.params = route["params"]
+            route["handler"](req, res)
+            return True
         end
 
-        req.params = route["params"]
-        route["handler"](req, res)
-        return True
+        for sub in self._subRouters
+            let prefix = sub["prefix"]
+            let pLen = prefix.length()
+            
+            # Check if req.path matches prefix
+            let matchPrefix = False
+            if req.path == prefix
+                matchPrefix = True
+            elif req.path.length() > pLen && req.path.slice(0, pLen) == prefix && req.path[pLen] == "/"
+                matchPrefix = True
+            end
+
+            if matchPrefix
+                let origPath = req.path
+                req.path = req.path.slice(pLen)
+                if req.path == "" req.path = "/" end
+                if req.path[0] != "/" req.path = "/" + req.path end
+                
+                let handled = sub["router"].handle(req, res)
+                
+                req.path = origPath
+                if handled
+                    return True
+                end
+            end
+        end
+
+        return False
     end
 
     _match(method, path)

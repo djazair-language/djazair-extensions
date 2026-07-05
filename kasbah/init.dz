@@ -4,12 +4,20 @@
 #        app.get("/", fn(req, res) res.send("Hello") end)
 #        app.listen()
 
-import "core/kasbah.dz" as _app_mod
+import "core/KasbahApp.dz" as _app_mod
 import "core/Router.dz" as _router_mod
 import "core/Request.dz" as _req_mod
 import "core/Response.dz" as _res_mod
+import "middleware/BodyParser.dz" as _body_mod
+import "middleware/Logger.dz" as _log_mod
+import "middleware/Session.dz" as _sess_mod
+import "middleware/Static.dz" as _static_mod
 
-let Kasbah = _app_mod.Kasbah
+let KasbahApp = _app_mod.KasbahApp
 let Request = _req_mod.Request
 let Response = _res_mod.Response
 let Router = _router_mod.Router
+let bodyParser = _body_mod.bodyParser
+let logger = _log_mod.logger
+let session = _sess_mod.session
+let serveStatic = _static_mod.serveStatic

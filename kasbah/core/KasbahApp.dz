@@ -21,17 +21,17 @@ import "../middleware/Static.dz" as *
 import "../helpers/Utils.dz" as *
 import "../helpers/Cookie.dz" as *
 
-class Kasbah
+class KasbahApp
     init(config = {})
         let defaults = {
-            "port": 8080,
+            "port": 3000,
             "host": "0.0.0.0",
             "bodyParser": True,
+            "maxBodySize": 1048576,
             "logger": True,
             "session": False,
             "sessionSecret": "kasbah",
-            "static": "",
-            "maxBodySize": 1048576
+            "static": ""
         }
         self._config = merge(defaults, config)
         if self._config["static"] != ""
@@ -47,6 +47,11 @@ class Kasbah
         self._staticMw = Null
         # Global error handler — Null means use built-in default
         self._errorHandler = Null
+    end
+
+    mount(prefix, router)
+        self._router.mount(prefix, router)
+        return self
     end
 
     middleware(mwFn)
