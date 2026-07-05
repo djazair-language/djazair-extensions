@@ -1,5 +1,5 @@
 # Kasbah Middleware — BodyParser
-# Parses JSON and form-urlencoded request bodies
+# Parses JSON, form-urlencoded, and multipart/form-data request bodies
 
 use json as *
 use net
@@ -9,135 +9,129 @@ use dir
 use bytes
 import "../helpers/Utils.dz" as *
 
+fn _parseJson(req, res)
+    if req.body == "" return end
+    try
+        req.body = parse(req.body)
+    catch err
+        res.status(400).json({"error": "Invalid JSON body", "detail": str(err)})
+    end
+end
+
+fn _parseUrlEncoded(req, res)
+    if req.body != ""
+        let parsed = new net.URL("http://x?" + req.body)
+        req.body = parsed.query
+    else
+        req.body = {}
+    end
+end
+
+fn _parseMultipart(req, res, boundary)
+    if boundary == ""
+        res.status(400).json({"error": "Missing boundary in multipart/form-data"})
+        return
+    end
+    
+    let rawBody = req.body
+    req.body = {}
+    
+    let boundaryPrefix = "--" + boundary
+    let parts = rawBody.split(boundaryPrefix)
+    
+    for part in parts
+        let pLen = part.length()
+        if pLen == 0 || part == "--\r\n" || part == "--\n" || part == "--" || part == "\r\n" || part == "\n"
+            continue
+        end
+        
+        let pStart = 0
+        if pLen >= 2 && part.slice(0, 2) == "\r\n"
+            pStart = 2
+        elif pLen >= 1 && part.slice(0, 1) == "\n"
+            pStart = 1
+        end
+        
+        let cleanPart = part.slice(pStart)
+        let headerEnd = cleanPart.index("\r\n\r\n")
+        let contentOffset = 4
+        if headerEnd == -1
+            headerEnd = cleanPart.index("\n\n")
+            contentOffset = 2
+        end
+        
+        if headerEnd > 0
+            let headerSection = cleanPart.slice(0, headerEnd)
+            let contentSection = cleanPart.slice(headerEnd + contentOffset)
+            
+            if contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "\r\n"
+                contentSection = contentSection.slice(0, contentSection.length() - 2)
+            elif contentSection.length() >= 1 && contentSection.slice(contentSection.length() - 1, contentSection.length()) == "\n"
+                contentSection = contentSection.slice(0, contentSection.length() - 1)
+            end
+            
+            let cdHeader = ""
+            let ctHeader = "text/plain"
+            
+            let hLines = headerSection.split("\n")
+            for hLine in hLines
+                let hClean = hLine.strip()
+                let hLower = hClean.lower()
+                if hLower.length() >= 20 && hLower.slice(0, 20) == "content-disposition:"
+                    cdHeader = hClean.slice(20).strip()
+                elif hLower.length() >= 13 && hLower.slice(0, 13) == "content-type:"
+                    ctHeader = hClean.slice(13).strip()
+                end
+            end
+            
+            let disp = parseContentDisposition(cdHeader)
+            let name = disp["name"]
+            let filename = disp["filename"]
+            
+            if name != ""
+                if filename != ""
+                    let tempDir = os.tmpDir() + "/kasbah_uploads"
+                    if !file.exists(tempDir) dir.createAll(tempDir) end
+                    let tempPath = tempDir + "/" + generateId(32)
+                    let byteArr = bytes.fromString(contentSection)
+                    file.writeBytes(tempPath, byteArr)
+                    
+                    req.files[name] = {
+                        "name": name,
+                        "filename": filename,
+                        "type": ctHeader,
+                        "tempPath": tempPath,
+                        "size": byteArr.length()
+                    }
+                else
+                    req.body[name] = contentSection
+                end
+            end
+        end
+    end
+end
+
 fn bodyParser(maxBodySize = 1048576)
     return fn(req, res)
-        if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS"
-            return
-        end
-
+        if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS" return end
         if req.body.length() > maxBodySize
             res.status(413).text("Request body too large")
             return
         end
 
         let ct = req._http.header("content-type")
-        if ct == ""
-            return
-        end
+        if ct == "" return end
 
         let parts = ct.split(";")
         let mainType = parts[0].strip()
 
         if mainType == "application/json"
-            if req.body == ""
-                return
-            end
-            try
-                req.body = parse(req.body)
-            catch err
-                # Invalid JSON — stop the request with 400 Bad Request
-                res.status(400).json({"error": "Invalid JSON body", "detail": str(err)})
-                return
-            end
+            _parseJson(req, res)
         elif mainType == "application/x-www-form-urlencoded"
-            # Use net.URL to parse and URL-decode form fields automatically
-            if req.body != ""
-                let parsed = new net.URL("http://x?" + req.body)
-                req.body = parsed.query
-            else
-                req.body = {}
-            end
+            _parseUrlEncoded(req, res)
         elif mainType == "multipart/form-data"
             let parsedCt = parseContentType(ct)
-            let boundary = parsedCt["boundary"]
-            if boundary == ""
-                res.status(400).json({"error": "Missing boundary in multipart/form-data"})
-                return
-            end
-            
-            let rawBody = req.body
-            req.body = {}
-            # req.files is already {}
-            
-            let boundaryPrefix = "--" + boundary
-            let parts = rawBody.split(boundaryPrefix)
-            
-            for part in parts
-                let pLen = part.length()
-                if pLen == 0 || part == "--\r\n" || part == "--\n" || part == "--" || part == "\r\n" || part == "\n"
-                    continue
-                end
-                
-                # Skip leading \r\n or \n if present after split
-                let pStart = 0
-                if pLen >= 2 && part.slice(0, 2) == "\r\n"
-                    pStart = 2
-                elif pLen >= 1 && part.slice(0, 1) == "\n"
-                    pStart = 1
-                end
-                
-                let cleanPart = part.slice(pStart)
-                
-                let headerEnd = cleanPart.index("\r\n\r\n")
-                let contentOffset = 4
-                if headerEnd == -1
-                    headerEnd = cleanPart.index("\n\n")
-                    contentOffset = 2
-                end
-                
-                if headerEnd > 0
-                    let headerSection = cleanPart.slice(0, headerEnd)
-                    let contentSection = cleanPart.slice(headerEnd + contentOffset)
-                    
-                    # Remove trailing \r\n from contentSection
-                    if contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "\r\n"
-                        contentSection = contentSection.slice(0, contentSection.length() - 2)
-                    elif contentSection.length() >= 1 && contentSection.slice(contentSection.length() - 1, contentSection.length()) == "\n"
-                        contentSection = contentSection.slice(0, contentSection.length() - 1)
-                    end
-                    
-                    let cdHeader = ""
-                    let ctHeader = "text/plain"
-                    
-                    let hLines = headerSection.split("\n")
-                    for hLine in hLines
-                        let hClean = hLine.strip()
-                        let hLower = hClean.lower()
-                        if hLower.length() >= 20 && hLower.slice(0, 20) == "content-disposition:"
-                            cdHeader = hClean.slice(20).strip()
-                        elif hLower.length() >= 13 && hLower.slice(0, 13) == "content-type:"
-                            ctHeader = hClean.slice(13).strip()
-                        end
-                    end
-                    
-                    let disp = parseContentDisposition(cdHeader)
-                    let name = disp["name"]
-                    let filename = disp["filename"]
-                    
-                    if name != ""
-                        if filename != ""
-                            let tempDir = os.tmpDir() + "/kasbah_uploads"
-                            if !file.exists(tempDir)
-                                dir.createAll(tempDir)
-                            end
-                            
-                            let tempPath = tempDir + "/" + generateId(32)
-                            let byteArr = bytes.fromString(contentSection)
-                            file.writeBytes(tempPath, byteArr)
-                            
-                            req.files[name] = {
-                                "name": name,
-                                "filename": filename,
-                                "type": ctHeader,
-                                "tempPath": tempPath,
-                                "size": byteArr.length()
-                            }
-                        else
-                            req.body[name] = contentSection
-                        end
-                    end
-                end
-            end
+            _parseMultipart(req, res, parsedCt["boundary"])
         end
     end
 end

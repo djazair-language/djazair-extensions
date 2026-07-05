@@ -114,89 +114,38 @@ class Kasbah
         return self
     end
 
+    _prepareRequest(req, httpReq)
+        req.ip = httpReq.header("x-forwarded-for")
+        if req.ip == "" req.ip = httpReq.header("x-real-ip") end
+        if req.ip == "" req.ip = "unknown" end
+
+        let qidx = req.path.index("?")
+        if !isNull(qidx) && qidx >= 0
+            let fullPath = req.path
+            req.path = fullPath.slice(0, qidx)
+            let parsed = new net.URL("http://x" + fullPath)
+            req._queryMap = parsed.query
+        end
+
+        let cHeader = httpReq.header("cookie")
+        if cHeader != "" req.cookies = parseCookie(cHeader) end
+    end
+
     _buildHandler()
         return fn(httpReq, httpRes)
             let req = new Request(httpReq)
             let res = new Response(httpRes)
 
-            # ── Resolve client IP ──
-            # IP is only available via proxy headers (x-forwarded-for, x-real-ip)
-            # The raw TCP client IP is not exposed by the http module
-            req.ip = httpReq.header("x-forwarded-for")
-            if req.ip == ""
-                req.ip = httpReq.header("x-real-ip")
-            end
-            if req.ip == ""
-                req.ip = "unknown"
-            end
-
-            # ── Parse query string via net.URL (handles URL decoding automatically) ──
-            let qidx = req.path.index("?")
-            if !isNull(qidx) && qidx >= 0
-                let fullPath = req.path
-                req.path = fullPath.slice(0, qidx)
-                let parsed = new net.URL("http://x" + fullPath)
-                req._queryMap = parsed.query
-            end
-
-            # ── Parse cookies ──
-            let cHeader = httpReq.header("cookie")
-            if cHeader != ""
-                req.cookies = parseCookie(cHeader)
-            end
+            self._prepareRequest(req, httpReq)
 
             try
-                # ── Body parser ──
-                if !isNull(self._bodyParserMw)
-                    self._bodyParserMw(req, res)
-                    if res._sent
-                        self._saveSession(req)
-                        return
-                    end
-                end
-
-                # ── Logger ──
-                if !isNull(self._loggerMw)
-                    self._loggerMw(req, res)
-                end
-
-                # ── Session ──
-                if !isNull(self._sessionMw)
-                    self._sessionMw(req, res)
-                end
-
-                # ── Static file serving ──
-                if !isNull(self._staticMw)
-                    self._staticMw(req, res)
-                    if res._sent
-                        self._saveSession(req)
-                        if self._config["logger"] logComplete(req, res) end
-                        return
-                    end
-                end
-
-                # ── User-defined middlewares ──
-                for mw in self._middlewares
+                for mw in self._pipeline
                     mw(req, res)
                     if res._sent
-                        self._saveSession(req)
-                        if self._config["logger"] logComplete(req, res) end
-                        return
+                        break
                     end
                 end
-
-                # ── Router ──
-                let matched = self._router.handle(req, res)
-                if !matched
-                    res.status(404).json({
-                        "error": "Not Found",
-                        "path": req.path,
-                        "method": req.method
-                    })
-                end
-
             catch err
-                # Any unhandled exception reaches here
                 self._handleError(err, req, res)
             end
 
@@ -208,7 +157,6 @@ class Kasbah
         end
     end
 
-    # Helper: persist session data — called at every exit point
     _saveSession(req)
         if self._config["session"]
             let sid = req.get("_sid")
@@ -220,28 +168,42 @@ class Kasbah
     end
 
     listen(port = Null, message = Null)
-        if !isNull(port)
-            self._config["port"] = port
-        end
+        if !isNull(port) self._config["port"] = port end
 
-        # Build middleware instances once here, not inside each request handler
+        self._pipeline = []
+
         if self._config["bodyParser"]
-            self._bodyParserMw = bodyParser(self._config["maxBodySize"])
+            self._pipeline.append(bodyParser(self._config["maxBodySize"]))
         end
         if self._config["logger"]
-            self._loggerMw = logger()
+            self._pipeline.append(logger())
         end
         if self._config["session"]
-            let opts = {"secret": self._config["sessionSecret"]}
-            self._sessionMw = session(opts)
+            self._pipeline.append(session({"secret": self._config["sessionSecret"]}))
         end
         if self._config["static"] != ""
-            self._staticMw = serveStatic(self._config["static"])
+            self._pipeline.append(serveStatic(self._config["static"]))
         end
+
+        for mw in self._middlewares
+            self._pipeline.append(mw)
+        end
+
+        self._pipeline.append(fn(req, res)
+            let matched = self._router.handle(req, res)
+            if !matched
+                res.status(404).json({
+                    "error": "Not Found",
+                    "path": req.path,
+                    "method": req.method
+                })
+            end
+        end)
 
         if message == Null
             print("Kasbah server starting on ${self._config["host"]}:${self._config["port"]}")
         end
+        
         self._server = http.createServer(self._buildHandler(), self._config["maxBodySize"])
         try
             self._server.listen(self._config["port"])

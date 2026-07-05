@@ -4,6 +4,8 @@ use random
 use file
 use path
 use net
+use bytes
+import "Cookie.dz" as *
 
 # parseUrl — uses net.URL to parse a URL string into path + query map
 fn parseUrl(url)
@@ -122,4 +124,26 @@ fn parseContentDisposition(header)
     end
     
     return result
+end
+
+# buildHttpResponse — Constructs the raw HTTP string response
+fn buildHttpResponse(status, statusText, headers, cookies, bodyStr)
+    let response = "HTTP/1.1 " + str(status) + " " + statusText + "\r\n"
+
+    let hKeys = headers.keys()
+    for key in hKeys
+        response += key + ": " + str(headers[key]) + "\r\n"
+    end
+
+    for c in cookies
+        let cookieStr = serializeCookie(c["name"], c["value"], c["options"])
+        response += "Set-Cookie: " + cookieStr + "\r\n"
+    end
+
+    response += "Content-Length: " + str(bytes.byteLength(bodyStr)) + "\r\n"
+    response += "Connection: close\r\n"
+    response += "\r\n"
+    response += bodyStr
+
+    return response
 end

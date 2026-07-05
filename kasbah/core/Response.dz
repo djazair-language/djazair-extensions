@@ -47,29 +47,10 @@ class Response
             bodyStr = str(body)
         end
 
-        # Get status text from underlying builder status text mapping
         let statusText = self._http._builder.statusText
+        let responseStr = buildHttpResponse(self._status, statusText, self._headers, self._cookies, bodyStr)
 
-        let response = "HTTP/1.1 " + str(self._status) + " " + statusText + "\r\n"
-
-        # Add regular headers
-        let hKeys = self._headers.keys()
-        for key in hKeys
-            response += key + ": " + str(self._headers[key]) + "\r\n"
-        end
-
-        # Add all cookies as separate Set-Cookie headers
-        for c in self._cookies
-            let cookieStr = serializeCookie(c["name"], c["value"], c["options"])
-            response += "Set-Cookie: " + cookieStr + "\r\n"
-        end
-
-        response += "Content-Length: " + str(bytes.byteLength(bodyStr)) + "\r\n"
-        response += "Connection: close\r\n"
-        response += "\r\n"
-        response += bodyStr
-
-        self._http._send(response)
+        self._http._send(responseStr)
     end
 
     send(body)
