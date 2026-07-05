@@ -49,11 +49,6 @@ class KasbahApp
         self._errorHandler = Null
     end
 
-    mount(prefix, router)
-        self._router.mount(prefix, router)
-        return self
-    end
-
     middleware(mwFn)
         self._middlewares.append(mwFn)
         return self
