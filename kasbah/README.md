@@ -141,6 +141,28 @@ The parsed request body (map from JSON, or raw string). Available when `bodyPars
 let name = req.body["name"]
 ```
 
+### `req.files`
+
+A map containing uploaded files when parsing `multipart/form-data` requests. Available when `bodyParser` is enabled.
+Files are securely streamed to a temporary directory (`os.tmpDir()`) to preserve memory. You can inspect them and move them to a permanent location using `file.move()`.
+
+```djazair
+app.post("/upload", fn(req, res)
+    let uploaded = req.files["avatar"]
+    if isNull(uploaded)
+        res.status(400).text("Missing file")
+        return
+    end
+    
+    print("File: ${uploaded["filename"]}, Size: ${uploaded["size"]}")
+    
+    # Move from temp directory to permanent location
+    file.move(uploaded["tempPath"], "./uploads/" + uploaded["filename"])
+    
+    res.json({"status": "uploaded"})
+end)
+```
+
 ### `req.cookie(name)`
 
 Returns a cookie value by name. Returns `Null` if not found.
