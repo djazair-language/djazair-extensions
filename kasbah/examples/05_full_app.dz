@@ -1,0 +1,87 @@
+# Kasbah Example 05 — Full Application
+# Combines all features: routing, params, query, POST, session, logger, middleware
+#
+# A simple guestbook: users POST messages, GET lists them, session tracks visits
+
+use kasbah
+use datetime
+
+let app = new kasbah.Kasbah({
+    "port": 8080,
+    "bodyParser": True,
+    "logger": True,
+    "session": True,
+    "sessionSecret": "guestbook-secret"
+})
+
+let messages = []
+
+app.middleware(fn(req, res)
+    req.set("timestamp", datetime.timestamp())
+end)
+
+app.get("/", fn(req, res)
+    res.json({
+        "app": "Kasbah Guestbook",
+        "endpoints": {
+            "GET  /": "this help",
+            "GET  /messages": "list all messages",
+            "POST /messages": "add a message (JSON body: {\"text\": \"...\"})",
+            "GET  /messages/:id": "get message by id",
+            "GET  /session": "view session info"
+        }
+    })
+end)
+
+app.get("/messages", fn(req, res)
+    res.json({
+        "total": messages.length(),
+        "messages": messages
+    })
+end)
+
+app.post("/messages", fn(req, res)
+    let text = req.body["text"]
+    if isNull(text) || text == ""
+        res.status(400).json({"error": "text field is required"})
+        return
+    end
+    let msg = {
+        "id": messages.length(),
+        "text": text,
+        "timestamp": req.get("timestamp")
+    }
+    messages.append(msg)
+    res.status(201).json({"created": msg})
+end)
+
+app.get("/messages/:id", fn(req, res)
+    let id = req.param("id")
+    let idx = 0
+    try
+        idx = int(id)
+    catch err
+        res.status(400).json({"error": "id must be a number"})
+        return
+    end
+    if idx < 0 || idx >= messages.length()
+        res.status(404).json({"error": "message not found"})
+        return
+    end
+    res.json(messages[idx])
+end)
+
+app.get("/session", fn(req, res)
+    if !req.session.has("visits")
+        req.session["visits"] = 0
+    end
+    req.session["visits"] = req.session["visits"] + 1
+    res.json({
+        "sessionId": req.get("_sid"),
+        "isNew": req.get("_isNew"),
+        "visits": req.session["visits"],
+        "allSessionData": req.session
+    })
+end)
+
+app.listen()

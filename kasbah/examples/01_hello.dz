@@ -1,0 +1,26 @@
+# Kasbah Example 01 — Hello World
+# Minimal server: single route returning "Hello from Kasbah!"
+#
+# Usage:
+#   Run: djazair examples/01_hello.dz
+#   Visit: http://localhost:8080
+
+use kasbah
+
+let app = new kasbah.Kasbah({
+    "port": 8080
+})
+
+app.get("/", fn(req, res)
+    res.text("Hello from Kasbah!")
+end)
+
+app.get("/json", fn(req, res)
+    res.json({
+        "message": "Hello from Kasbah!",
+        "version": "0.1.0",
+        "framework": "Kasbah"
+    })
+end)
+
+app.listen()

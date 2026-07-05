@@ -1,0 +1,44 @@
+# Kasbah Example 04 — Sessions
+# Server-side file-based sessions with visit counter
+#
+# Usage:
+#   First visit  -> "Welcome! Visit #1"
+#   Reload page  -> "Welcome back! Visit #2"
+#   Session data persists in os.tmpDir()/kasbah_sessions/
+
+use kasbah
+
+let app = new kasbah.Kasbah({
+    "port": 8080,
+    "session": True,
+    "sessionSecret": "my-secret-key"
+})
+
+app.get("/", fn(req, res)
+    let count = 0
+    if req.session.has("visits")
+        count = req.session["visits"]
+    end
+    count = count + 1
+    req.session["visits"] = count
+
+    let msg = ""
+    if count == 1
+        msg = "Welcome! This is your first visit."
+    else
+        msg = "Welcome back! This is visit #${count}."
+    end
+
+    res.json({
+        "message": msg,
+        "visitCount": count,
+        "sessionData": req.session
+    })
+end)
+
+app.get("/clear", fn(req, res)
+    req.session = {}
+    res.text("Session cleared — next visit will be #1 again")
+end)
+
+app.listen()

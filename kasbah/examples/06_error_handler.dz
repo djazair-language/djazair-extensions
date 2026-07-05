@@ -1,0 +1,67 @@
+# Kasbah Example 06 — Global Error Handler (onError)
+# Demonstrates how the global error handler works:
+# - If any Handler or Middleware throws an unhandled exception
+# - onError() is automatically invoked instead of freezing the server
+#
+# Usage:
+#   Run: djazair examples/06_error_handler.dz
+#   Test endpoints:
+#     http://localhost:8080/safe         -> works normally
+#     http://localhost:8080/crash        -> throws an intentional error
+#     http://localhost:8080/divide       -> division by zero
+#     http://localhost:8080/null-access  -> null dereference
+#     http://localhost:8080/unknown      -> 404 Not Found
+
+use kasbah
+use datetime
+
+let app = new kasbah.Kasbah({
+    "port": 8080,
+    "logger": True
+})
+
+# ── Register global error handler ─────────────────────────────────────────────
+# Called automatically when any unhandled exception occurs during request handling
+app.onError(fn(err, req, res)
+    # Log error to console
+    print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
+
+    # Guard: do not send a response twice
+    if res._sent return end
+
+    res.status(500).json({
+        "error":   "Internal Server Error",
+        "message": str(err),
+        "path":    req.path,
+        "method":  req.method,
+        "time":    str(datetime.now())
+    })
+end)
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+app.get("/safe", fn(req, res)
+    res.json({"status": "ok", "message": "This route works fine!"})
+end)
+
+app.get("/crash", fn(req, res)
+    # Intentional throw — onError will be called automatically
+    throw "Something went terribly wrong!"
+end)
+
+app.get("/divide", fn(req, res)
+    let x = 10
+    let y = 0
+    # Division by zero — triggers an exception
+    let result = x / y
+    res.json({"result": result})
+end)
+
+app.get("/null-access", fn(req, res)
+    # Null dereference — triggers an exception
+    let obj = Null
+    let val = obj["key"]
+    res.json({"val": val})
+end)
+
+app.listen()
