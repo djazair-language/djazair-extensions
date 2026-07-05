@@ -1,0 +1,43 @@
+# Kasbah Middleware — Static File Server
+# Serves files from a configured directory for GET requests
+
+use file
+use path
+import "../helpers/Utils.dz" as *
+
+fn serveStatic(root)
+    let normRoot = path.normalize(root)
+    return fn(req, res)
+        if req.method != "GET"
+            return
+        end
+
+        let filePath = path.normalize(normRoot + "/" + req.path)
+
+        if filePath.slice(0, normRoot.length()) != normRoot
+            return
+        end
+        if filePath.length() > normRoot.length()
+            let sep = filePath[normRoot.length()]
+            if sep != "/" && sep != "\\"
+                return
+            end
+        end
+
+        if file.isDir(filePath)
+            return
+        end
+
+        if !file.exists(filePath)
+            return
+        end
+
+        let ext = path.extname(filePath)
+        if ext == ""
+            return
+        end
+
+        res.setHeader("content-type", mimeType(ext))
+        res.send(file.read(filePath))
+    end
+end

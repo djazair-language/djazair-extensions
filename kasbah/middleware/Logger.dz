@@ -1,0 +1,33 @@
+# Kasbah Middleware — Logger
+# Logs incoming HTTP requests with method, path, status code, and duration
+
+use datetime
+
+# Factory: creates and returns the logger middleware
+fn logger()
+    return fn(req, res)
+        let start = datetime.ticks()
+        let method = req.method
+        let path = req.path
+
+        # Store log data in request state for later retrieval
+        req.set("_logStart", start)
+        req.set("_logMethod", method)
+        req.set("_logPath", path)
+    end
+end
+
+# Called after the response is sent — prints the final log line
+fn logComplete(req, res)
+    let start = req.get("_logStart")
+    if isNull(start)
+        return
+    end
+
+    let elapsed = (datetime.ticks() - start) / 1000
+    let method = req.get("_logMethod")
+    let url = req.get("_logPath")
+    let status = res._status
+
+    print("${method} ${url} ${status} ${elapsed}ms")
+end

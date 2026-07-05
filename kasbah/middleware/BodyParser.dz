@@ -1,0 +1,49 @@
+# Kasbah Middleware — BodyParser
+# Parses JSON and form-urlencoded request bodies
+
+use json as *
+import "../helpers/Utils.dz" as *
+
+fn bodyParser(maxBodySize = 1048576)
+    return fn(req, res)
+        if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS"
+            return
+        end
+
+        if req.body.length() > maxBodySize
+            res.status(413).text("Request body too large")
+            return
+        end
+
+        let ct = req._http.header("content-type")
+        if ct == ""
+            return
+        end
+
+        let parts = ct.split(";")
+        let mainType = parts[0].strip()
+
+        if mainType == "application/json"
+            if req.body == ""
+                return
+            end
+            try
+                req.body = parse(req.body)
+            catch err
+                req.body = {"_error": "Invalid JSON: " + err}
+            end
+        elif mainType == "application/x-www-form-urlencoded"
+            let data = {}
+            if req.body != ""
+                let pairs = req.body.split("&")
+                for pair in pairs
+                    let kv = pair.split("=")
+                    if kv.length() == 2
+                        data[kv[0]] = kv[1]
+                    end
+                end
+            end
+            req.body = data
+        end
+    end
+end

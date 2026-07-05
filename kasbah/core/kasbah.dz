@@ -1,0 +1,170 @@
+# Kasbah Core — Application class
+# Uses built-in `http` module for the HTTP server.
+# Configures middleware, registers routes, starts the server.
+
+use http
+use os
+use file
+use path
+use datetime
+use json
+import "Request.dz" as *
+import "Response.dz" as *
+import "Router.dz" as *
+import "../middleware/BodyParser.dz" as *
+import "../middleware/Logger.dz" as *
+import "../middleware/Session.dz" as *
+import "../middleware/Static.dz" as *
+import "../helpers/Utils.dz" as *
+import "../helpers/Cookie.dz" as *
+
+class Kasbah
+    init(config = {})
+        let defaults = {
+            "port": 8080,
+            "host": "0.0.0.0",
+            "bodyParser": True,
+            "logger": True,
+            "session": False,
+            "sessionSecret": "kasbah",
+            "static": "",
+            "maxBodySize": 1048576
+        }
+        self._config = merge(defaults, config)
+        if self._config["static"] != ""
+            self._config["static"] = path.resolve(self._config["static"])
+        end
+        self._router = new Router()
+        self._middlewares = []
+        self._server = Null
+        self._sessionMw = Null
+    end
+
+    middleware(mwFn)
+        self._middlewares.append(mwFn)
+        return self
+    end
+
+    get(pattern, handler)
+        self._router.get(pattern, handler)
+        return self
+    end
+
+    post(pattern, handler)
+        self._router.post(pattern, handler)
+        return self
+    end
+
+    put(pattern, handler)
+        self._router.put(pattern, handler)
+        return self
+    end
+
+    delete(pattern, handler)
+        self._router.delete(pattern, handler)
+        return self
+    end
+
+    patch(pattern, handler)
+        self._router.patch(pattern, handler)
+        return self
+    end
+
+    all(pattern, handler)
+        self._router.all(pattern, handler)
+        return self
+    end
+
+    _buildHandler()
+        return fn(httpReq, httpRes)
+            let req = new Request(httpReq)
+            let res = new Response(httpRes)
+
+            req.ip = httpReq.header("x-forwarded-for")
+            if isNull(req.ip) || req.ip == ""
+                req.ip = "127.0.0.1"
+            end
+
+            let qidx = req.path.index("?")
+            if !isNull(qidx) && qidx >= 0
+                let qs = req.path.slice(qidx + 1)
+                req.path = req.path.slice(0, qidx)
+                for pair in qs.split("&")
+                    let kv = pair.split("=")
+                    if kv.length() == 2
+                        req._queryMap[kv[0]] = kv[1]
+                    end
+                end
+            end
+
+            let cHeader = httpReq.header("cookie")
+            if cHeader != ""
+                req.cookies = parseCookie(cHeader)
+            end
+
+            if self._config["bodyParser"]
+                let bp = bodyParser(self._config["maxBodySize"])
+                bp(req, res)
+            end
+
+            if self._config["logger"]
+                let lg = logger()
+                lg(req, res)
+            end
+
+            if !isNull(self._sessionMw)
+                self._sessionMw(req, res)
+            end
+
+            if self._config["static"] != ""
+                let st = serveStatic(self._config["static"])
+                st(req, res)
+                if res._sent return end
+            end
+
+            for mw in self._middlewares
+                mw(req, res)
+                if res._sent return end
+            end
+
+            let matched = self._router.handle(req, res)
+            if !matched
+                res.status(404).text("Not Found")
+            end
+
+            if self._config["session"]
+                let sid = req.get("_sid")
+                let store = req.get("_store")
+                if !isNull(sid) && !isNull(store)
+                    store.write(sid, req.session)
+                end
+            end
+
+            if self._config["logger"]
+                logComplete(req, res)
+            end
+        end
+    end
+
+    listen(port = Null, message = Null)
+        if !isNull(port)
+            self._config["port"] = port
+        end
+        if self._config["session"]
+            let opts = {"secret": self._config["sessionSecret"]}
+            self._sessionMw = session(opts)
+        end
+
+        if message == Null
+            print("Kasbah server starting on ${self._config["host"]}:${self._config["port"]}")
+        end
+        self._server = http.createServer(self._buildHandler())
+        self._server.listen(self._config["port"])
+    end
+
+    close()
+        if !isNull(self._server)
+            self._server.close()
+        end
+    end
+end

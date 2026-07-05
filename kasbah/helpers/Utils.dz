@@ -1,0 +1,92 @@
+# Kasbah Helpers — Utility functions
+
+use datetime
+use file
+use path
+
+fn parseUrl(url)
+    let parts = url.split("?")
+    let pathname = parts[0]
+    let query = {}
+
+    if parts.length() > 1
+        for pair in parts[1].split("&")
+            let kv = pair.split("=")
+            if kv.length() == 2
+                query[kv[0]] = kv[1]
+            end
+        end
+    end
+
+    return {"path": pathname, "query": query}
+end
+
+fn merge(a, b)
+    let result = {}
+
+    for key in a.keys()
+        result[key] = a[key]
+    end
+    for key in b.keys()
+        result[key] = b[key]
+    end
+
+    return result
+end
+
+fn generateId(len = 16)
+    let hex = "0123456789abcdef"
+    let result = ""
+    let t = datetime.ticks() * 7 + 13
+
+    for i in 0..len - 1
+        t = t + (t % 7) * 13 + 11 + i
+        let n = t % 16
+        result = result + hex[n]
+    end
+
+    return result
+end
+
+fn mimeType(ext)
+    let mimes = {
+        ".html": "text/html",
+        ".css": "text/css",
+        ".js": "application/javascript",
+        ".json": "application/json",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+        ".txt": "text/plain",
+        ".pdf": "application/pdf",
+        ".zip": "application/zip",
+        ".xml": "application/xml",
+        ".woff": "font/woff",
+        ".woff2": "font/woff2",
+        ".ttf": "font/ttf",
+        ".otf": "font/otf"
+    }
+
+    if mimes.has(ext)
+        return mimes[ext]
+    end
+    return "application/octet-stream"
+end
+
+fn parseContentType(header)
+    let parts = header.split(";")
+    let result = {"type": parts[0].strip(), "boundary": ""}
+
+    let pLen = parts.length()
+    for i in 1..pLen - 1
+        let kv = parts[i].strip().split("=")
+        if kv.length() == 2 && kv[0] == "boundary"
+            result["boundary"] = kv[1]
+        end
+    end
+
+    return result
+end

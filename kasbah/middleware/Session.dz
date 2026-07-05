@@ -1,0 +1,100 @@
+# Kasbah Middleware — Session
+# Server-side session management with file-based storage
+# Session data persists in os.tmpDir()/kasbah_sessions/ as JSON files
+
+use os
+use file
+use dir
+use json
+import "../helpers/Utils.dz" as *
+import "../helpers/Cookie.dz" as *
+
+# FileStore — persists session data to the filesystem
+class FileStore
+    # Init with a storage directory path
+    init(dirPath)
+        self._dir = dirPath
+        if !file.exists(dirPath)
+            dir.createAll(dirPath)
+        end
+    end
+
+    # Read session data by session ID — returns a map or empty map
+    read(sid)
+        let spath = self._dir + "/" + sid + ".json"
+        if !file.exists(spath)
+            return {}
+        end
+        try
+            let raw = file.read(spath)
+            return json.parse(raw)
+        catch err
+            return {}
+        end
+    end
+
+    # Write session data by session ID
+    write(sid, data)
+        let spath = self._dir + "/" + sid + ".json"
+        file.write(spath, json.stringify(data))
+    end
+
+    # Delete a session file
+    destroy(sid)
+        let spath = self._dir + "/" + sid + ".json"
+        if file.exists(spath)
+            file.delete(spath)
+        end
+    end
+end
+
+# Factory: creates and returns session middleware
+# Options: secret (for cookie signing), name (cookie name), maxAge (seconds)
+fn session(options = {})
+    let cookieName = "kasbah.sid"
+    if options.has("name")
+        cookieName = options["name"]
+    end
+
+    let sessionDir = os.tmpDir() + "/kasbah_sessions"
+    if options.has("dir")
+        sessionDir = options["dir"]
+    end
+
+    let store = new FileStore(sessionDir)
+    let maxAge = 86400
+    if options.has("maxAge")
+        maxAge = options["maxAge"]
+    end
+
+    return fn(req, res)
+        let sid = Null
+
+        # Look for existing session cookie
+        let cookieHeader = req._http.header("cookie")
+        if !isNull(cookieHeader) && cookieHeader != ""
+            let cookies = parseCookie(cookieHeader)
+            if cookies.has(cookieName)
+                sid = cookies[cookieName]
+            end
+        end
+
+        if isNull(sid) || sid == ""
+            # Create a new session
+            sid = generateId(32)
+            req.session = {}
+            req.set("_sid", sid)
+            req.set("_isNew", True)
+            # Set cookie before response is sent
+            res.cookie(cookieName, sid, {"httpOnly": True, "path": "/"})
+        else
+            # Load existing session
+            req.session = store.read(sid)
+            req.set("_sid", sid)
+            req.set("_isNew", False)
+        end
+
+        # Save session after response (hooked by App)
+        req.set("_store", store)
+    end
+end

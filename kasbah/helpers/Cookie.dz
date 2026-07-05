@@ -1,0 +1,57 @@
+# Kasbah Helpers — Cookie parsing and serialization
+# Implements RFC 6265 cookie parsing and Set-Cookie header generation
+
+# Parse Cookie header string into a key-value map
+# "token=abc123; theme=dark" → {"token": "abc123", "theme": "dark"}
+fn parseCookie(header)
+    let cookies = {}
+
+    if isNull(header) || header == ""
+        return cookies
+    end
+
+    for pair in header.split(";")
+        let kv = pair.strip().split("=")
+        if kv.length() == 2
+            cookies[kv[0].strip()] = kv[1].strip()
+        end
+    end
+
+    return cookies
+end
+
+# Serialize a cookie object into a Set-Cookie header string
+# Options: domain, path, expires, maxAge, httpOnly, secure, sameSite
+fn serializeCookie(name, value, options = {})
+    let parts = [name + "=" + value]
+
+    if options.has("domain") && options["domain"] != ""
+        parts.append("Domain=" + options["domain"])
+    end
+
+    if options.has("path") && options["path"] != ""
+        parts.append("Path=" + options["path"])
+    end
+
+    if options.has("expires") && options["expires"] != ""
+        parts.append("Expires=" + options["expires"])
+    end
+
+    if options.has("maxAge") && isNumber(options["maxAge"])
+        parts.append("Max-Age=" + str(options["maxAge"]))
+    end
+
+    if options.has("httpOnly") && options["httpOnly"]
+        parts.append("HttpOnly")
+    end
+
+    if options.has("secure") && options["secure"]
+        parts.append("Secure")
+    end
+
+    if options.has("sameSite") && options["sameSite"] != ""
+        parts.append("SameSite=" + options["sameSite"])
+    end
+
+    return parts.join("; ")
+end

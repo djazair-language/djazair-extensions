@@ -1,0 +1,53 @@
+# Kasbah Example 02 — Routing
+# Route params (:param), query strings, POST body parsing
+#
+# Usage:
+#   GET  /users/5          -> req.param("id") = "5"
+#   GET  /users/5?page=2   -> req.query("page") = "2"
+#   POST /users            -> req.body contains parsed JSON/form
+#   GET  /search?q=kasbah  -> req.query("q") = "kasbah"
+
+use kasbah
+
+let app = new kasbah.Kasbah({
+    "port": 8080,
+    "bodyParser": True
+})
+
+app.get("/", fn(req, res)
+    res.text("Kasbah Routing Demo — try /users/123 or /search?q=hello")
+end)
+
+app.get("/users/:id", fn(req, res)
+    let uid = req.param("id")
+    res.json({
+        "route": "/users/:id",
+        "userId": uid,
+        "method": req.method
+    })
+end)
+
+app.get("/users/:id/posts/:postId", fn(req, res)
+    res.json({
+        "userId": req.param("id"),
+        "postId": req.param("postId")
+    })
+end)
+
+app.get("/search", fn(req, res)
+    let q = req.query("q")
+    if isNull(q)
+        res.json({"error": "Missing ?q= parameter"})
+    else
+        res.json({"query": q, "results": ["result1", "result2"]})
+    end
+end)
+
+app.post("/users", fn(req, res)
+    res.json({
+        "created": True,
+        "data": req.body
+    })
+end)
+
+app.listen()

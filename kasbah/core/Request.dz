@@ -1,0 +1,60 @@
+# Kasbah Core — Request class
+# Wraps built-in HttpRequest with params, query, cookies, session, state
+
+class Request
+    init(httpReq)
+        self.method = httpReq.method
+        self.path = httpReq.path
+        self.headers = httpReq.headers
+        self.body = httpReq.body
+        self._http = httpReq
+
+        self.params = {}
+        self.cookies = {}
+        self.session = {}
+        self.ip = ""
+        self.files = []
+        self._state = {}
+        self._queryMap = {}
+    end
+
+    param(name)
+        if self.params.has(name) return self.params[name] end
+        return Null
+    end
+
+    query(name = Null)
+        if isNull(name) return self._queryMap end
+        if self._queryMap.has(name) return self._queryMap[name] end
+        return Null
+    end
+
+    headers(name)
+        return self._http.header(name)
+    end
+
+    cookie(name)
+        if self.cookies.has(name) return self.cookies[name] end
+        return Null
+    end
+
+    get(key)
+        if self._state.has(key) return self._state[key] end
+        return Null
+    end
+
+    set(key, value)
+        self._state[key] = value
+        return self
+    end
+
+    isMethod(method)
+        return self._http.isMethod(method)
+    end
+
+    accepts(type)
+        let accept = self._http.header("accept")
+        if accept == "" return True end
+        return accept.contains(type)
+    end
+end

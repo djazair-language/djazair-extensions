@@ -1,0 +1,118 @@
+# Kasbah Core — Response class
+# Wraps built-in HttpResponse with fluent helpers
+
+use json as *
+use file
+use path
+import "../helpers/Cookie.dz" as *
+import "../helpers/Utils.dz" as *
+
+class Response
+    init(httpRes)
+        self._http = httpRes
+        self._status = 200
+        self._headers = {}
+        self._body = ""
+        self._cookies = []
+        self._sent = False
+    end
+
+    status(code)
+        self._status = code
+        self._http.status(code)
+        return self
+    end
+
+    setHeader(name, value)
+        if isString(value) && (value.contains("\r") || value.contains("\n"))
+            return self
+        end
+        self._headers[name.lower()] = value
+        self._http.setHeader(name, value)
+        return self
+    end
+
+    send(body)
+        self._body = body
+        self._http.send(body)
+        self._sent = True
+        return self
+    end
+
+    text(body)
+        self.setHeader("Content-Type", "text/plain")
+        return self.send(body)
+    end
+
+    html(body)
+        self.setHeader("Content-Type", "text/html")
+        return self.send(body)
+    end
+
+    json(data)
+        self._body = stringify(data)
+        self._http.sendJson(data)
+        self._sent = True
+        return self
+    end
+
+    file(filePath)
+        let safePath = path.normalize(filePath)
+        if !file.exists(safePath)
+            self._http.status(404)
+            self.send("File not found")
+            return self
+        end
+        let ext = path.extname(safePath)
+        self.setHeader("Content-Type", mimeType(ext))
+        self.send(file.read(safePath))
+        return self
+    end
+
+    download(filePath, filename = Null)
+        if isNull(filename)
+            let parts = filePath.split("/")
+            filename = parts[parts.length() - 1]
+        end
+        self.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+        return self.file(filePath)
+    end
+
+    redirect(url, code = 302)
+        self._http.redirect(url, code)
+        self._sent = True
+        return self
+    end
+
+    cookie(name, value, options = {})
+        self._cookies.append({"name": name, "value": value, "options": options})
+        let cookieStr = serializeCookie(name, value, options)
+        self._http.setHeader("Set-Cookie", cookieStr)
+        return self
+    end
+
+    deleteCookie(name)
+        return self.cookie(name, "", {
+            "maxAge": 0,
+            "path": "/",
+            "expires": "Thu, 01 Jan 1970 00:00:00 GMT"
+        })
+    end
+
+    type(ext)
+        if ext[0] != "."
+            ext = "." + ext
+        end
+        self.setHeader("Content-Type", mimeType(ext))
+        return self
+    end
+
+    links(linkMap)
+        let parts = []
+        for rel, href in linkMap
+            parts.append("<" + href + ">; rel=\"" + rel + "\"")
+        end
+        self.setHeader("Link", parts.join(", "))
+        return self
+    end
+end
