@@ -8,7 +8,7 @@
 
 use kasbah
 
-let app = new kasbah.KasbahApp({
+let app = new kasbah.kasbahApp({
     "port": 8080,
     "session": True,
     "sessionSecret": "my-secret-key"
