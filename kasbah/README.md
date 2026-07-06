@@ -1,6 +1,18 @@
-# Djazair Kasbah — Web Framework
+# Kasbah — Web Framework for Djazair
 
-A modular, object-oriented web framework for the Djazair programming language, built on the built-in `http` module. Supports routing with `:param` patterns, middleware chains, sessions, static file serving, and body parsing.
+**Version: 0.0.2**  
+**Author: Harizi Riyadh (<hariziriyadh@gmail.com>)**
+
+Kasbah is a modular, fast, and secure web framework for the Djazair programming language. It is built on top of Djazair's native `http` module and provides a high-level, fluent API for routing, middleware, sessions, static file serving, and view rendering.
+
+## Key Features
+- **Expressive Routing**: Elegant, native routing with URL parameter extraction (`:id`).
+- **Secure by Default**: Built-in protections against Path Traversal vulnerabilities in static files and view templates.
+- **Robust Error Handling**: Absolute error boundaries prevent the server from crashing, even on malformed HTTP requests.
+- **Automatic Decoding**: URLs, query parameters, and form bodies are automatically URL-decoded so you don't have to deal with `%20`.
+- **Smart Views**: Raw template rendering with auto-appended `.html` and `{{key}}` injection.
+- **Multipart Uploads**: Safe file uploads with automatic path sanitization and configurable size limits.
+- **Developer Friendly**: Uses standard `camelCase` naming conventions globally.
 
 ---
 
@@ -10,7 +22,7 @@ A modular, object-oriented web framework for the Djazair programming language, b
 dpm install kasbah
 ```
 
-Kasbah is a pure-Dz extension — no native build step needed.
+Kasbah is a pure-Djazair extension — no native build step needed.
 
 ---
 
@@ -19,271 +31,216 @@ Kasbah is a pure-Dz extension — no native build step needed.
 ```djazair
 use kasbah
 
-let app = new kasbah.KasbahApp({"port": 8080})
+let app = new kasbah.kasbahApp({"port": 3000})
 
 app.get("/", fn(req, res)
-    res.text("Hello from Kasbah!")
+    res.html("<h1>Welcome to Kasbah!</h1>")
+end)
+
+app.get("/hello/:name", fn(req, res)
+    res.json({
+        "message": "Hello, " + req.param("name")
+    })
 end)
 
 app.listen()
 ```
 
-Run it:
+Run the server:
 ```bash
-djazair myserver.dz
+djazair server.dz
 ```
 
 ---
 
-## 3. KasbahApp (Application Class)
+## 3. Configuration
 
-### `new KasbahApp(config)`
-
-Creates a new application instance. `config` is a map of options:
+When creating the application, you can pass a configuration map to `new kasbah.kasbahApp(config)`.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `port` | `3000` | TCP port to listen on |
-| `bodyParser` | `True` | Enable JSON/form body parsing |
-| `logger` | `True` | Enable request logging |
-| `session` | `False` | Enable file-based sessions |
-| `sessionSecret` | `""` | Secret key for session ID generation |
-| `static` | `""` | Directory path for static file serving |
-| `maxBodySize` | `1048576` | Max request body size in bytes (configurable per-app) |
+| `port` | `3000` | TCP port to listen on. |
+| `host` | `"0.0.0.0"` | Bind address. |
+| `bodyParser` | `True` | Automatically parse JSON and Form Data bodies. |
+| `maxBodySize` | `1048576` | Maximum size (in bytes) allowed for an uploaded file (Default: 1MB). |
+| `logger` | `True` | Enable the built-in request/error logger. |
+| `session` | `False` | Enable file-based persistent sessions. |
+| `sessionSecret` | `"kasbah"` | Secret used to sign session cookies. |
+| `static` | `""` | Absolute or relative path to a directory for serving static files. |
+| `views` | `"views"` | Directory path containing your HTML templates. |
 
-```djazair
-let app = new kasbah.KasbahApp({
-    "port": 8080,
-    "bodyParser": True,
-    "logger": True,
-    "session": True,
-    "sessionSecret": "my-secret",
-    "static": "./public"
-})
-```
+---
+
+## 4. Routing (`kasbahApp`)
+
+Routing is handled natively inside the `kasbahApp` class. Paths and variables are automatically URL-decoded, and trailing slashes are ignored (e.g., `/users/` is treated as `/users`).
 
 ### `app.get(path, handler)`
 ### `app.post(path, handler)`
 ### `app.put(path, handler)`
 ### `app.delete(path, handler)`
 ### `app.patch(path, handler)`
+### `app.all(path, handler)`
 
 Register a route handler for the given HTTP method and path. Supports `:param` segments:
 
 ```djazair
-app.get("/users/:id", fn(req, res)
-    res.json({"userId": req.param("id")})
-end)
-
 app.get("/users/:id/posts/:postId", fn(req, res)
-    res.json({"user": req.param("id"), "post": req.param("postId")})
+    let userId = req.param("id")
+    let postId = req.param("postId")
+    res.json({"user": userId, "post": postId})
 end)
 ```
-
-### `app.group(prefix, callback)`
-
-Groups routes under a common path prefix with shared middleware.
-
-```djazair
-app.group("/admin", fn(g)
-    g.middleware(authMw)
-    g.get("/", adminHome)       # → GET /admin
-    g.get("/users", listUsers)  # → GET /admin/users
-end)
-```
+*Note: If the client visits `/users/john%20doe/posts/1`, `req.param("id")` will automatically decode to `"john doe"`.*
 
 ### `app.middleware(fn)`
-
-Adds a middleware function that runs before route handlers:
-
-```djazair
-app.middleware(fn(req, res)
-    if req.header("x-auth") != "admin"
-        res.status(401).text("Unauthorized")
-    end
-end)
-```
-
-### `app.listen(port = Null, quiet = False)`
-
-Builds the middleware pipeline and starts the HTTP server. Must be called last.
-
-- `port` — overrides the configured port for this call only.
-- `quiet = True` — suppresses the startup message.
+Adds a middleware function that runs before route handlers.
 
 ### `app.onError(handler)`
-
 Registers a global error handler called when any unhandled exception occurs inside a middleware or route handler. The handler receives `(err, req, res)`.
 
-```djazair
-app.onError(fn(err, req, res)
-    print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
-    if !res._sent
-        res.status(500).json({"error": "Internal Server Error", "message": str(err)})
-    end
-end)
-```
+### `app.listen(port = Null, quiet = False)`
+Starts the HTTP server. Must be called last.
 
 ### `app.close()`
-
 Stops the server and cleans up sessions (if enabled).
 
 ---
 
-## 4. Request Class
+## 5. Request (`request`) Object
 
-Wraps the built-in `HttpRequest`. Available inside route/middleware handlers.
+The `request` object wraps the incoming HTTP request and provides safe, high-level methods to access inputs.
 
-### `req.param(name)`
+### Properties
+- `req.method`: The HTTP method (e.g., "GET").
+- `req.path`: The normalized, URL-decoded request path (e.g., "/api/users").
+- `req.ip`: The client's IP address (supports Reverse Proxy headers like `x-forwarded-for`).
+- `req.rawHeaders`: The original HTTP headers map.
+- `req.body`: The parsed request body (JSON map or form data map).
+- `req.files`: Uploaded files (if `multipart/form-data`).
+- `req.session`: The active session map (if sessions are enabled).
+- `req.cookies`: Map of parsed cookies.
 
-Returns a named route parameter (from `:param` segments). Returns `Null` if not found.
+### Parameter Extractors
 
-```djazair
-# Route: /users/:id
-let id = req.param("id")
-```
+#### `req.param(name)`
+Get a route parameter. Returns `Null` if missing.
 
-### `req.query(name = Null)`
+#### `req.query(name = Null)`
+Get a query string parameter. Automatically URL-decoded. If called with no arguments, returns the full query map.
 
-Returns query string parameter by name. If called with no arguments, returns the full query map.
+#### `req.header(name)`
+Get a header value (case-insensitive). Returns `""` if missing.
 
-```djazair
-# ?q=hello&page=2
-let q = req.query("q")       # "hello"
-let all = req.query()        # {"q": "hello", "page": "2"}
-```
+#### `req.cookie(name)`
+Get a parsed cookie value. Returns `Null` if not found.
 
-### `req.header(name)`
+### Input Management (Form/Body/Query/Params)
 
-Returns a request header value (case-insensitive). Returns `""` if missing.
+#### `req.inputs()` 
+Merges inputs from `params`, `query`, and `body` into a single map. `body` has the highest priority.
 
-```djazair
-let ct = req.header("content-type")
-```
-
-### `req.body`
-
-The parsed request body (map from JSON, or raw string). Available when `bodyParser` is enabled.
-
-```djazair
-let name = req.body["name"]
-```
-
-### `req.files`
-
-A map containing uploaded files when parsing `multipart/form-data` requests. Available when `bodyParser` is enabled.
-
-Files are written to a secure temporary directory (`os.tmpDir()/kasbah_uploads/`) while the request is being handled, and automatically deleted after the response is sent. Move them to a permanent location inside your handler using `file.move()`.
-
-**Security:** The `filename` field is automatically sanitized — all path separators are stripped — so `"../../etc/passwd"` becomes `"passwd"`. You can safely use `uploaded["filename"]` when constructing destination paths.
-
-**413 Payload Too Large:** If an individual file exceeds `maxBodySize` the framework immediately responds with HTTP 413 and the upload is rejected.
-
-```djazair
-app.post("/upload", fn(req, res)
-    let uploaded = req.files["avatar"]
-    if isNull(uploaded)
-        res.status(400).text("Missing file")
-        return
-    end
-
-    print("File: ${uploaded["filename"]}, Size: ${uploaded["size"]}")
-
-    # filename is already sanitized — safe to use as a path component
-    file.move(uploaded["tempPath"], "./uploads/" + uploaded["filename"])
-
-    res.json({"status": "uploaded", "name": uploaded["filename"]})
-end)
-```
-
-
-### `req.cookie(name)`
-
-Returns a cookie value by name. Returns `Null` if not found.
-
-### `req.get(key)`
-
-Returns a custom attribute set by middleware via `req.set()`.
-
-```djazair
-# In middleware:
-req.set("startTime", datetime.timestamp())
-
-# In handler:
-let start = req.get("startTime")
-```
-
-### `req.set(key, value)`
-
-Stores a custom attribute on the request object. Available to all downstream handlers.
-
-### `req.inputs()`
-
-Returns a merged map of `params` + `query` + `body` (body has highest priority).
-
-```djazair
-let all = req.inputs()
-```
-
-### `req.input(name, fallback = Null)`
-
+#### `req.input(name, fallback = Null)`
 Looks up a value from inputs in order: params → query → body. Returns `fallback` if not found.
 
-```djazair
-let name = req.input("name")       # from body, query, or params
-let page = req.input("page", 1)    # with fallback
-```
-
-### `req.only(keys)`
-
+#### `req.only(keys)` 
 Returns a subset of inputs containing only the specified keys.
-
 ```djazair
-let safe = req.only(["name", "email"])
+let safeData = req.only(["username", "password"])
 ```
 
-### `req.except(keys)`
-
+#### `req.except(keys)`
 Returns all inputs except the specified keys.
 
-```djazair
-let clean = req.except(["token", "_sid"])
-```
+### Request Context & Checking
 
-### `req.isAjax()`
+#### `req.get(key)`
+Returns a custom attribute set by middleware via `req.set()`.
 
+#### `req.set(key, value)`
+Stores a custom attribute on the request object. Available to all downstream handlers.
+
+#### `req.isAjax()`
 Returns `True` if the `X-Requested-With` header equals `XMLHttpRequest`.
 
-```djazair
-if req.isAjax()
-    res.json(data)
-end
-```
-
-### `req.isMethod(method)`
-
+#### `req.isMethod(method)`
 Returns `True` if the request method matches (case-insensitive).
 
-```djazair
-if req.isMethod("post")
-    # handle POST
-end
-```
-
-### `req.accepts(type)`
-
+#### `req.accepts(type)`
 Checks if the client's `Accept` header includes the given content type.
 
+---
+
+## 6. Response (`response`) Object
+
+The `response` object is used to send data to the client. All mutating methods support chaining.
+
+### HTTP Status & Headers
+
+#### `res.status(code)`
+Set the HTTP status code. Returns self for chaining.
+
+#### `res.setHeader(name, value)`
+Set a custom response header. Rejects `\r` and `\n` to prevent HTTP response splitting.
+
+#### `res.type(ext)`
+Sets `Content-Type` based on file extension using the internal MIME map (e.g., `res.type(".css")`).
+
+#### `res.links(linkMap)`
+Builds a `Link` header from a map of rel → URL pairs.
+
+### Cookies
+
+#### `res.cookie(name, value, options)`
+Set a cookie with security attributes (`maxAge`, `httpOnly`, `path`, `domain`, `secure`, `sameSite`).
 ```djazair
-if req.accepts("application/json")
-    res.json(data)
-end
+res.cookie("token", "123", {"httpOnly": True, "maxAge": 3600})
 ```
 
-### `req.session`
+#### `res.deleteCookie(name)`
+Deletes a cookie by setting `Max-Age=0` and an expired date.
 
-The session data map. Only available when `session` config is enabled. Automatically persisted between requests.
+### Sending Responses
 
+#### `res.send(body)`
+Sends a raw string body. Does NOT set Content-Type automatically.
+
+#### `res.text(body)`
+Sets `Content-Type: text/plain` and sends the body.
+
+#### `res.html(body)` 
+Sets `Content-Type: text/html` and sends the body.
+
+#### `res.json(data)`
+Serializes a Djazair map or array to JSON, sets `Content-Type: application/json`, and sends.
+
+#### `res.view(templateName, data = {})`
+Render a template from the configured `views` directory. If the extension is missing, `.html` is automatically appended. Placeholders matching `{{key}}` or `{{ key }}` will be replaced with values from the `data` map.
+```djazair
+# Resolves to views/profile.html
+res.view("profile", {"username": "Admin"}) 
+```
+
+#### `res.file(path)`
+Serve a static file from disk. MIME types are automatically resolved.
+
+#### `res.download(path, filename = Null)`
+Force the browser to download a file. Optionally set a custom filename.
+
+#### `res.redirect(url, code = 302)`
+Redirect the client to the given URL.
+
+---
+
+## 7. Built-in Features
+
+### File Uploads (`req.files`)
+When `bodyParser` is enabled, `multipart/form-data` uploads are safely parsed to `req.files`.
+- **Size Limits**: Exceeding `maxBodySize` immediately triggers a `413 Payload Too Large` error.
+- **Auto-Cleanup**: Temporary files are deleted automatically at the end of the request if not explicitly moved via `file.move()`.
+
+### Sessions (`req.session`)
+File-based session storage. Each session is a JSON file in a temp directory. The session ID is set via a signed cookie. Enabled via `"session": True` and `"sessionSecret"`.
 ```djazair
 if !req.session.has("visits")
     req.session["visits"] = 0
@@ -291,283 +248,71 @@ end
 req.session["visits"] = req.session["visits"] + 1
 ```
 
----
-
-## 5. Response Class
-
-Wraps the built-in `HttpResponse`. All methods support method chaining (fluent API).
-
-### `res.status(code)`
-
-Sets the HTTP status code. Returns self for chaining.
-
-```djazair
-res.status(201).json({"created": True})
-```
-
-### `res.setHeader(name, value)`
-
-Sets a response header. Rejects `\r` and `\n` to prevent HTTP response splitting.
-
-```djazair
-res.setHeader("x-powered-by", "Kasbah")
-```
-
-### `res.send(body)`
-
-Sends a raw string body. Does NOT set Content-Type.
-
-### `res.text(body)`
-
-Sets `Content-Type: text/plain` and sends the body.
-
-```djazair
-res.text("Hello World")
-```
-
-### `res.html(body)`
-
-Sets `Content-Type: text/html` and sends the body.
-
-```djazair
-res.html("<h1>Hello</h1>")
-```
-
-### `res.json(data)`
-
-Serializes a map to JSON, sets `Content-Type: application/json`, and sends.
-
-```djazair
-res.json({"message": "ok", "count": 5})
-```
-
-### `res.file(path)`
-
-Sends a file from disk. Sets Content-Type based on file extension.
-
-```djazair
-res.file("./static/image.png")
-```
-
-### `res.download(path, filename = Null)`
-
-Sends a file as an attachment download. Optional custom filename.
-
-```djazair
-res.download("./report.pdf", "monthly-report.pdf")
-```
-
-### `res.redirect(url, code = 302)`
-
-Redirects the client to the given URL.
-
-```djazair
-res.redirect("/login")
-res.redirect("https://example.com", 301)
-```
-
-### `res.cookie(name, value, options)`
-
-Sets a cookie with optional attributes.
-
-```djazair
-res.cookie("token", "abc123", {
-    "httpOnly": True,
-    "maxAge": 3600,
-    "path": "/",
-    "sameSite": "lax"
-})
-```
-
-### `res.deleteCookie(name)`
-
-Deletes a cookie by setting `Max-Age=0` and an expired date.
-
-```djazair
-res.deleteCookie("token")
-```
-
-### `res.type(ext)`
-
-Sets `Content-Type` based on file extension using the internal MIME map.
-
-```djazair
-res.type(".css").send("body { color: red }")
-```
-
-### `res.links(linkMap)`
-
-Builds a `Link` header from a map of rel → URL pairs.
-
-```djazair
-res.links({"next": "/page/2", "prev": "/page/1"})
-# Link: </page/2>; rel="next", </page/1>; rel="prev"
-```
-
----
-
-## 6. Router Class
-
-Internal route matching engine. Supports `:param` patterns and middleware chains. Created automatically by `KasbahApp`.
-
-```djazair
-let router = new kasbah.Router()
-router.get("/users/:id", fn(req, res) ... end)
-router.handle(req, res)   # returns True if a route matched
-```
-
----
-
-## 7. Middleware Reference
-
-### BodyParser
-
-Parses `application/json` and `application/x-www-form-urlencoded` request bodies. Enabled via `"bodyParser": True` config. Respects configurable `maxBodySize`.
+### Static File Server
+When configuring `"static": "./public"`, Kasbah acts as a secure static file server, serving files directly from the public directory.
 
 ### Logger
-
-Logs method, path, status code, and duration for each request. Enabled via `"logger": True`.
-
+Logs requests and unhandled errors. Output format:
 ```
-GET /index.html 200 0.0012ms
+[12:00:01] [INFO] GET /index.html 200 0.0012ms
+[12:00:05] [ERROR] POST /api/data -> NameError: undefined variable
 ```
 
-### Session
+### Error Handling
+Kasbah catches all errors gracefully. Exceptions in middlewares, route handlers, or during file uploads will not crash the server. Instead, an `[ERROR]` is logged, and a `500 Internal Server Error` is sent to the client.
 
-File-based session storage. Each session is a JSON file in a temp directory. The session ID is set via a signed cookie. Enabled via `"session": True` and `"sessionSecret"`.
-
+To customize error handling:
 ```djazair
-let app = new kasbah.KasbahApp({
-    "session": True,
-    "sessionSecret": "your-secret-key"
-})
+app.onError(fn(err, req, res)
+    res.status(500).view("errors/500", {"error": str(err)})
+end)
 ```
-
-### Static
-
-Serves files from a directory for GET requests. Prevents path traversal. Enabled via `"static": "./public"`.
-
-```
-public/
-├── index.html
-├── style.css
-└── images/
-    └── logo.png
-```
-
-Accessible at `/index.html`, `/style.css`, `/images/logo.png`.
 
 ---
 
-## 8. Helper Functions
-
-### `merge(base, override)`
-
-Deep-merges two maps. Used internally for config merging.
-
-### `generateId(len)`
-
-Generates a random hex string of the given length. Used for session IDs.
-
-### `mimeType(ext)`
-
-Returns the MIME type for a file extension.
-
-```djazair
-let ct = mimeType(".html")   # "text/html"
-let ct = mimeType(".json")   # "application/json"
-```
-
-### `parseUrl(url)`
-
-Parses a URL string into its components (path, query string, query map).
-
-### `parseContentType(header)`
-
-Parses a Content-Type header into media type and parameters.
-
-### `parseCookie(header)`
-
-Parses a Cookie header string into a map of name → value.
-
-### `serializeCookie(name, value, options)`
-
-Serializes a cookie name/value pair with options into a `Set-Cookie` header string.
-
----
-
-## 9. Complete Example
+## 8. Full Example
 
 ```djazair
 use kasbah
-use datetime
+use file
 
-let app = new kasbah.KasbahApp({
-    "port": 8080,
-    "bodyParser": True,
-    "logger": True,
+let app = new kasbah.kasbahApp({
+    "port": 3000,
+    "static": "./public",
+    "views": "./templates",
     "session": True,
-    "sessionSecret": "guestbook-secret"
+    "sessionSecret": "super-secret"
 })
 
-let messages = []
-
+# Global Middleware
 app.middleware(fn(req, res)
-    req.set("timestamp", datetime.timestamp())
+    print("Incoming Request: " + req.path)
 end)
 
+# View Rendering
 app.get("/", fn(req, res)
-    res.text("Welcome to the Guestbook")
+    res.view("index", {"title": "Home Page"})
 end)
 
-app.post("/messages", fn(req, res)
-    let data = req.only(["text", "author"])
-    if isNull(data["text"]) || data["text"] == ""
-        res.status(400).json({"error": "text field required"})
+# JSON API
+app.get("/api/data", fn(req, res)
+    res.json({"status": "active", "version": "1.0"})
+end)
+
+# File Uploads
+app.post("/upload", fn(req, res)
+    let uploaded = req.files["document"]
+    if isNull(uploaded)
+        res.status(400).json({"error": "No file uploaded"})
         return
     end
-    let msg = {
-        "id": messages.length(),
-        "text": data["text"],
-        "author": data["author"] || "Anonymous",
-        "time": req.get("timestamp")
-    }
-    messages.append(msg)
-    res.status(201).json({"created": msg})
+
+    let dest = "./storage/" + uploaded["filename"]
+    file.move(uploaded["tempPath"], dest)
+
+    res.json({"status": "success", "savedTo": dest})
 end)
 
-app.get("/messages/:id", fn(req, res)
-    let idx = int(req.param("id"))
-    if idx >= messages.length()
-        res.status(404).json({"error": "not found"})
-        return
-    end
-    res.json(messages[idx])
-end)
-
-app.get("/session", fn(req, res)
-    if !req.session.has("visits")
-        req.session["visits"] = 0
-    end
-    req.session["visits"] = req.session["visits"] + 1
-    res.json({"visits": req.session["visits"]})
-end)
-
+# Start the server
 app.listen()
 ```
-
----
-
-## 10. Examples
-
-See the [`examples/`](examples/) directory for runnable demos:
-
-| File | Features |
-|------|----------|
-| `01_hello.dz` | Text, JSON, sendStatus, custom headers via header() setter |
-| `02_routing.dz` | Route params, input()/inputs()/only()/except() helpers |
-| `03_middleware.dz` | Custom middleware, auth, static files, isAjax() |
-| `04_session.dz` | File-based sessions, visit counter |
-| `05_full_app.dz` | Guestbook with all features combined |
-| `06_error_handler.dz` | Global error handling with `onError`, sendStatus() |
-| `07_route_groups.dz` | Route groups, shared middleware, isAjax(), header() setter, input() |

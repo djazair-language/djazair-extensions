@@ -6,17 +6,19 @@ use json as *
 use file
 use path
 use bytes
-import "../helpers/Cookie.dz" as *
-import "../helpers/Utils.dz" as *
+import "../helpers/cookie.dz" as *
+import "../helpers/utils.dz" as *
+import "view.dz" as *
 
-class Response
-    init(httpRes)
+class response
+    init(httpRes, appConfig = {})
         self._http   = httpRes
         self._status = 200
         self._headers = {}
         self._body    = ""
         self._cookies = []
         self._sent    = False
+        self._config  = appConfig
     end
 
     # status — sets the HTTP response status code.
@@ -150,6 +152,22 @@ class Response
         end
 
         return self
+    end
+
+    # view — renders a template file using the View class.
+    view(templateName, data = {})
+        try
+            let v = new view(self._config)
+            let content = v.render(templateName, data)
+            return self.html(content)
+        catch err
+            if str(err).startsWith("View not found")
+                self.status(404).send(str(err))
+            else
+                self.status(500).send(str(err))
+            end
+            return self
+        end
     end
 
     # download — sends a file as an attachment, prompting the browser to save it.

@@ -4,7 +4,7 @@
 
 use file
 use path
-import "../helpers/Utils.dz" as *
+import "../helpers/utils.dz" as *
 
 # serveStatic — factory that returns a middleware function.
 # `root` is the absolute or relative path to the directory to expose.

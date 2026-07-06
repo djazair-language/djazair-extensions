@@ -1,0 +1,65 @@
+# Kasbah Core — View class
+# Handles reading HTML templates and injecting dynamic variables to keep Response.dz clean.
+
+use file
+use path
+
+class view
+    init(config)
+        self._config = config
+    end
+
+    render(templateName, data = {})
+        let viewsDir = ""
+        if self._config.has("views") && self._config["views"] != ""
+            viewsDir = path.normalize(self._config["views"])
+        else
+            viewsDir = path.resolve("views")
+        end
+
+        # Auto-append .html if there is no extension
+        if !templateName.contains(".")
+            templateName = templateName + ".html"
+        end
+
+        let safePath = path.normalize(viewsDir + "/" + templateName)
+
+        # Path Traversal Protection
+        let viewsDirLower = viewsDir.lower()
+        if !viewsDirLower.endsWith("/") && !viewsDirLower.endsWith("\\")
+            let okSlash = safePath.lower().startsWith(viewsDirLower + "/")
+            let okBackslash = safePath.lower().startsWith(viewsDirLower + "\\")
+            if !okSlash && !okBackslash
+                throw "Forbidden view path traversal: " + templateName
+            end
+        else
+            if !safePath.lower().startsWith(viewsDirLower)
+                throw "Forbidden view path traversal: " + templateName
+            end
+        end
+
+        if !file.exists(safePath)
+            throw "View not found: " + templateName
+        end
+
+        let content = ""
+        let fh = file.open(safePath, "r")
+        try
+            content = fh.read()
+        catch err
+            throw "Error reading view file: " + templateName
+        finally
+            fh.close()
+        end
+
+        if isMap(data)
+            for k, v in data
+                # Replace both exact {{key}} and {{ key }} (with one space)
+                content = content.replace("{{" + k + "}}", str(v))
+                content = content.replace("{{ " + k + " }}", str(v))
+            end
+        end
+
+        return content
+    end
+end

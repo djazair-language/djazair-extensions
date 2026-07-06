@@ -1,22 +1,22 @@
 # Kasbah — Web Framework for Djazair
 # Usage: use kasbah
-#        let app = new kasbah.KasbahApp({"port": 8080})
+#        let app = new kasbah.kasbahApp({"port": 8080})
 #        app.get("/", fn(req, res) res.send("Hello") end)
 #        app.listen()
 
-import "core/KasbahApp.dz" as _app_mod
-import "core/Router.dz" as _router_mod
-import "core/Request.dz" as _req_mod
-import "core/Response.dz" as _res_mod
-import "middleware/BodyParser.dz" as _body_mod
-import "middleware/Logger.dz" as _log_mod
-import "middleware/Session.dz" as _sess_mod
-import "middleware/Static.dz" as _static_mod
+import "core/kasbahApp.dz" as _app_mod
+import "core/request.dz" as _req_mod
+import "core/response.dz" as _res_mod
+import "core/view.dz" as _view_mod
+import "middleware/bodyParser.dz" as _body_mod
+import "middleware/logger.dz" as _log_mod
+import "middleware/session.dz" as _sess_mod
+import "middleware/static.dz" as _static_mod
 
-let KasbahApp = _app_mod.KasbahApp
-let Request = _req_mod.Request
-let Response = _res_mod.Response
-let Router = _router_mod.Router
+let kasbahApp = _app_mod.kasbahApp
+let request = _req_mod.request
+let response = _res_mod.response
+let view = _view_mod.view
 let bodyParser = _body_mod.bodyParser
 let logger = _log_mod.logger
 let session = _sess_mod.session

@@ -197,14 +197,14 @@ fn sanitizeFilename(filename)
     end
     let name = filename
     # Strip everything up to and including the last forward slash
-    let slashIdx = name.lastIndex("/")
-    if !isNull(slashIdx) && slashIdx >= 0
-        name = name.slice(slashIdx + 1)
+    let slashParts = name.split("/")
+    if slashParts.length() > 0
+        name = slashParts[slashParts.length() - 1]
     end
     # Strip everything up to and including the last back slash (Windows paths)
-    let backSlashIdx = name.lastIndex("\\")
-    if !isNull(backSlashIdx) && backSlashIdx >= 0
-        name = name.slice(backSlashIdx + 1)
+    let backSlashParts = name.split("\\")
+    if backSlashParts.length() > 0
+        name = backSlashParts[backSlashParts.length() - 1]
     end
     return name
 end
@@ -235,4 +235,41 @@ fn buildHttpResponse(status, statusText, headers, cookies, bodyStr)
     response += bodyStr
 
     return response
+end
+
+# urlDecode — decodes URL-encoded parameters (e.g. %20 -> space).
+# Handles + as space.
+fn urlDecode(strVal)
+    if isNull(strVal) return "" end
+    let res = ""
+    let i = 0
+    let len = strVal.length()
+    let hexMap = {
+        "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+        "a": 10, "b": 11, "c": 12, "d": 13, "e": 14, "f": 15,
+        "A": 10, "B": 11, "C": 12, "D": 13, "E": 14, "F": 15
+    }
+
+    while i < len
+        let c = strVal[i]
+        if c == "+"
+            res = res + " "
+            i = i + 1
+        elif c == "%" && i + 2 < len
+            let h1 = strVal[i+1]
+            let h2 = strVal[i+2]
+            if !isNull(hexMap[h1]) && !isNull(hexMap[h2])
+                let code = (hexMap[h1] * 16) + hexMap[h2]
+                res = res + chr(code)
+                i = i + 3
+            else
+                res = res + "%"
+                i = i + 1
+            end
+        else
+            res = res + c
+            i = i + 1
+        end
+    end
+    return res
 end

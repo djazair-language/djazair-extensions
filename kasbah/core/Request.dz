@@ -1,7 +1,7 @@
 # Kasbah Core — Request class
 # Wraps built-in HttpRequest with params, query, cookies, session, state
 
-class Request
+class request
     init(httpReq)
         self.method = httpReq.method
         self.path = httpReq.path

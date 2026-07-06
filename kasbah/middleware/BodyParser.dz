@@ -8,7 +8,7 @@ use os
 use file
 use dir
 use bytes
-import "../helpers/Utils.dz" as *
+import "../helpers/utils.dz" as *
 
 # ── JSON parser ────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,11 @@ fn _parseUrlEncoded(req, res)
     if req.body != ""
         let parsed = new net.URL("http://x?" + req.body)
         req.body = parsed.query
+        
+        let keys = req.body.keys()
+        for k in keys
+            req.body[k] = urlDecode(req.body[k])
+        end
     else
         req.body = {}
     end

@@ -8,8 +8,8 @@ use file
 use dir
 use json
 use regex
-import "../helpers/Utils.dz" as *
-import "../helpers/Cookie.dz" as *
+import "../helpers/utils.dz" as *
+import "../helpers/cookie.dz" as *
 
 # ── FileStore ──────────────────────────────────────────────────────────────────
 
@@ -48,14 +48,22 @@ class FileStore
             return
         end
         let spath = self._dir + "/" + sid + ".json"
-        file.write(spath, json.stringify(data))
+        try
+            file.write(spath, json.stringify(data))
+        catch err
+            # Log or ignore, but do not crash
+        end
     end
 
     # destroy — deletes the session file for `sid`, if it exists.
     destroy(sid)
         let spath = self._dir + "/" + sid + ".json"
-        if file.exists(spath)
-            file.delete(spath)
+        try
+            if file.exists(spath)
+                file.delete(spath)
+            end
+        catch err
+            # Ignore
         end
     end
 end

@@ -11,17 +11,17 @@ use datetime
 use json
 use process
 
-import "Request.dz" as *
-import "Response.dz" as *
-import "Router.dz" as *
-import "../middleware/BodyParser.dz" as *
-import "../middleware/Logger.dz" as *
-import "../middleware/Session.dz" as *
-import "../middleware/Static.dz" as *
-import "../helpers/Utils.dz" as *
-import "../helpers/Cookie.dz" as *
+import "request.dz" as *
+import "response.dz" as *
 
-class KasbahApp
+import "../middleware/bodyParser.dz" as *
+import "../middleware/logger.dz" as *
+import "../middleware/session.dz" as *
+import "../middleware/static.dz" as *
+import "../helpers/utils.dz" as *
+import "../helpers/cookie.dz" as *
+
+class kasbahApp
     # init — builds the application with a merged config.
     # All config keys are optional; sensible defaults are provided.
     #
@@ -43,7 +43,8 @@ class KasbahApp
             "logger":        True,
             "session":       False,
             "sessionSecret": "kasbah",
-            "static":        ""
+            "static":        "",
+            "views":         ""
         }
         self._config = merge(defaults, config)
 
@@ -52,12 +53,25 @@ class KasbahApp
             self._config["static"] = path.resolve(self._config["static"])
         end
 
-        self._router      = new Router()
+        if self._config["views"] != ""
+            self._config["views"] = path.resolve(self._config["views"])
+        end
+
+        self._routes      = []
         self._middlewares = []   # user-defined middleware functions
         self._pipeline    = []   # ordered list built in listen()
         self._server      = Null
         # Global error handler — Null means use built-in 500 response
         self._errorHandler = Null
+
+        self._logger = Null
+        if self._config["logger"]
+            let logOpts = {}
+            if isMap(self._config["logger"])
+                logOpts = self._config["logger"]
+            end
+            self._logger = new kasbahLogger(logOpts)
+        end
     end
 
     # middleware — appends a user-defined middleware function to the chain.
@@ -80,79 +94,99 @@ class KasbahApp
     # Each method delegates to the internal Router instance.
 
     get(pattern, handler)
-        self._router.get(pattern, handler)
+        self._routes.append({"method": "GET", "pattern": pattern, "handler": handler})
         return self
     end
 
     post(pattern, handler)
-        self._router.post(pattern, handler)
+        self._routes.append({"method": "POST", "pattern": pattern, "handler": handler})
         return self
     end
 
     put(pattern, handler)
-        self._router.put(pattern, handler)
+        self._routes.append({"method": "PUT", "pattern": pattern, "handler": handler})
         return self
     end
 
     delete(pattern, handler)
-        self._router.delete(pattern, handler)
+        self._routes.append({"method": "DELETE", "pattern": pattern, "handler": handler})
         return self
     end
 
     patch(pattern, handler)
-        self._router.patch(pattern, handler)
+        self._routes.append({"method": "PATCH", "pattern": pattern, "handler": handler})
         return self
     end
 
     all(pattern, handler)
-        self._router.all(pattern, handler)
+        let methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+        for m in methods
+            self._routes.append({"method": m, "pattern": pattern, "handler": handler})
+        end
         return self
     end
 
-    # group — creates a scoped set of routes that share a common URL prefix.
-    # `cb` receives a Router instance; routes registered on it are copied into
-    # the main router with the prefix prepended to their patterns.
-    # A snapshot of the route object is used so that repeated group() calls
-    # with the same Router do not accumulate prefixes.
-    group(prefix, cb)
-        # Normalise the prefix: strip trailing slash (but keep "/" alone intact)
-        if prefix != "/" && prefix.endsWith("/")
-            prefix = prefix.slice(0, prefix.length() - 1)
+    # ── Internal Route Dispatcher ──────────────────────────────────────────────
+
+    _dispatchRoute(req, res)
+        let route = self._matchRoute(req.method, req.path)
+        if isNull(route)
+            # No route found
+            return False
         end
 
-        let sub = new Router()
-        cb(sub)
+        req.params = route["params"]
+        route["handler"](req, res)
+        return True
+    end
 
-        for route in sub._routes
-            # Create a copy of the route so the original is never mutated
-            let newRoute = {
-                "method":  route["method"],
-                "pattern": prefix + route["pattern"],
-                "handler": route["handler"]
-            }
+    _matchRoute(method, pathStr)
+        # Normalize trailing slash
+        if pathStr.length() > 1 && pathStr.endsWith("/")
+            pathStr = pathStr.slice(0, pathStr.length() - 1)
+        end
 
-            # If the sub-router has its own middlewares, wrap the handler so
-            # they run before the original handler for every route in the group.
-            if sub._middlewares.length() > 0
-                let middlewares  = sub._middlewares
-                let origHandler  = route["handler"]
-                newRoute["handler"] = fn(req, res)
-                    for mw in middlewares
-                        mw(req, res)
-                        if res._sent return end
-                    end
-                    # Only call the route handler if the response is still open
-                    if !res._sent
-                        origHandler(req, res)
-                    end
+        let pathSegs = pathStr.split("/")
+
+        for route in self._routes
+            if route["method"] != method
+                continue
+            end
+
+            let pattern = route["pattern"]
+            if pattern.length() > 1 && pattern.endsWith("/")
+                pattern = pattern.slice(0, pattern.length() - 1)
+            end
+
+            let patternSegs = pattern.split("/")
+            if patternSegs.length() != pathSegs.length()
+                continue
+            end
+
+            let params = {}
+            let matched = True
+
+            let segCount = patternSegs.length()
+            for i in 0..segCount - 1
+                let ps = patternSegs[i]
+                let rs = pathSegs[i]
+
+                if ps.length() > 0 && ps[0] == ":"
+                    params[ps.slice(1)] = rs
+                elif ps != rs
+                    matched = False
+                    break
                 end
             end
 
-            self._router._routes.append(newRoute)
+            if matched
+                return {"handler": route["handler"], "params": params}
+            end
         end
 
-        return self
+        return Null
     end
+
 
     # ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -182,6 +216,18 @@ class KasbahApp
             end
             let parsed = new net.URL("http://x" + fullPath)
             req._queryMap = parsed.query
+            
+            # Decode query parameter values
+            let qKeys = req._queryMap.keys()
+            for k in qKeys
+                req._queryMap[k] = urlDecode(req._queryMap[k])
+            end
+        end
+
+        # Decode URL path and normalize multiple slashes
+        req.path = urlDecode(req.path)
+        while req.path.contains("//")
+            req.path = req.path.replace("//", "/")
         end
 
         # Parse the Cookie header once here; Session middleware reads
@@ -194,6 +240,11 @@ class KasbahApp
 
     # _handleError — calls the user error handler or sends a default 500 response.
     _handleError(err, req, res)
+        # Always log the error server-side regardless of the handler
+        if !isNull(self._logger)
+            self._logger.onError(req, err)
+        end
+
         try
             if !isNull(self._errorHandler)
                 self._errorHandler(err, req, res)
@@ -218,12 +269,18 @@ class KasbahApp
     # further execution via break (not return, so cleanup always runs).
     _buildHandler()
         return fn(httpReq, httpRes)
-            let req = new Request(httpReq)
-            let res = new Response(httpRes)
-
-            self._prepareRequest(req, httpReq)
-
+            let req = Null
+            let res = Null
             try
+                req = new request(httpReq)
+                res = new response(httpRes, self._config)
+
+                self._prepareRequest(req, httpReq)
+
+                if !isNull(self._logger)
+                    self._logger.onRequest(req)
+                end
+
                 for mw in self._pipeline
                     mw(req, res)
                     if res._sent
@@ -231,16 +288,30 @@ class KasbahApp
                     end
                 end
             catch err
-                self._handleError(err, req, res)
+                if isNull(res)
+                    # If we crashed before req/res were fully initialized
+                    httpRes.status(500).text("Internal Server Error")
+                else
+                    self._handleError(err, req, res)
+                end
             end
 
             # Always persist the session and clean up temp files,
             # regardless of whether the request succeeded or errored.
-            self._saveSession(req)
-            self._cleanupUploads(req)
+            # Wrapped in try-catch to guarantee the server never crashes.
+            try
+                if !isNull(req)
+                    self._saveSession(req)
+                    self._cleanupUploads(req)
+                end
 
-            if self._config["logger"]
-                logComplete(req, res)
+                if !isNull(self._logger) && !isNull(req) && !isNull(res)
+                    self._logger.onComplete(req, res)
+                end
+            catch postErr
+                if !isNull(self._logger) && !isNull(req)
+                    self._logger.onError(req, "Post-request error: " + str(postErr))
+                end
             end
         end
     end
@@ -251,8 +322,12 @@ class KasbahApp
         let files = req.get("_uploadedFiles")
         if !isNull(files)
             for f in files
-                if file.exists(f)
-                    file.delete(f)
+                try
+                    if file.exists(f)
+                        file.delete(f)
+                    end
+                catch err
+                    # Ignore deletion errors to avoid crashing
                 end
             end
         end
@@ -288,9 +363,6 @@ class KasbahApp
         if self._config["bodyParser"]
             self._pipeline.append(bodyParser(self._config["maxBodySize"]))
         end
-        if self._config["logger"]
-            self._pipeline.append(logger())
-        end
         if self._config["session"]
             self._pipeline.append(session({"secret": self._config["sessionSecret"]}))
         end
@@ -303,10 +375,10 @@ class KasbahApp
             self._pipeline.append(mw)
         end
 
-        # Router is the final step in the pipeline; sends 404 if no route matched
+        # Final stage: Route dispatch
         self._pipeline.append(fn(req, res)
-            let matched = self._router.handle(req, res)
-            if !matched
+            let handled = self._dispatchRoute(req, res)
+            if !handled && !res._sent
                 res.status(404).json({
                     "error":  "Not Found",
                     "path":   req.path,

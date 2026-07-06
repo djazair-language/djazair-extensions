@@ -1,33 +1,147 @@
 # Kasbah Middleware — Logger
-# Logs incoming HTTP requests with method, path, status code, and duration
+# A class-based logger that centralizes request logs, error logs, and level filtering.
+# Outputs to stdout (terminal) safely.
 
 use datetime
+import "../helpers/utils.dz" as *
 
-# Factory: creates and returns the logger middleware
-fn logger()
-    return fn(req, res)
-        let start = datetime.ticks()
-        let method = req.method
-        let path = req.path
+class kasbahLogger
+    # Initializes the logger with the given options.
+    # Supported levels: "debug", "info", "warn", "error", "none"
+    # Supported formats: "dev" (compact), "combined" (includes IP)
+    init(options = {})
+        let defaults = {
+            "level":  "info",
+            "format": "dev"
+        }
+        self._config = merge(defaults, options)
+        self._levels = {
+            "debug": 10,
+            "info":  20,
+            "warn":  30,
+            "error": 40,
+            "none":  100
+        }
+        let levelName = self._config["level"].lower()
+        if !self._levels.has(levelName)
+            levelName = "info"
+        end
+        self._currentLevel = self._levels[levelName]
+    end
 
-        # Store log data in request state for later retrieval
-        req.set("_logStart", start)
-        req.set("_logMethod", method)
-        req.set("_logPath", path)
+    # ── Formatting Helpers ─────────────────────────────────────────────────────
+
+    # Returns the current timestamp in [HH:MM:SS] format
+    _timestamp()
+        let d = datetime.now()
+        let h = str(d.hour())
+        let m = str(d.minute())
+        let s = str(d.second())
+        if h.length() < 2 h = "0" + h end
+        if m.length() < 2 m = "0" + m end
+        if s.length() < 2 s = "0" + s end
+        return "[" + h + ":" + m + ":" + s + "]"
+    end
+
+    # Internal method to print messages if they meet the required log level
+    _log(levelName, levelValue, msg)
+        if levelValue >= self._currentLevel
+            print(self._timestamp() + " [" + levelName.upper() + "] " + str(msg))
+        end
+    end
+
+    # ── Manual Logging Methods ─────────────────────────────────────────────────
+
+    debug(msg)
+        self._log("debug", 10, msg)
+    end
+
+    info(msg)
+        self._log("info",  20, msg)
+    end
+
+    warn(msg)
+        self._log("warn",  30, msg)
+    end
+
+    error(msg)
+        self._log("error", 40, msg)
+    end
+
+    # ── Framework Hooks ────────────────────────────────────────────────────────
+
+    # onRequest — Called at the very beginning of the request pipeline.
+    # Records the start time and basic request metadata for later.
+    onRequest(req)
+        req.set("_logStart", datetime.ticks())
+        req.set("_logMethod", req.method)
+        req.set("_logPath", req.path)
+        req.set("_logIp", req.ip)
+    end
+
+    # onComplete — Called after the response is sent.
+    # Formats and prints the request summary.
+    onComplete(req, res)
+        # 20 is "info" level
+        if self._currentLevel > 20
+            return
+        end
+
+        let start = req.get("_logStart")
+        if isNull(start)
+            return
+        end
+
+        let elapsed = (datetime.ticks() - start) / 1000
+        let method  = req.get("_logMethod")
+        let url     = req.get("_logPath")
+        let status  = res._status
+
+        let msg = ""
+        if self._config["format"] == "combined"
+            let ip = req.get("_logIp")
+            msg = "${ip} ${method} ${url} ${status} ${elapsed}ms"
+        else
+            msg = "${method} ${url} ${status} ${elapsed}ms"
+        end
+
+        # Print directly to bypass the standard _log timestamp if preferred,
+        # but here we use _log for consistency.
+        self._log("info", 20, msg)
+    end
+
+    # onError — Called when an unhandled exception is caught by the server.
+    # Ensures the error is safely printed to the terminal without crashing.
+    onError(req, err)
+        let method = req.get("_logMethod")
+        if isNull(method) method = req.method end
+        let url = req.get("_logPath")
+        if isNull(url) url = req.path end
+        
+        let msg = ""
+        if self._config["format"] == "combined"
+            let ip = req.get("_logIp")
+            if isNull(ip) ip = req.ip end
+            msg = "${ip} ${method} ${url} -> ${str(err)}"
+        else
+            msg = "${method} ${url} -> ${str(err)}"
+        end
+
+        self._log("error", 40, msg)
     end
 end
 
-# Called after the response is sent — prints the final log line
-fn logComplete(req, res)
-    let start = req.get("_logStart")
-    if isNull(start)
-        return
+# Backward compatibility function for any middleware/code
+# that expects logger() to be a factory returning a middleware.
+# In the new KasbahApp, this is no longer used directly in the pipeline
+# the same way, but kept to not break anything calling it manually.
+fn logger()
+    # It does nothing now, as logging is handled directly in KasbahApp pipeline
+    return fn(req, res)
+        # handled by KasbahApp directly
     end
+end
 
-    let elapsed = (datetime.ticks() - start) / 1000
-    let method = req.get("_logMethod")
-    let url = req.get("_logPath")
-    let status = res._status
-
-    print("${method} ${url} ${status} ${elapsed}ms")
+fn logComplete(req, res)
+    # backward compat, does nothing.
 end
