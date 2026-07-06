@@ -1,11 +1,10 @@
-# Kasbah Example 03 — Middleware & Static Files
-# Custom middleware for auth, request timing, and static file serving
+# Kasbah Example 03 — Middleware, Static Files & isAjax
+# Custom middleware for auth, request timing, AJAX detection, and static files
 #
 # Usage:
-#   mkdir public
-#   echo "<h1>Static file</h1>" > public/index.html
 #   GET /              -> "Public Home"
-#   GET /admin         -> requires ?token=secret (returns 401 without)
+#   GET /admin         -> requires ?token=secret (401 without)
+#   GET /admin?token=secret&ajax=1 -> isAjax() returns True
 #   GET /index.html    -> served from ./public/
 
 use kasbah
@@ -17,12 +16,15 @@ let app = new kasbah.KasbahApp({
 })
 
 app.middleware(fn(req, res)
-if req.path.slice(0, 6) == "/admin"
-    let token = req.query("token")
-    if isNull(token) || token != "secret"
-        res.status(401).json({"error": "Unauthorized — use ?token=secret"})
+    # Guard all /admin routes — reject requests without the correct token
+    if req.path.slice(0, 6) == "/admin"
+        let token = req.query("token")
+        if isNull(token) || token != "secret"
+            res.status(401).json({"error": "Unauthorized — use ?token=secret"})
+            # Always return after sending a response inside middleware
+            return
+        end
     end
-end
 end)
 
 app.middleware(fn(req, res)
@@ -35,10 +37,18 @@ end)
 
 app.get("/admin", fn(req, res)
 let elapsed = (datetime.ticks() - req.get("startTime")) / 1000
-res.json({
-    "message": "Welcome to the admin panel",
-    "responseTimeMs": elapsed
-})
+if req.isAjax()
+    res.json({
+        "ajax": True,
+        "message": "AJAX request detected",
+        "responseTimeMs": elapsed
+    })
+else
+    res.json({
+        "message": "Welcome to the admin panel",
+        "responseTimeMs": elapsed
+    })
+end
 end)
 
 app.listen()

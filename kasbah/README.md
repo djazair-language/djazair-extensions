@@ -49,7 +49,7 @@ Creates a new application instance. `config` is a map of options:
 | `session` | `False` | Enable file-based sessions |
 | `sessionSecret` | `""` | Secret key for session ID generation |
 | `static` | `""` | Directory path for static file serving |
-| `maxBodySize` | `1048576` | Max request body size in bytes |
+| `maxBodySize` | `1048576` | Max request body size in bytes (configurable per-app) |
 
 ```djazair
 let app = new kasbah.KasbahApp({
@@ -104,9 +104,12 @@ app.middleware(fn(req, res)
 end)
 ```
 
-### `app.listen()`
+### `app.listen(port = Null, quiet = False)`
 
-Starts the HTTP server. Must be called last.
+Builds the middleware pipeline and starts the HTTP server. Must be called last.
+
+- `port` — overrides the configured port for this call only.
+- `quiet = True` — suppresses the startup message.
 
 ### `app.onError(handler)`
 
@@ -169,7 +172,12 @@ let name = req.body["name"]
 ### `req.files`
 
 A map containing uploaded files when parsing `multipart/form-data` requests. Available when `bodyParser` is enabled.
-Files are securely streamed to a temporary directory (`os.tmpDir()`) to preserve memory. You can inspect them and move them to a permanent location using `file.move()`.
+
+Files are written to a secure temporary directory (`os.tmpDir()/kasbah_uploads/`) while the request is being handled, and automatically deleted after the response is sent. Move them to a permanent location inside your handler using `file.move()`.
+
+**Security:** The `filename` field is automatically sanitized — all path separators are stripped — so `"../../etc/passwd"` becomes `"passwd"`. You can safely use `uploaded["filename"]` when constructing destination paths.
+
+**413 Payload Too Large:** If an individual file exceeds `maxBodySize` the framework immediately responds with HTTP 413 and the upload is rejected.
 
 ```djazair
 app.post("/upload", fn(req, res)
@@ -178,15 +186,16 @@ app.post("/upload", fn(req, res)
         res.status(400).text("Missing file")
         return
     end
-    
+
     print("File: ${uploaded["filename"]}, Size: ${uploaded["size"]}")
-    
-    # Move from temp directory to permanent location
+
+    # filename is already sanitized — safe to use as a path component
     file.move(uploaded["tempPath"], "./uploads/" + uploaded["filename"])
-    
-    res.json({"status": "uploaded"})
+
+    res.json({"status": "uploaded", "name": uploaded["filename"]})
 end)
 ```
+
 
 ### `req.cookie(name)`
 
@@ -216,13 +225,13 @@ Returns a merged map of `params` + `query` + `body` (body has highest priority).
 let all = req.inputs()
 ```
 
-### `req.input(name, default = Null)`
+### `req.input(name, fallback = Null)`
 
-Looks up a value from inputs in order: params → query → body. Returns `default` if not found.
+Looks up a value from inputs in order: params → query → body. Returns `fallback` if not found.
 
 ```djazair
 let name = req.input("name")       # from body, query, or params
-let page = req.input("page", 1)    # with default
+let page = req.input("page", 1)    # with fallback
 ```
 
 ### `req.only(keys)`
@@ -512,14 +521,15 @@ app.get("/", fn(req, res)
 end)
 
 app.post("/messages", fn(req, res)
-    let text = req.body["text"]
-    if isNull(text) || text == ""
+    let data = req.only(["text", "author"])
+    if isNull(data["text"]) || data["text"] == ""
         res.status(400).json({"error": "text field required"})
         return
     end
     let msg = {
         "id": messages.length(),
-        "text": text,
+        "text": data["text"],
+        "author": data["author"] || "Anonymous",
         "time": req.get("timestamp")
     }
     messages.append(msg)
@@ -554,10 +564,10 @@ See the [`examples/`](examples/) directory for runnable demos:
 
 | File | Features |
 |------|----------|
-| `01_hello.dz` | Minimal server, GET, JSON, redirect |
-| `02_routing.dz` | Route params, query strings, POST body |
-| `03_middleware.dz` | Custom middleware, auth, static files |
+| `01_hello.dz` | Text, JSON, sendStatus, custom headers via header() setter |
+| `02_routing.dz` | Route params, input()/inputs()/only()/except() helpers |
+| `03_middleware.dz` | Custom middleware, auth, static files, isAjax() |
 | `04_session.dz` | File-based sessions, visit counter |
 | `05_full_app.dz` | Guestbook with all features combined |
-| `06_error_handler.dz` | Global error handling with `onError` |
-| `07_route_groups.dz` | Route groups with prefix and middleware |
+| `06_error_handler.dz` | Global error handling with `onError`, sendStatus() |
+| `07_route_groups.dz` | Route groups, shared middleware, isAjax(), header() setter, input() |

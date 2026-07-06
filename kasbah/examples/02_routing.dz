@@ -1,11 +1,12 @@
-# Kasbah Example 02 — Routing
-# Route params (:param), query strings, POST body parsing
+# Kasbah Example 02 — Routing & Input Helpers
+# Route params, query strings, POST body, and shorthand input helpers
 #
 # Usage:
-#   GET  /users/5          -> req.param("id") = "5"
-#   GET  /users/5?page=2   -> req.query("page") = "2"
-#   POST /users            -> req.body contains parsed JSON/form
-#   GET  /search?q=kasbah  -> req.query("q") = "kasbah"
+#   GET  /users/5           -> req.param("id") = "5"
+#   GET  /users/5?page=2    -> req.query("page") = "2"
+#   GET  /search?q=kasbah   -> req.input("q") = "kasbah" (shorthand)
+#   POST /users             -> req.body contains parsed JSON/form
+#   GET  /inputs            -> req.inputs() merges params+query+body
 
 use kasbah
 
@@ -19,10 +20,9 @@ app.get("/", fn(req, res)
 end)
 
 app.get("/users/:id", fn(req, res)
-    let uid = req.param("id")
     res.json({
         "route": "/users/:id",
-        "userId": uid,
+        "userId": req.param("id"),
         "method": req.method
     })
 end)
@@ -35,7 +35,7 @@ app.get("/users/:id/posts/:postId", fn(req, res)
 end)
 
 app.get("/search", fn(req, res)
-    let q = req.query("q")
+    let q = req.input("q")
     if isNull(q)
         res.json({"error": "Missing ?q= parameter"})
     else
@@ -43,9 +43,23 @@ app.get("/search", fn(req, res)
     end
 end)
 
-app.post("/users", fn(req, res)
+app.get("/inputs", fn(req, res)
+    let all = req.inputs()
     res.json({
-        "created": True,
+        "allInputs": all,
+        "only": req.only(["name", "page"]),
+        "except": req.except(["token"])
+    })
+end)
+
+app.post("/users", fn(req, res)
+    let name = req.input("name")
+    if isNull(name)
+        res.status(400).json({"error": "name field is required"})
+        return
+    end
+    res.status(201).json({
+        "created": name,
         "data": req.body
     })
 end)

@@ -1,9 +1,11 @@
 # Kasbah Example 01 — Hello World
-# Minimal server: single route returning "Hello from Kasbah!"
+# Minimal server demonstrating basic text, JSON, status, and custom headers
 #
 # Usage:
-#   Run: djazair examples/01_hello.dz
-#   Visit: http://localhost:8080
+#   GET /        -> text
+#   GET /json    -> JSON
+#   GET /status  -> 200 OK via sendStatus()
+#   GET /headers -> custom header via res.header()
 
 use kasbah
 
@@ -21,6 +23,16 @@ app.get("/json", fn(req, res)
         "version": "0.1.0",
         "framework": "Kasbah"
     })
+end)
+
+app.get("/status", fn(req, res)
+    res.sendStatus(200)
+end)
+
+app.get("/headers", fn(req, res)
+    res.header("x-powered-by", "Kasbah")
+    res.header("x-custom", "hello")
+    res.json({"headers": "check response headers"})
 end)
 
 app.listen()

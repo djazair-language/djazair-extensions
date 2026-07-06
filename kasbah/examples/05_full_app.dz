@@ -41,14 +41,15 @@ app.get("/messages", fn(req, res)
 end)
 
 app.post("/messages", fn(req, res)
-    let text = req.body["text"]
-    if isNull(text) || text == ""
+    let data = req.only(["text", "author"])
+    if isNull(data["text"]) || data["text"] == ""
         res.status(400).json({"error": "text field is required"})
         return
     end
     let msg = {
         "id": messages.length(),
-        "text": text,
+        "text": data["text"],
+        "author": data["author"] || "Anonymous",
         "timestamp": req.get("timestamp")
     }
     messages.append(msg)

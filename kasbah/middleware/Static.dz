@@ -1,42 +1,63 @@
 # Kasbah Middleware — Static File Server
-# Serves files from a configured directory for GET requests
+# Serves files from a configured root directory for GET requests only.
+# Prevents path traversal by normalizing and verifying paths before serving.
 
 use file
 use path
 import "../helpers/Utils.dz" as *
 
+# serveStatic — factory that returns a middleware function.
+# `root` is the absolute or relative path to the directory to expose.
 fn serveStatic(root)
+    # Resolve and normalize the root once at startup, not per request
     let normRoot = path.normalize(root)
+    # Lowercase version used for case-insensitive prefix checks (Windows safety)
+    let normRootLower = normRoot.lower()
+
     return fn(req, res)
+        # Only serve GET requests; ignore POST, PUT, etc.
         if req.method != "GET"
             return
         end
 
+        # Build the candidate file path and normalize it to collapse ".." etc.
         let filePath = path.normalize(normRoot + "/" + req.path)
+        let filePathLower = filePath.lower()
 
-        if filePath.slice(0, normRoot.length()) != normRoot
+        # ── Path traversal guard ───────────────────────────────────────────────
+        # Compare lower-cased paths so that on Windows a request like
+        # "/..%5C..%5Cetc%5Cpasswd" cannot bypass the prefix check via
+        # mixed-case tricks (C:\Public vs c:\public are the same directory).
+        if filePathLower.slice(0, normRootLower.length()) != normRootLower
             return
         end
+
+        # The character immediately after the root prefix must be a separator,
+        # otherwise "/public-evil" would pass the prefix check for "/public".
         if filePath.length() > normRoot.length()
-            let sep = filePath[normRoot.length()]
+            let sep = filePathLower[normRootLower.length()]
             if sep != "/" && sep != "\\"
                 return
             end
         end
 
+        # Do not serve directories as files
         if file.isDir(filePath)
             return
         end
 
+        # Skip paths that do not exist on disk
         if !file.exists(filePath)
             return
         end
 
+        # Require a file extension so we can set a proper Content-Type
         let ext = path.extname(filePath)
         if ext == ""
             return
         end
 
+        # Send the file with the appropriate MIME type
         res.setHeader("content-type", mimeType(ext))
         res.send(file.read(filePath))
     end

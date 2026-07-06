@@ -1,5 +1,6 @@
 # Kasbah Core — Response class
-# Wraps built-in HttpResponse with fluent helpers
+# Wraps the built-in HttpResponse with a fluent, high-level API.
+# All mutating methods return `self` to support method chaining.
 
 use json as *
 use file
@@ -10,20 +11,24 @@ import "../helpers/Utils.dz" as *
 
 class Response
     init(httpRes)
-        self._http = httpRes
+        self._http   = httpRes
         self._status = 200
         self._headers = {}
-        self._body = ""
+        self._body    = ""
         self._cookies = []
-        self._sent = False
+        self._sent    = False
     end
 
+    # status — sets the HTTP response status code.
     status(code)
         self._status = code
         self._http.status(code)
         return self
     end
 
+    # setHeader — stores a response header.
+    # Silently drops values containing CR or LF to prevent HTTP response
+    # splitting attacks (RFC 7230 §3.2).
     setHeader(name, value)
         if isString(value) && (value.contains("\r") || value.contains("\n"))
             return self
@@ -32,7 +37,9 @@ class Response
         return self
     end
 
-    # Dual-use: get header with 1 arg, set header with 2 args
+    # header — dual-purpose getter/setter.
+    # Called with one argument: returns the stored header value or "".
+    # Called with two arguments: sets the header (delegates to setHeader).
     header(name, value = Null)
         if !isNull(value)
             return self.setHeader(name, value)
@@ -43,33 +50,25 @@ class Response
         return ""
     end
 
-    # Remove a previously set header by name (case-insensitive)
+    # removeHeader — deletes a previously set response header by name.
     removeHeader(name)
         self._headers.delete(name.lower())
         return self
     end
 
-    # Send a status code with its default text as body
+    # sendStatus — sends the given HTTP status code with its reason phrase
+    # as a plain-text body (e.g. 404 → "Not Found").
     sendStatus(code)
-        let texts = {
-            100: "Continue", 200: "OK", 201: "Created", 204: "No Content",
-            301: "Moved Permanently", 302: "Found", 304: "Not Modified",
-            400: "Bad Request", 401: "Unauthorized", 403: "Forbidden",
-            404: "Not Found", 405: "Method Not Allowed", 408: "Request Timeout",
-            413: "Payload Too Large", 422: "Unprocessable Entity",
-            429: "Too Many Requests", 500: "Internal Server Error",
-            502: "Bad Gateway", 503: "Service Unavailable"
-        }
         self.status(code)
-        if texts.has(code)
-            self.text(texts[code])
-        else
-            self.text("")
-        end
+        self.text(httpStatusText(code))
         return self
     end
 
-    # Internal helper to construct and send raw response headers and body
+    # ── Internal send ──────────────────────────────────────────────────────────
+
+    # _sendRaw — serializes headers, cookies, and body into a raw HTTP/1.1
+    # response string and writes it to the socket. Idempotent: subsequent
+    # calls after the first are ignored via the _sent flag.
     _sendRaw(body)
         if self._sent return end
         self._sent = True
@@ -85,27 +84,35 @@ class Response
         end
 
         let statusText = self._http._builder.statusText
-        let responseStr = buildHttpResponse(self._status, statusText, self._headers, self._cookies, bodyStr)
+        let responseStr = buildHttpResponse(
+            self._status, statusText, self._headers, self._cookies, bodyStr
+        )
 
         self._http._send(responseStr)
     end
 
+    # ── Public send helpers ────────────────────────────────────────────────────
+
+    # send — sends an arbitrary body without overriding the Content-Type.
     send(body)
         self._body = body
         self._sendRaw(body)
         return self
     end
 
+    # text — sends a plain-text body with Content-Type: text/plain.
     text(body)
         self.setHeader("Content-Type", "text/plain")
         return self.send(body)
     end
 
+    # html — sends an HTML body with Content-Type: text/html.
     html(body)
         self.setHeader("Content-Type", "text/html")
         return self.send(body)
     end
 
+    # json — serializes `data` to JSON and sends it with Content-Type: application/json.
     json(data)
         self.setHeader("Content-Type", "application/json")
         let strData = stringify(data)
@@ -114,28 +121,39 @@ class Response
         return self
     end
 
+    # file — reads a file from disk and sends its contents with the appropriate
+    # Content-Type derived from the file extension.
+    # Uses try/finally to guarantee the file handle is always closed.
     file(filePath)
         let safePath = path.normalize(filePath)
+
         if !file.exists(safePath)
-            self._status = 404
-            self._http.status(404)
-            self.send("File not found")
+            self.status(404).send("File not found")
             return self
         end
+
         let ext = path.extname(safePath)
         self.setHeader("Content-Type", mimeType(ext))
+
+        # Open the file and ensure it is closed even if send() raises an error
         let fh = file.open(safePath, "rb")
         try
             self.send(fh.read())
         catch err
-            self._status = 500
-            self._http.status(500)
-            self.send("Error reading file")
+            # Avoid a double-send: only respond if nothing was sent yet
+            if !self._sent
+                self.status(500).send("Error reading file")
+            end
+            finally
+            # Always close the handle, whether send succeeded or failed
+            fh.close()
         end
-        fh.close()
+
         return self
     end
 
+    # download — sends a file as an attachment, prompting the browser to save it.
+    # `filename` overrides the downloaded file name shown to the user.
     download(filePath, filename = Null)
         if isNull(filename)
             filename = path.basename(filePath)
@@ -144,6 +162,8 @@ class Response
         return self.file(filePath)
     end
 
+    # redirect — sends an HTTP redirect to `url`.
+    # Defaults to 302 Found; pass 301 for a permanent redirect.
     redirect(url, code = 302)
         self.status(code)
         self.setHeader("Location", url)
@@ -151,19 +171,23 @@ class Response
         return self
     end
 
+    # cookie — queues a Set-Cookie header to be written with the response.
+    # Options: httpOnly, secure, sameSite, path, maxAge, expires, domain.
     cookie(name, value, options = {})
         self._cookies.append({"name": name, "value": value, "options": options})
         return self
     end
 
+    # deleteCookie — expires a cookie immediately by setting Max-Age=0.
     deleteCookie(name)
         return self.cookie(name, "", {
-            "maxAge": 0,
-            "path": "/",
+            "maxAge":  0,
+            "path":    "/",
             "expires": "Thu, 01 Jan 1970 00:00:00 GMT"
         })
     end
 
+    # type — sets Content-Type from a file extension string (with or without dot).
     type(ext)
         if ext.length() > 0 && ext[0] != "."
             ext = "." + ext
@@ -175,6 +199,8 @@ class Response
         return self
     end
 
+    # links — builds a Link header from a map of rel → URL pairs.
+    # Example: res.links({"next": "/page/2", "prev": "/page/1"})
     links(linkMap)
         let parts = []
         for rel, href in linkMap
@@ -184,4 +210,3 @@ class Response
         return self
     end
 end
-

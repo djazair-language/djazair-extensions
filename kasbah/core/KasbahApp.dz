@@ -1,6 +1,6 @@
 # Kasbah Core — Application class
-# Uses built-in `http` module for the HTTP server.
-# Configures middleware, registers routes, starts the server.
+# Central orchestrator: configures middleware, registers routes, starts the HTTP server.
+# Uses the built-in `http` module for low-level network I/O.
 
 use http
 use os
@@ -22,67 +22,62 @@ import "../helpers/Utils.dz" as *
 import "../helpers/Cookie.dz" as *
 
 class KasbahApp
+    # init — builds the application with a merged config.
+    # All config keys are optional; sensible defaults are provided.
+    #
+    # Config options:
+    #   port        — TCP port to listen on (default: 3000)
+    #   host        — bind address (default: "0.0.0.0")
+    #   bodyParser  — enable automatic body parsing (default: True)
+    #   maxBodySize — max request body size in bytes (default: 1 048 576 = 1 MB)
+    #   logger      — enable request/response logging (default: True)
+    #   session     — enable file-based sessions (default: False)
+    #   sessionSecret — secret used for session cookie signing
+    #   static      — path of directory to serve as static files (default: "")
     init(config = {})
         let defaults = {
-            "port": 3000,
-            "host": "0.0.0.0",
-            "bodyParser": True,
-            "maxBodySize": 1048576,
-            "logger": True,
-            "session": False,
+            "port":          3000,
+            "host":          "0.0.0.0",
+            "bodyParser":    True,
+            "maxBodySize":   1048576,
+            "logger":        True,
+            "session":       False,
             "sessionSecret": "kasbah",
-            "static": ""
+            "static":        ""
         }
         self._config = merge(defaults, config)
+
+        # Resolve the static root to an absolute path at startup time
         if self._config["static"] != ""
             self._config["static"] = path.resolve(self._config["static"])
         end
-        self._router = new Router()
-        self._middlewares = []
-        self._server = Null
-        self._sessionMw = Null
-        # Middleware instances — created once in listen(), not per request
-        self._bodyParserMw = Null
-        self._loggerMw = Null
-        self._staticMw = Null
-        # Global error handler — Null means use built-in default
+
+        self._router      = new Router()
+        self._middlewares = []   # user-defined middleware functions
+        self._pipeline    = []   # ordered list built in listen()
+        self._server      = Null
+        # Global error handler — Null means use built-in 500 response
         self._errorHandler = Null
     end
 
+    # middleware — appends a user-defined middleware function to the chain.
+    # Middlewares run in registration order before the router.
+    # Signature: fn(req, res)
     middleware(mwFn)
         self._middlewares.append(mwFn)
         return self
     end
 
-    # Register a global error handler function(err, req, res)
-    # Called automatically whenever an unhandled exception occurs
-    # inside any handler or middleware during request processing.
+    # onError — registers a global error handler.
+    # Called automatically when any unhandled exception escapes a handler.
+    # Signature: fn(err, req, res)
     onError(handler)
         self._errorHandler = handler
         return self
     end
 
-    # Internal: invoke the user error handler or fall back to a default 500 response
-    _handleError(err, req, res)
-        try
-            if !isNull(self._errorHandler)
-                self._errorHandler(err, req, res)
-            else
-                # Default response when no error handler is registered
-                if !res._sent
-                    res.status(500).json({
-                        "error": "Internal Server Error",
-                        "message": str(err)
-                    })
-                end
-            end
-        catch handlerErr
-            # Last-resort response if the error handler itself throws
-            if !res._sent
-                res.status(500).text("Internal Server Error")
-            end
-        end
-    end
+    # ── Route registration helpers ─────────────────────────────────────────────
+    # Each method delegates to the internal Router instance.
 
     get(pattern, handler)
         self._router.get(pattern, handler)
@@ -114,47 +109,113 @@ class KasbahApp
         return self
     end
 
+    # group — creates a scoped set of routes that share a common URL prefix.
+    # `cb` receives a Router instance; routes registered on it are copied into
+    # the main router with the prefix prepended to their patterns.
+    # A snapshot of the route object is used so that repeated group() calls
+    # with the same Router do not accumulate prefixes.
     group(prefix, cb)
+        # Normalise the prefix: strip trailing slash (but keep "/" alone intact)
         if prefix != "/" && prefix.endsWith("/")
             prefix = prefix.slice(0, prefix.length() - 1)
         end
+
         let sub = new Router()
         cb(sub)
+
         for route in sub._routes
-            route["pattern"] = prefix + route["pattern"]
+            # Create a copy of the route so the original is never mutated
+            let newRoute = {
+                "method":  route["method"],
+                "pattern": prefix + route["pattern"],
+                "handler": route["handler"]
+            }
+
+            # If the sub-router has its own middlewares, wrap the handler so
+            # they run before the original handler for every route in the group.
             if sub._middlewares.length() > 0
-                let middlewares = sub._middlewares
-                let origHandler = route["handler"]
-                route["handler"] = fn(req, res)
+                let middlewares  = sub._middlewares
+                let origHandler  = route["handler"]
+                newRoute["handler"] = fn(req, res)
                     for mw in middlewares
                         mw(req, res)
                         if res._sent return end
                     end
-                    origHandler(req, res)
+                    # Only call the route handler if the response is still open
+                    if !res._sent
+                        origHandler(req, res)
+                    end
                 end
             end
-            self._router._routes.append(route)
+
+            self._router._routes.append(newRoute)
         end
+
         return self
     end
 
+    # ── Internal helpers ───────────────────────────────────────────────────────
+
+    # _prepareRequest — extracts and attaches metadata to the request object
+    # before middleware execution:
+    #   - req.ip      (from proxy headers)
+    #   - req.path    (query-string stripped)
+    #   - req._queryMap (parsed query parameters)
+    #   - req.cookies (parsed Cookie header)
     _prepareRequest(req, httpReq)
+        # Resolve the client IP from common reverse-proxy headers.
+        # The underlying TCP address is not exposed by the http module.
         req.ip = httpReq.header("x-forwarded-for")
         if req.ip == "" req.ip = httpReq.header("x-real-ip") end
         if req.ip == "" req.ip = "unknown" end
 
+        # Split the query string from the path.
+        # Guard against qidx==0 (URL like "?foo=bar" with no path component)
+        # by ensuring path never becomes an empty string — fall back to "/".
         let qidx = req.path.index("?")
         if !isNull(qidx) && qidx >= 0
             let fullPath = req.path
-            req.path = fullPath.slice(0, qidx)
+            if qidx > 0
+                req.path = fullPath.slice(0, qidx)
+            else
+                req.path = "/"
+            end
             let parsed = new net.URL("http://x" + fullPath)
             req._queryMap = parsed.query
         end
 
+        # Parse the Cookie header once here; Session middleware reads
+        # from req.cookies instead of re-parsing the raw header.
         let cHeader = httpReq.header("cookie")
-        if cHeader != "" req.cookies = parseCookie(cHeader) end
+        if cHeader != ""
+            req.cookies = parseCookie(cHeader)
+        end
     end
 
+    # _handleError — calls the user error handler or sends a default 500 response.
+    _handleError(err, req, res)
+        try
+            if !isNull(self._errorHandler)
+                self._errorHandler(err, req, res)
+            else
+                if !res._sent
+                    res.status(500).json({
+                        "error":   "Internal Server Error",
+                        "message": str(err)
+                    })
+                end
+            end
+        catch handlerErr
+            # Last-resort fallback if the error handler itself raises
+            if !res._sent
+                res.status(500).text("Internal Server Error")
+            end
+        end
+    end
+
+    # _buildHandler — constructs the per-request callback passed to http.createServer.
+    # The pipeline is iterated in order; a middleware that sets res._sent stops
+    # further execution via break (not return, so cleanup always runs).
     _buildHandler()
         return fn(httpReq, httpRes)
             let req = new Request(httpReq)
@@ -173,8 +234,9 @@ class KasbahApp
                 self._handleError(err, req, res)
             end
 
+            # Always persist the session and clean up temp files,
+            # regardless of whether the request succeeded or errored.
             self._saveSession(req)
-
             self._cleanupUploads(req)
 
             if self._config["logger"]
@@ -183,18 +245,25 @@ class KasbahApp
         end
     end
 
+    # _cleanupUploads — deletes temporary upload files that the route handler
+    # did not move to a permanent location. Called after every request.
     _cleanupUploads(req)
         let files = req.get("_uploadedFiles")
         if !isNull(files)
             for f in files
-                if file.exists(f) file.delete(f) end
+                if file.exists(f)
+                    file.delete(f)
+                end
             end
         end
     end
 
+    # _saveSession — persists session data to the FileStore after the response.
+    # FileStore.write() handles the case where req.session is empty by
+    # destroying the session file rather than writing "{}".
     _saveSession(req)
         if self._config["session"]
-            let sid = req.get("_sid")
+            let sid   = req.get("_sid")
             let store = req.get("_store")
             if !isNull(sid) && !isNull(store)
                 store.write(sid, req.session)
@@ -202,9 +271,18 @@ class KasbahApp
         end
     end
 
-    listen(port = Null, message = Null)
-        if !isNull(port) self._config["port"] = port end
+    # listen — builds the middleware pipeline and starts the HTTP server.
+    # Internal middlewares are ordered as:
+    #   bodyParser → logger → session → static → user middlewares → router
+    #
+    # `port`    — overrides the configured port for this call only.
+    # `quiet`   — when True, suppresses the startup message (default: False).
+    listen(port = Null, quiet = False)
+        if !isNull(port)
+            self._config["port"] = port
+        end
 
+        # Build the ordered pipeline once; it is shared across all requests.
         self._pipeline = []
 
         if self._config["bodyParser"]
@@ -220,25 +298,27 @@ class KasbahApp
             self._pipeline.append(serveStatic(self._config["static"]))
         end
 
+        # Append user-registered middlewares after the built-in ones
         for mw in self._middlewares
             self._pipeline.append(mw)
         end
 
+        # Router is the final step in the pipeline; sends 404 if no route matched
         self._pipeline.append(fn(req, res)
             let matched = self._router.handle(req, res)
             if !matched
                 res.status(404).json({
-                    "error": "Not Found",
-                    "path": req.path,
+                    "error":  "Not Found",
+                    "path":   req.path,
                     "method": req.method
                 })
             end
         end)
 
-        if message == Null
+        if !quiet
             print("Kasbah server starting on ${self._config["host"]}:${self._config["port"]}")
         end
-        
+
         self._server = http.createServer(self._buildHandler(), self._config["maxBodySize"])
         try
             self._server.listen(self._config["port"])
@@ -248,6 +328,7 @@ class KasbahApp
         end
     end
 
+    # close — gracefully shuts down the HTTP server.
     close()
         if !isNull(self._server)
             self._server.close()

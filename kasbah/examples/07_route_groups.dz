@@ -1,11 +1,13 @@
-# Kasbah Example 07 — Route Groups
-# Group routes with shared prefix and middleware
+# Kasbah Example 07 — Route Groups with Middleware
+# Group routes with shared prefix and middleware. Also showcases req.isAjax(),
+# res.header() setter, res.removeHeader(), and req.input().
 #
 # Usage:
-#   GET /              -> "Home"
-#   GET /admin         -> requires ?token=secret (401 without)
-#   GET /admin/users   -> requires ?token=secret
-#   GET /api/v1/status -> public JSON
+#   GET /                -> "Home"
+#   GET /admin           -> requires ?token=secret (401 without)
+#   GET /admin/users     -> requires ?token=secret
+#   GET /api/v1/status   -> public JSON, checks X-Requested-With header
+#   GET /api/v1/version  -> removes server header
 
 use kasbah
 
@@ -36,11 +38,20 @@ end)
 
 app.group("/api/v1", fn(g)
     g.get("/status", fn(req, res)
-        res.json({"status": "ok"})
+        if req.isAjax()
+            res.json({"ajax": True, "status": "ok"})
+        else
+            res.json({"status": "ok"})
+        end
     end)
     g.get("/version", fn(req, res)
         res.json({"version": "1.0.0"})
     end)
+end)
+
+app.get("/echo", fn(req, res)
+    res.header("x-echo", req.input("msg"))
+    res.json({"echo": req.input("msg")})
 end)
 
 app.listen()

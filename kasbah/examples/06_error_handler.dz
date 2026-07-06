@@ -10,7 +10,7 @@
 #     http://localhost:8080/crash        -> throws an intentional error
 #     http://localhost:8080/divide       -> division by zero
 #     http://localhost:8080/null-access  -> null dereference
-#     http://localhost:8080/unknown      -> 404 Not Found
+#     http://localhost:8080/unknown      -> 404 via sendStatus()
 
 use kasbah
 use datetime
@@ -62,6 +62,10 @@ app.get("/null-access", fn(req, res)
     let obj = Null
     let val = obj["key"]
     res.json({"val": val})
+end)
+
+app.get("/unknown", fn(req, res)
+    res.sendStatus(404)
 end)
 
 app.listen()

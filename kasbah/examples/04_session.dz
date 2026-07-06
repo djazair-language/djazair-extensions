@@ -38,7 +38,7 @@ end)
 
 app.get("/clear", fn(req, res)
     req.session = {}
-    res.text("Session cleared — next visit will be #1 again")
+    res.sendStatus(204)
 end)
 
 app.listen()
