@@ -114,6 +114,30 @@ class KasbahApp
         return self
     end
 
+    group(prefix, cb)
+        if prefix != "/" && prefix.endsWith("/")
+            prefix = prefix.slice(0, prefix.length() - 1)
+        end
+        let sub = new Router()
+        cb(sub)
+        for route in sub._routes
+            route["pattern"] = prefix + route["pattern"]
+            if sub._middlewares.length() > 0
+                let middlewares = sub._middlewares
+                let origHandler = route["handler"]
+                route["handler"] = fn(req, res)
+                    for mw in middlewares
+                        mw(req, res)
+                        if res._sent return end
+                    end
+                    origHandler(req, res)
+                end
+            end
+            self._router._routes.append(route)
+        end
+        return self
+    end
+
     _prepareRequest(req, httpReq)
         req.ip = httpReq.header("x-forwarded-for")
         if req.ip == "" req.ip = httpReq.header("x-real-ip") end
@@ -151,8 +175,19 @@ class KasbahApp
 
             self._saveSession(req)
 
+            self._cleanupUploads(req)
+
             if self._config["logger"]
                 logComplete(req, res)
+            end
+        end
+    end
+
+    _cleanupUploads(req)
+        let files = req.get("_uploadedFiles")
+        if !isNull(files)
+            for f in files
+                if file.exists(f) file.delete(f) end
             end
         end
     end

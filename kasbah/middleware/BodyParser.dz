@@ -15,6 +15,7 @@ fn _parseJson(req, res)
         req.body = parse(req.body)
     catch err
         res.status(400).json({"error": "Invalid JSON body", "detail": str(err)})
+        return
     end
 end
 
@@ -27,7 +28,7 @@ fn _parseUrlEncoded(req, res)
     end
 end
 
-fn _parseMultipart(req, res, boundary)
+fn _parseMultipart(req, res, boundary, maxBodySize = 1048576)
     if boundary == ""
         res.status(400).json({"error": "Missing boundary in multipart/form-data"})
         return
@@ -90,11 +91,21 @@ fn _parseMultipart(req, res, boundary)
             
             if name != ""
                 if filename != ""
+                    let byteArr = bytes.fromString(contentSection)
+                    if byteArr.length() > maxBodySize
+                        continue
+                    end
                     let tempDir = os.tmpDir() + "/kasbah_uploads"
                     if !file.exists(tempDir) dir.createAll(tempDir) end
                     let tempPath = tempDir + "/" + generateId(32)
-                    let byteArr = bytes.fromString(contentSection)
                     file.writeBytes(tempPath, byteArr)
+                    
+                    let tracked = req.get("_uploadedFiles")
+                    if isNull(tracked)
+                        req.set("_uploadedFiles", [tempPath])
+                    else
+                        tracked.append(tempPath)
+                    end
                     
                     req.files[name] = {
                         "name": name,
@@ -131,7 +142,7 @@ fn bodyParser(maxBodySize = 1048576)
             _parseUrlEncoded(req, res)
         elif mainType == "multipart/form-data"
             let parsedCt = parseContentType(ct)
-            _parseMultipart(req, res, parsedCt["boundary"])
+            _parseMultipart(req, res, parsedCt["boundary"], maxBodySize)
         end
     end
 end

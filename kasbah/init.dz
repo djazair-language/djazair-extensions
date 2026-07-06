@@ -1,6 +1,6 @@
 # Kasbah — Web Framework for Djazair
 # Usage: use kasbah
-#        let app = new kasbah.Kasbah({"port": 8080})
+#        let app = new kasbah.KasbahApp({"port": 8080})
 #        app.get("/", fn(req, res) res.send("Hello") end)
 #        app.listen()
 

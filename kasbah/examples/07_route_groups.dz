@@ -1,0 +1,46 @@
+# Kasbah Example 07 — Route Groups
+# Group routes with shared prefix and middleware
+#
+# Usage:
+#   GET /              -> "Home"
+#   GET /admin         -> requires ?token=secret (401 without)
+#   GET /admin/users   -> requires ?token=secret
+#   GET /api/v1/status -> public JSON
+
+use kasbah
+
+let app = new kasbah.KasbahApp({
+    "port": 8080
+})
+
+let authMw = fn(req, res)
+    let token = req.query("token")
+    if isNull(token) || token != "secret"
+        res.status(401).json({"error": "Unauthorized — use ?token=secret"})
+    end
+end
+
+app.get("/", fn(req, res)
+    res.text("Home")
+end)
+
+app.group("/admin", fn(g)
+    g.middleware(authMw)
+    g.get("/", fn(req, res)
+        res.text("Admin Home")
+    end)
+    g.get("/users", fn(req, res)
+        res.json(["Alice", "Bob"])
+    end)
+end)
+
+app.group("/api/v1", fn(g)
+    g.get("/status", fn(req, res)
+        res.json({"status": "ok"})
+    end)
+    g.get("/version", fn(req, res)
+        res.json({"version": "1.0.0"})
+    end)
+end)
+
+app.listen()

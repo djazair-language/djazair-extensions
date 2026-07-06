@@ -29,6 +29,12 @@ end
 # Serialize a cookie into a Set-Cookie header string
 # Options: domain, path, expires, maxAge, httpOnly, secure, sameSite
 fn serializeCookie(name, value, options = {})
+    if isString(name) && (name.contains("\r") || name.contains("\n"))
+        return ""
+    end
+    if isString(value) && (value.contains("\r") || value.contains("\n"))
+        return ""
+    end
     let parts = [name + "=" + value]
 
     if options.has("domain") && options["domain"] != ""

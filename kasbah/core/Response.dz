@@ -32,6 +32,43 @@ class Response
         return self
     end
 
+    # Dual-use: get header with 1 arg, set header with 2 args
+    header(name, value = Null)
+        if !isNull(value)
+            return self.setHeader(name, value)
+        end
+        if self._headers.has(name.lower())
+            return self._headers[name.lower()]
+        end
+        return ""
+    end
+
+    # Remove a previously set header by name (case-insensitive)
+    removeHeader(name)
+        self._headers.delete(name.lower())
+        return self
+    end
+
+    # Send a status code with its default text as body
+    sendStatus(code)
+        let texts = {
+            100: "Continue", 200: "OK", 201: "Created", 204: "No Content",
+            301: "Moved Permanently", 302: "Found", 304: "Not Modified",
+            400: "Bad Request", 401: "Unauthorized", 403: "Forbidden",
+            404: "Not Found", 405: "Method Not Allowed", 408: "Request Timeout",
+            413: "Payload Too Large", 422: "Unprocessable Entity",
+            429: "Too Many Requests", 500: "Internal Server Error",
+            502: "Bad Gateway", 503: "Service Unavailable"
+        }
+        self.status(code)
+        if texts.has(code)
+            self.text(texts[code])
+        else
+            self.text("")
+        end
+        return self
+    end
+
     # Internal helper to construct and send raw response headers and body
     _sendRaw(body)
         if self._sent return end
@@ -128,8 +165,11 @@ class Response
     end
 
     type(ext)
-        if ext[0] != "."
+        if ext.length() > 0 && ext[0] != "."
             ext = "." + ext
+        end
+        if ext.length() == 0
+            return self
         end
         self.setHeader("Content-Type", mimeType(ext))
         return self

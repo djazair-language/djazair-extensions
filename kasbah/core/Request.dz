@@ -59,6 +59,52 @@ class Request
         return accept.contains(type)
     end
 
+    # Returns a merged map of params + query + body (body has highest priority)
+    inputs()
+        let result = {}
+        for k in self.params.keys() result[k] = self.params[k] end
+        for k in self._queryMap.keys() result[k] = self._queryMap[k] end
+        if isMap(self.body)
+            for k in self.body.keys() result[k] = self.body[k] end
+        end
+        return result
+    end
+
+    # Looks up a value from inputs in order: params -> query -> body -> default
+    input(name, default = Null)
+        if self.params.has(name) return self.params[name] end
+        if self._queryMap.has(name) return self._queryMap[name] end
+        if isMap(self.body) && self.body.has(name) return self.body[name] end
+        return default
+    end
+
+    # Returns a subset of inputs containing only the specified keys
+    only(keys)
+        let all = self.inputs()
+        let result = {}
+        for k in keys
+            if all.has(k) result[k] = all[k] end
+        end
+        return result
+    end
+
+    # Returns all inputs except the specified keys
+    except(keys)
+        let all = self.inputs()
+        let skip = {}
+        for k in keys skip[k] = True end
+        let result = {}
+        for k in all.keys()
+            if !skip.has(k) result[k] = all[k] end
+        end
+        return result
+    end
+
+    # Returns True if the X-Requested-With header equals XMLHttpRequest
+    isAjax()
+        return self._http.header("x-requested-with") == "XMLHttpRequest"
+    end
+
     # Check if the Content-Type matches the given type (e.g. "json", "form")
     contentIs(type)
         let ct = self._http.header("content-type")

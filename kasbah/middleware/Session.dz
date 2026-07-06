@@ -92,7 +92,7 @@ fn session(options = {})
             req.session = {}
             req.set("_sid", sid)
             req.set("_isNew", True)
-            res.cookie(cookieName, sid, {"httpOnly": True, "path": "/"})
+            res.cookie(cookieName, sid, {"httpOnly": True, "path": "/", "maxAge": maxAge})
         else
             # Load existing session data from store
             req.session = store.read(sid)

@@ -80,6 +80,18 @@ app.get("/users/:id/posts/:postId", fn(req, res)
 end)
 ```
 
+### `app.group(prefix, callback)`
+
+Groups routes under a common path prefix with shared middleware.
+
+```djazair
+app.group("/admin", fn(g)
+    g.middleware(authMw)
+    g.get("/", adminHome)       # → GET /admin
+    g.get("/users", listUsers)  # → GET /admin/users
+end)
+```
+
 ### `app.middleware(fn)`
 
 Adds a middleware function that runs before route handlers:
@@ -95,6 +107,19 @@ end)
 ### `app.listen()`
 
 Starts the HTTP server. Must be called last.
+
+### `app.onError(handler)`
+
+Registers a global error handler called when any unhandled exception occurs inside a middleware or route handler. The handler receives `(err, req, res)`.
+
+```djazair
+app.onError(fn(err, req, res)
+    print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
+    if !res._sent
+        res.status(500).json({"error": "Internal Server Error", "message": str(err)})
+    end
+end)
+```
 
 ### `app.close()`
 
@@ -182,6 +207,49 @@ let start = req.get("startTime")
 ### `req.set(key, value)`
 
 Stores a custom attribute on the request object. Available to all downstream handlers.
+
+### `req.inputs()`
+
+Returns a merged map of `params` + `query` + `body` (body has highest priority).
+
+```djazair
+let all = req.inputs()
+```
+
+### `req.input(name, default = Null)`
+
+Looks up a value from inputs in order: params → query → body. Returns `default` if not found.
+
+```djazair
+let name = req.input("name")       # from body, query, or params
+let page = req.input("page", 1)    # with default
+```
+
+### `req.only(keys)`
+
+Returns a subset of inputs containing only the specified keys.
+
+```djazair
+let safe = req.only(["name", "email"])
+```
+
+### `req.except(keys)`
+
+Returns all inputs except the specified keys.
+
+```djazair
+let clean = req.except(["token", "_sid"])
+```
+
+### `req.isAjax()`
+
+Returns `True` if the `X-Requested-With` header equals `XMLHttpRequest`.
+
+```djazair
+if req.isAjax()
+    res.json(data)
+end
+```
 
 ### `req.isMethod(method)`
 
@@ -331,7 +399,7 @@ res.links({"next": "/page/2", "prev": "/page/1"})
 
 ## 6. Router Class
 
-Internal route matching engine. Supports `:param` patterns and middleware chains. Created automatically by `Kasbah`.
+Internal route matching engine. Supports `:param` patterns and middleware chains. Created automatically by `KasbahApp`.
 
 ```djazair
 let router = new kasbah.Router()
@@ -491,3 +559,5 @@ See the [`examples/`](examples/) directory for runnable demos:
 | `03_middleware.dz` | Custom middleware, auth, static files |
 | `04_session.dz` | File-based sessions, visit counter |
 | `05_full_app.dz` | Guestbook with all features combined |
+| `06_error_handler.dz` | Global error handling with `onError` |
+| `07_route_groups.dz` | Route groups with prefix and middleware |
