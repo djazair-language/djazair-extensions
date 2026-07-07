@@ -57,8 +57,7 @@ fn serveStatic(root)
             return
         end
 
-        # Send the file with the appropriate MIME type
-        res.setHeader("content-type", mimeType(ext))
-        res.send(file.read(filePath))
+        # Delegate to res.file which handles binary safe reading and MIME types
+        res.file(filePath)
     end
 end
