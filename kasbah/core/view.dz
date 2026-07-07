@@ -3,6 +3,7 @@
 
 use file
 use path
+import "../helpers/utils.dz" as *
 
 class view
     init(config)
@@ -54,9 +55,16 @@ class view
 
         if isMap(data)
             for k, v in data
-                # Replace both exact {{key}} and {{ key }} (with one space)
-                content = content.replace("{{" + k + "}}", str(v))
-                content = content.replace("{{ " + k + " }}", str(v))
+                let rawVal = str(v)
+                let escapedVal = escapeHtml(rawVal)
+                
+                # Raw injection with {{{key}}} or {{{ key }}}
+                content = content.replace("{{{" + k + "}}}", rawVal)
+                content = content.replace("{{{ " + k + " }}}", rawVal)
+                
+                # Escaped injection with {{key}} or {{ key }}
+                content = content.replace("{{" + k + "}}", escapedVal)
+                content = content.replace("{{ " + k + " }}", escapedVal)
             end
         end
 
