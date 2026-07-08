@@ -31,11 +31,9 @@ end
 fn _parseUrlEncoded(req, res)
     if req.body != ""
         let parsed = new net.URL("http://x?" + req.body)
-        req.body = parsed.query
-        
-        let keys = req.body.keys()
-        for k in keys
-            req.body[k] = urlDecode(req.body[k])
+        req.body = {}
+        for pair in parsed.searchParams.entries()
+            req.body[pair[0]] = pair[1]
         end
     else
         req.body = {}

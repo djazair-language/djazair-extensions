@@ -70,7 +70,11 @@ let HTTP_STATUS_TEXTS = {
 # parseUrl — uses net.URL to parse a URL string into path + query map.
 fn parseUrl(url)
     let parsed = new net.URL(url)
-    return {"path": parsed.pathname, "query": parsed.query}
+    let qMap = {}
+    for pair in parsed.searchParams.entries()
+        qMap[pair[0]] = pair[1]
+    end
+    return {"path": parsed.pathname, "query": qMap}
 end
 
 

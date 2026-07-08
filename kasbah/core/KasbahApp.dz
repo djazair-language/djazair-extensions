@@ -215,12 +215,9 @@ class kasbahApp
                 req.path = "/"
             end
             let parsed = new net.URL("http://x" + fullPath)
-            req._queryMap = parsed.query
-            
-            # Decode query parameter values
-            let qKeys = req._queryMap.keys()
-            for k in qKeys
-                req._queryMap[k] = urlDecode(req._queryMap[k])
+            req._queryMap = {}
+            for pair in parsed.searchParams.entries()
+                req._queryMap[pair[0]] = pair[1]
             end
         end
 
