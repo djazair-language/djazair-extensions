@@ -1,10 +1,10 @@
 # Kasbah Core — Request class
-# Wraps built-in HttpRequest with params, query, cookies, session, state
+# Wraps built-in httpRequest with params, query, cookies, session, state
 
 class request
     init(httpReq)
         self.method = httpReq.method
-        self.path = httpReq.path
+        self.path = httpReq.pathname
         self.rawHeaders = httpReq.headers  # renamed from 'headers' to avoid conflict with header() method
         self.body = httpReq.body
         self._http = httpReq
@@ -16,6 +16,11 @@ class request
         self.files = {}
         self._state = {}
         self._queryMap = {}
+        if !isNull(httpReq.query)
+            for pair in httpReq.query.entries()
+                self._queryMap[pair[0]] = pair[1]
+            end
+        end
     end
 
     param(name)
@@ -62,10 +67,16 @@ class request
     # Returns a merged map of params + query + body (body has highest priority)
     inputs()
         let result = {}
-        for k in self.params.keys() result[k] = self.params[k] end
-        for k in self._queryMap.keys() result[k] = self._queryMap[k] end
+        for k, v in self.params
+            result[k] = v
+        end
+        for k, v in self._queryMap
+            result[k] = v
+        end
         if isMap(self.body)
-            for k in self.body.keys() result[k] = self.body[k] end
+            for k, v in self.body
+                result[k] = v
+            end
         end
         return result
     end
@@ -94,8 +105,8 @@ class request
         let skip = {}
         for k in keys skip[k] = True end
         let result = {}
-        for k in all.keys()
-            if !skip.has(k) result[k] = all[k] end
+        for k, v in all
+            if !skip.has(k) result[k] = v end
         end
         return result
     end

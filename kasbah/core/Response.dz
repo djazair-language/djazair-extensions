@@ -1,5 +1,5 @@
 # Kasbah Core — Response class
-# Wraps the built-in HttpResponse with a fluent, high-level API.
+# Wraps the built-in httpResponse with a fluent, high-level API.
 # All mutating methods return `self` to support method chaining.
 
 use json as *
@@ -123,9 +123,8 @@ class response
         return self
     end
 
-    # file — reads a file from disk and sends its contents with the appropriate
+    # file — reads a file from disk and streams its contents natively
     # Content-Type derived from the file extension.
-    # Uses try/finally to guarantee the file handle is always closed.
     file(filePath)
         let safePath = path.normalize(filePath)
 
@@ -137,19 +136,23 @@ class response
         let ext = path.extname(safePath)
         self.setHeader("Content-Type", mimeType(ext))
 
-        # Open the file and ensure it is closed even if send() raises an error
-        let fh = file.open(safePath, "rb")
-        try
-            self.send(fh.read())
-        catch err
-            # Avoid a double-send: only respond if nothing was sent yet
-            if !self._sent
-                self.status(500).send("Error reading file")
-            end
-            finally
-            # Always close the handle, whether send succeeded or failed
-            fh.close()
+        # Push Kasbah headers and cookies into the native httpResponse
+        self._http.status(self._status)
+        for key, val in self._headers
+            self._http.setHeader(key, val)
         end
+
+        if self._cookies.length() > 0
+            let cookieArr = []
+            for c in self._cookies
+                cookieArr.append(serializeCookie(c["name"], c["value"], c["options"]))
+            end
+            self._http.setHeader("Set-Cookie", cookieArr)
+        end
+
+        # Stream the file securely using Djazair's native low-memory sendFile
+        self._http.sendFile(safePath)
+        self._sent = True
 
         return self
     end
@@ -176,7 +179,7 @@ class response
         if isNull(filename)
             filename = path.basename(filePath)
         end
-        self.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+        self.setHeader("Content-Disposition", "attachment; filename=\"${filename}\"")
         return self.file(filePath)
     end
 
@@ -208,7 +211,7 @@ class response
     # type — sets Content-Type from a file extension string (with or without dot).
     type(ext)
         if ext.length() > 0 && ext[0] != "."
-            ext = "." + ext
+            ext = ".${ext}"
         end
         if ext.length() == 0
             return self
@@ -222,7 +225,7 @@ class response
     links(linkMap)
         let parts = []
         for rel, href in linkMap
-            parts.append("<" + href + ">; rel=\"" + rel + "\"")
+            parts.append("<${href}>; rel=\"${rel}\"")
         end
         self.setHeader("Link", parts.join(", "))
         return self

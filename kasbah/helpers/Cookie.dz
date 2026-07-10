@@ -35,22 +35,22 @@ fn serializeCookie(name, value, options = {})
     if isString(value) && (value.contains("\r") || value.contains("\n"))
         return ""
     end
-    let parts = [name + "=" + value]
+    let parts = ["${name}=${value}"]
 
     if options.has("domain") && options["domain"] != ""
-        parts.append("Domain=" + options["domain"])
+        parts.append("Domain=${options["domain"]}")
     end
 
     if options.has("path") && options["path"] != ""
-        parts.append("Path=" + options["path"])
+        parts.append("Path=${options["path"]}")
     end
 
     if options.has("expires") && options["expires"] != ""
-        parts.append("Expires=" + options["expires"])
+        parts.append("Expires=${options["expires"]}")
     end
 
     if options.has("maxAge") && isNumber(options["maxAge"])
-        parts.append("Max-Age=" + str(options["maxAge"]))
+        parts.append("Max-Age=${options["maxAge"]}")
     end
 
     if options.has("httpOnly") && options["httpOnly"]
@@ -62,7 +62,7 @@ fn serializeCookie(name, value, options = {})
     end
 
     if options.has("sameSite") && options["sameSite"] != ""
-        parts.append("SameSite=" + options["sameSite"])
+        parts.append("SameSite=${options["sameSite"]}")
     end
 
     return parts.join("; ")

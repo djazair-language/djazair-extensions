@@ -20,27 +20,27 @@ class view
 
         # Auto-append .html if there is no extension
         if !templateName.contains(".")
-            templateName = templateName + ".html"
+            templateName = "${templateName}.html"
         end
 
-        let safePath = path.normalize(viewsDir + "/" + templateName)
+        let safePath = path.normalize("${viewsDir}/${templateName}")
 
         # Path Traversal Protection
         let viewsDirLower = viewsDir.lower()
         if !viewsDirLower.endsWith("/") && !viewsDirLower.endsWith("\\")
-            let okSlash = safePath.lower().startsWith(viewsDirLower + "/")
-            let okBackslash = safePath.lower().startsWith(viewsDirLower + "\\")
+            let okSlash = safePath.lower().startsWith("${viewsDirLower}/")
+            let okBackslash = safePath.lower().startsWith("${viewsDirLower}\\")
             if !okSlash && !okBackslash
-                throw "Forbidden view path traversal: " + templateName
+                throw "Forbidden view path traversal: ${templateName}"
             end
         else
             if !safePath.lower().startsWith(viewsDirLower)
-                throw "Forbidden view path traversal: " + templateName
+                throw "Forbidden view path traversal: ${templateName}"
             end
         end
 
         if !file.exists(safePath)
-            throw "View not found: " + templateName
+            throw "View not found: ${templateName}"
         end
 
         let content = ""
@@ -48,7 +48,7 @@ class view
         try
             content = fh.read()
         catch err
-            throw "Error reading view file: " + templateName
+            throw "Error reading view file: ${templateName}"
         finally
             fh.close()
         end
@@ -59,12 +59,12 @@ class view
                 let escapedVal = escapeHtml(rawVal)
                 
                 # Raw injection with {{{key}}} or {{{ key }}}
-                content = content.replace("{{{" + k + "}}}", rawVal)
-                content = content.replace("{{{ " + k + " }}}", rawVal)
+                content = content.replace("{{{${k}}}}", rawVal)
+                content = content.replace("{{{ ${k} }}}", rawVal)
                 
                 # Escaped injection with {{key}} or {{ key }}
-                content = content.replace("{{" + k + "}}", escapedVal)
-                content = content.replace("{{ " + k + " }}", escapedVal)
+                content = content.replace("{{${k}}}", escapedVal)
+                content = content.replace("{{ ${k} }}", escapedVal)
             end
         end
 

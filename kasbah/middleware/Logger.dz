@@ -37,16 +37,16 @@ class kasbahLogger
         let h = str(d.hour())
         let m = str(d.minute())
         let s = str(d.second())
-        if h.length() < 2 h = "0" + h end
-        if m.length() < 2 m = "0" + m end
-        if s.length() < 2 s = "0" + s end
-        return "[" + h + ":" + m + ":" + s + "]"
+        if h.length() < 2 h = "0${h}" end
+        if m.length() < 2 m = "0${m}" end
+        if s.length() < 2 s = "0${s}" end
+        return "[${h}:${m}:${s}]"
     end
 
     # Internal method to print messages if they meet the required log level
     _log(levelName, levelValue, msg)
         if levelValue >= self._currentLevel
-            print(self._timestamp() + " [" + levelName.upper() + "] " + str(msg))
+            print("${self._timestamp()} [${levelName.upper()}] ${msg}")
         end
     end
 

@@ -3,7 +3,6 @@
 # Populated fields: req.body (map or string) and req.files (map of uploaded files).
 
 use json as *
-use net
 use os
 use file
 use dir
@@ -29,14 +28,18 @@ end
 # _parseUrlEncoded — decodes an application/x-www-form-urlencoded body
 # into a map and stores it in req.body.
 fn _parseUrlEncoded(req, res)
-    if req.body != ""
-        let parsed = new net.URL("http://x?" + req.body)
-        req.body = {}
-        for pair in parsed.searchParams.entries()
-            req.body[pair[0]] = pair[1]
+    let rawBody = req.body
+    req.body = {}
+    if rawBody != ""
+        let parts = rawBody.split("&")
+        for part in parts
+            let eq = part.index("=")
+            if eq != -1
+                req.body[urlDecode(part.slice(0, eq))] = urlDecode(part.slice(eq + 1))
+            elif part != ""
+                req.body[urlDecode(part)] = ""
+            end
         end
-    else
-        req.body = {}
     end
 end
 
@@ -55,8 +58,8 @@ end
 #   req         — the Request object to populate
 #   res         — the Response object (used to send error responses)
 #   boundary    — the multipart boundary string extracted from Content-Type
-#   maxBodySize — maximum allowed size per file part in bytes
-fn _parseMultipart(req, res, boundary, maxBodySize = 1048576)
+#   maxBodySize — maximum allowed size per file part in MB
+fn _parseMultipart(req, res, boundary, maxBodySize = 2)
     if boundary == ""
         res.status(400).json({"error": "Missing boundary in multipart/form-data"})
         return
@@ -65,7 +68,7 @@ fn _parseMultipart(req, res, boundary, maxBodySize = 1048576)
     let rawBody = req.body
     req.body = {}
 
-    let boundaryPrefix = "--" + boundary
+    let boundaryPrefix = "--${boundary}"
     let parts = rawBody.split(boundaryPrefix)
 
     for part in parts
@@ -137,21 +140,22 @@ fn _parseMultipart(req, res, boundary, maxBodySize = 1048576)
 
             # Reject oversized parts immediately with 413 instead of silently
             # skipping, so the client knows the upload was refused.
-            if byteArr.length() > maxBodySize
+            let byteLimit = maxBodySize * 1024 * 1024
+            if byteArr.length() > byteLimit
                 res.status(413).json({
                     "error": "File too large",
                     "field": name,
-                    "maxBytes": maxBodySize
+                    "maxBytes": byteLimit
                 })
                 return
             end
 
             # Write the file to a unique temporary path
-            let tempDir = os.tmpDir() + "/kasbah_uploads"
+            let tempDir = "${os.tmpDir()}/kasbah_uploads"
             if !file.exists(tempDir)
                 dir.createAll(tempDir)
             end
-            let tempPath = tempDir + "/" + generateId(32)
+            let tempPath = "${tempDir}/${generateId(32)}"
             file.writeBytes(tempPath, byteArr)
 
             # Track the temp path so KasbahApp can clean it up after the response
@@ -184,7 +188,7 @@ end
 #
 # `maxBodySize` sets the maximum allowed total body size in bytes (default 1 MB).
 # The limit can be customised per-app via the KasbahApp config option.
-fn bodyParser(maxBodySize = 1048576)
+fn bodyParser(maxBodySize = 2)
     return fn(req, res)
         # Body-less methods have nothing to parse
         if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS"

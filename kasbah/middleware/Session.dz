@@ -11,11 +11,11 @@ use regex
 import "../helpers/utils.dz" as *
 import "../helpers/cookie.dz" as *
 
-# ── FileStore ──────────────────────────────────────────────────────────────────
+# ── fileStore ──────────────────────────────────────────────────────────────────
 
-# FileStore — persists session data to the local filesystem as JSON files.
+# fileStore — persists session data to the local filesystem as JSON files.
 # Each session is one file named "<sid>.json" inside the storage directory.
-class FileStore
+class fileStore
     # Initialize the store and create the storage directory if needed.
     init(dirPath)
         self._dir = dirPath
@@ -26,7 +26,7 @@ class FileStore
 
     # read — loads session data for `sid`. Returns an empty map on miss or error.
     read(sid)
-        let spath = self._dir + "/" + sid + ".json"
+        let spath = "${self._dir}/${sid}.json"
         if !file.exists(spath)
             return {}
         end
@@ -47,7 +47,7 @@ class FileStore
             self.destroy(sid)
             return
         end
-        let spath = self._dir + "/" + sid + ".json"
+        let spath = "${self._dir}/${sid}.json"
         try
             file.write(spath, json.stringify(data))
         catch err
@@ -57,7 +57,7 @@ class FileStore
 
     # destroy — deletes the session file for `sid`, if it exists.
     destroy(sid)
-        let spath = self._dir + "/" + sid + ".json"
+        let spath = "${self._dir}/${sid}.json"
         try
             if file.exists(spath)
                 file.delete(spath)
@@ -83,12 +83,12 @@ fn session(options = {})
         cookieName = options["name"]
     end
 
-    let sessionDir = os.tmpDir() + "/kasbah_sessions"
+    let sessionDir = "${os.tmpDir()}/kasbah_sessions"
     if options.has("dir")
         sessionDir = options["dir"]
     end
 
-    let store = new FileStore(sessionDir)
+    let store = new fileStore(sessionDir)
 
     let maxAge = 86400
     if options.has("maxAge")

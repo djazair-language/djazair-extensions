@@ -4,9 +4,8 @@
 use random
 use file
 use path
-use net
 use bytes
-import "Cookie.dz" as *
+import "cookie.dz" as *
 
 # ── Module-level constants ─────────────────────────────────────────────────────
 # These maps are created once at import time, not on every function call.
@@ -65,19 +64,6 @@ let HTTP_STATUS_TEXTS = {
     503: "Service Unavailable"
 }
 
-# ── URL / Path helpers ─────────────────────────────────────────────────────────
-
-# parseUrl — uses net.URL to parse a URL string into path + query map.
-fn parseUrl(url)
-    let parsed = new net.URL(url)
-    let qMap = {}
-    for pair in parsed.searchParams.entries()
-        qMap[pair[0]] = pair[1]
-    end
-    return {"path": parsed.pathname, "query": qMap}
-end
-
-
 
 # ── Map helpers ────────────────────────────────────────────────────────────────
 
@@ -85,11 +71,11 @@ end
 # Note: this is a shallow merge; nested maps are NOT recursively merged.
 fn merge(a, b)
     let result = {}
-    for key in a.keys()
-        result[key] = a[key]
+    for key, val in a
+        result[key] = val
     end
-    for key in b.keys()
-        result[key] = b[key]
+    for key, val in b
+        result[key] = val
     end
     return result
 end
@@ -104,8 +90,8 @@ fn generateId(len = 32)
     let i = 0
     while i < len
         let n = random.int(0, 15)
-        result = result + hex[n]
-        i = i + 1
+        result += hex[n]
+        i += 1
     end
     return result
 end
@@ -209,25 +195,22 @@ end
 # buildHttpResponse — assembles a complete raw HTTP/1.1 response string.
 # Called by Response._sendRaw() to produce the full wire-format message.
 fn buildHttpResponse(status, statusText, headers, cookies, bodyStr)
-    let response = "HTTP/1.1 " + str(status) + " " + statusText + "\r\n"
+    let response = "HTTP/1.1 ${status} ${statusText}\r\n"
 
     # Write all response headers
-    let hKeys = headers.keys()
-    for key in hKeys
-        response += key + ": " + str(headers[key]) + "\r\n"
+    for key, val in headers
+        response += "${key}: ${val}\r\n"
     end
 
     # Serialize each cookie as a Set-Cookie header line
     for c in cookies
         let cookieStr = serializeCookie(c["name"], c["value"], c["options"])
-        response += "Set-Cookie: " + cookieStr + "\r\n"
+        response += "Set-Cookie: ${cookieStr}\r\n"
     end
 
     # Append mandatory framing headers and the body
-    response += "Content-Length: " + str(bytes.byteLength(bodyStr)) + "\r\n"
-    response += "Connection: close\r\n"
-    response += "\r\n"
-    response += bodyStr
+    response += "Content-Length: ${bytes.byteLength(bodyStr)}\r\n"
+    response += "Connection: close\r\n\r\n${bodyStr}"
 
     return response
 end

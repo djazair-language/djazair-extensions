@@ -21,7 +21,7 @@ fn serveStatic(root)
         end
 
         # Build the candidate file path and normalize it to collapse ".." etc.
-        let filePath = path.normalize(normRoot + "/" + req.path)
+        let filePath = path.normalize("${normRoot}/${req.path}")
         let filePathLower = filePath.lower()
 
         # ── Path traversal guard ───────────────────────────────────────────────

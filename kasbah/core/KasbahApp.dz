@@ -6,7 +6,6 @@ use http
 use os
 use file
 use path
-use net
 use datetime
 use json
 use process
@@ -20,6 +19,74 @@ import "../middleware/session.dz" as *
 import "../middleware/static.dz" as *
 import "../helpers/utils.dz" as *
 import "../helpers/cookie.dz" as *
+
+class routerGroup
+    init(app, prefix, middlewares)
+        self.app = app
+        self.prefix = prefix
+        self.middlewares = middlewares
+    end
+
+    _wrap(handler)
+        if self.middlewares.length() == 0 return handler end
+        let mws = self.middlewares
+        return fn(req, res)
+            for mw in mws
+                mw(req, res)
+                if res._sent return end
+            end
+            handler(req, res)
+        end
+    end
+
+    get(pattern, handler)
+        self.app.get(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    post(pattern, handler)
+        self.app.post(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    put(pattern, handler)
+        self.app.put(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    delete(pattern, handler)
+        self.app.delete(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    patch(pattern, handler)
+        self.app.patch(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    all(pattern, handler)
+        self.app.all(self.prefix + pattern, self._wrap(handler))
+        return self
+    end
+
+    group(prefix, middlewares_or_callback, callback = Null)
+        let mws = []
+        let cb = callback
+        if isNull(callback)
+            cb = middlewares_or_callback
+        else
+            mws = middlewares_or_callback
+        end
+        # Combine parent middlewares with new group middlewares
+        let combinedMws = []
+        for mw in self.middlewares combinedMws.append(mw) end
+        for mw in mws combinedMws.append(mw) end
+
+        let g = new routerGroup(self.app, self.prefix + prefix, combinedMws)
+        cb(g)
+        return self
+    end
+end
 
 class kasbahApp
     # init — builds the application with a merged config.
@@ -39,7 +106,7 @@ class kasbahApp
             "port":          3000,
             "host":          "0.0.0.0",
             "bodyParser":    True,
-            "maxBodySize":   1048576,
+            "maxBodySize":   2,
             "logger":        True,
             "session":       False,
             "sessionSecret": "kasbah",
@@ -57,7 +124,12 @@ class kasbahApp
             self._config["views"] = path.resolve(self._config["views"])
         end
 
-        self._routes      = []
+        self._staticRoutes  = {
+            "GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "PATCH": {}, "HEAD": {}, "OPTIONS": {}
+        }
+        self._dynamicRoutes = {
+            "GET": [], "POST": [], "PUT": [], "DELETE": [], "PATCH": [], "HEAD": [], "OPTIONS": []
+        }
         self._middlewares = []   # user-defined middleware functions
         self._pipeline    = []   # ordered list built in listen()
         self._server      = Null
@@ -93,35 +165,64 @@ class kasbahApp
     # ── Route registration helpers ─────────────────────────────────────────────
     # Each method delegates to the internal Router instance.
 
+    group(prefix, middlewares_or_callback, callback = Null)
+        let mws = []
+        let cb = callback
+        if isNull(callback)
+            cb = middlewares_or_callback
+        else
+            mws = middlewares_or_callback
+        end
+        let g = new routerGroup(self, prefix, mws)
+        cb(g)
+        return self
+    end
+
+    _addRoute(method, pattern, handler)
+        if pattern.length() > 1 && pattern.endsWith("/")
+            pattern = pattern.slice(0, pattern.length() - 1)
+        end
+
+        if pattern.contains(":")
+            self._dynamicRoutes[method].append({
+                "pattern": pattern,
+                "segs": pattern.split("/"),
+                "handler": handler
+            })
+        else
+            self._staticRoutes[method][pattern] = handler
+        end
+    end
+
     get(pattern, handler)
-        self._routes.append({"method": "GET", "pattern": pattern, "handler": handler})
+        self._addRoute("GET", pattern, handler)
         return self
     end
 
     post(pattern, handler)
-        self._routes.append({"method": "POST", "pattern": pattern, "handler": handler})
+        self._addRoute("POST", pattern, handler)
         return self
     end
 
     put(pattern, handler)
-        self._routes.append({"method": "PUT", "pattern": pattern, "handler": handler})
+        self._addRoute("PUT", pattern, handler)
         return self
     end
 
     delete(pattern, handler)
-        self._routes.append({"method": "DELETE", "pattern": pattern, "handler": handler})
+        self._addRoute("DELETE", pattern, handler)
         return self
     end
 
     patch(pattern, handler)
-        self._routes.append({"method": "PATCH", "pattern": pattern, "handler": handler})
+        self._addRoute("PATCH", pattern, handler)
         return self
     end
 
     all(pattern, handler)
         let methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
         for m in methods
-            self._routes.append({"method": m, "pattern": pattern, "handler": handler})
+            self._addRoute(m, pattern, handler)
         end
         return self
     end
@@ -146,19 +247,16 @@ class kasbahApp
             pathStr = pathStr.slice(0, pathStr.length() - 1)
         end
 
+        # O(1) lookup for static routes
+        if self._staticRoutes[method].has(pathStr)
+            return {"handler": self._staticRoutes[method][pathStr], "params": {}}
+        end
+
+        # O(N) lookup for dynamic routes
         let pathSegs = pathStr.split("/")
 
-        for route in self._routes
-            if route["method"] != method
-                continue
-            end
-
-            let pattern = route["pattern"]
-            if pattern.length() > 1 && pattern.endsWith("/")
-                pattern = pattern.slice(0, pattern.length() - 1)
-            end
-
-            let patternSegs = pattern.split("/")
+        for route in self._dynamicRoutes[method]
+            let patternSegs = route["segs"]
             if patternSegs.length() != pathSegs.length()
                 continue
             end
@@ -202,24 +300,6 @@ class kasbahApp
         req.ip = httpReq.header("x-forwarded-for")
         if req.ip == "" req.ip = httpReq.header("x-real-ip") end
         if req.ip == "" req.ip = "unknown" end
-
-        # Split the query string from the path.
-        # Guard against qidx==0 (URL like "?foo=bar" with no path component)
-        # by ensuring path never becomes an empty string — fall back to "/".
-        let qidx = req.path.index("?")
-        if !isNull(qidx) && qidx >= 0
-            let fullPath = req.path
-            if qidx > 0
-                req.path = fullPath.slice(0, qidx)
-            else
-                req.path = "/"
-            end
-            let parsed = new net.URL("http://x" + fullPath)
-            req._queryMap = {}
-            for pair in parsed.searchParams.entries()
-                req._queryMap[pair[0]] = pair[1]
-            end
-        end
 
         # Decode URL path and normalize multiple slashes
         req.path = urlDecode(req.path)
@@ -307,7 +387,7 @@ class kasbahApp
                 end
             catch postErr
                 if !isNull(self._logger) && !isNull(req)
-                    self._logger.onError(req, "Post-request error: " + str(postErr))
+                    self._logger.onError(req, "Post-request error: ${postErr}")
                 end
             end
         end
@@ -388,7 +468,7 @@ class kasbahApp
             print("Kasbah server starting on ${self._config["host"]}:${self._config["port"]}")
         end
 
-        self._server = http.createServer(self._buildHandler(), self._config["maxBodySize"])
+        self._server = http.createServer(self._buildHandler(), {"maxRequestSize": self._config["maxBodySize"]})
         try
             self._server.listen(self._config["port"])
         catch err
