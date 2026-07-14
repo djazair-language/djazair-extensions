@@ -32,7 +32,7 @@ class fileStore
         end
         try
             let raw = file.read(spath)
-            return json.parse(raw)
+            return json.decode(raw)
         catch err
             # Corrupted file — treat as empty session
             return {}
@@ -49,7 +49,7 @@ class fileStore
         end
         let spath = "${self._dir}/${sid}.json"
         try
-            file.write(spath, json.stringify(data))
+            file.write(spath, json.encode(data))
         catch err
             # Log or ignore, but do not crash
         end
