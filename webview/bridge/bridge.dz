@@ -36,13 +36,13 @@ end
 #   Error   → { "__dz_ok": false, "__dz_error": "<message>" }
 #
 # value_to_json_result() in C++ passes JSON-looking strings through raw,
-# so stringify() output is transmitted as-is and auto-parsed by webview.h.
+# so encode() output is transmitted as-is and auto-parsed by webview.h.
 #
 # Handlers receive `payload` already deserialized (plain dict/list/value) —
-# no manual parse() needed. Return any Djazair value — no stringify() needed.
+# no manual decode() needed. Return any Djazair value — no encode() needed.
 fn _onDispatch(app, name, req)
     sysLog("Bridge", "Received dispatch: ${name}, req: ${req}", "debug")
-    let args = parse(req)
+    let args = decode(req)
 
     if name == "__dz_invoke"
         let channel = args[0]
@@ -50,28 +50,28 @@ fn _onDispatch(app, name, req)
         let handler = app._bridgeHandlers[channel]
 
         if isNull(handler)
-            return stringify({ "__dz_ok": False, "__dz_error": "No handler for channel: " + channel })
+            return encode({ "__dz_ok": False, "__dz_error": "No handler for channel: " + channel })
         end
 
         try
             let result = handler(payload)
-            return stringify({ "__dz_ok": True, "__dz_data": result })
+            return encode({ "__dz_ok": True, "__dz_data": result })
         catch err
-            return stringify({ "__dz_ok": False, "__dz_error": "${err}" })
+            return encode({ "__dz_ok": False, "__dz_error": "${err}" })
         end
     else
         # Direct native binding via bridge.expose()
         let handler = app._bridgeHandlers[name]
 
         if isNull(handler)
-            return stringify({ "__dz_ok": False, "__dz_error": "No handler for binding: " + name })
+            return encode({ "__dz_ok": False, "__dz_error": "No handler for binding: " + name })
         end
 
         try
             let result = handler(args)
-            return stringify({ "__dz_ok": True, "__dz_data": result })
+            return encode({ "__dz_ok": True, "__dz_data": result })
         catch err
-            return stringify({ "__dz_ok": False, "__dz_error": "${err}" })
+            return encode({ "__dz_ok": False, "__dz_error": "${err}" })
         end
     end
 end
@@ -90,7 +90,7 @@ fn createBridge(app, win)
     # Send data to a JS channel
     bridge.send = fn(channel, data)
         sysLog("Bridge", "Sending to JS channel: ${channel}", "debug")
-        let jsCmd = "if (window.djazair) window.djazair.send(${stringify(channel)}, ${stringify(data)});"
+        let jsCmd = "if (window.djazair) window.djazair.send(${encode(channel)}, ${encode(data)});"
         win.eval(jsCmd)
     end
 

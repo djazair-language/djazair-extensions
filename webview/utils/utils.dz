@@ -88,7 +88,7 @@ fn _formatMessage(msg)
     if type(msg) == "String"
         return msg
     else
-        return stringify(msg)
+        return encode(msg)
     end
 end
 

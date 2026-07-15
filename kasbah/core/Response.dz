@@ -80,7 +80,7 @@ class response
             if !self._headers.has("content-type")
                 self.setHeader("Content-Type", "application/json")
             end
-            bodyStr = stringify(body)
+            bodyStr = encode(body)
         else
             bodyStr = str(body)
         end
@@ -117,7 +117,7 @@ class response
     # json — serializes `data` to JSON and sends it with Content-Type: application/json.
     json(data)
         self.setHeader("Content-Type", "application/json")
-        let strData = stringify(data)
+        let strData = encode(data)
         self._body = strData
         self._sendRaw(strData)
         return self

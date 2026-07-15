@@ -16,7 +16,7 @@ import "../helpers/utils.dz" as *
 fn _parseJson(req, res)
     if req.body == "" return end
         try
-            req.body = parse(req.body)
+            req.body = decode(req.body)
         catch err
             res.status(400).json({"error": "Invalid JSON body", "detail": str(err)})
             return
