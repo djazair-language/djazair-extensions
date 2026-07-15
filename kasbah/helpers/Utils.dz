@@ -209,7 +209,7 @@ fn buildHttpResponse(status, statusText, headers, cookies, bodyStr)
     end
 
     # Append mandatory framing headers and the body
-    response += "Content-Length: ${bytes.length(bytes.fromString(bodyStr))}\r\n"
+    response += "Content-Length: ${bytes.length(bodyStr)}\r\n"
     response += "Connection: close\r\n\r\n${bodyStr}"
 
     return response
