@@ -169,7 +169,7 @@ fn bodyParser(maxBodySize = 2)
             return
         end
 
-        if req.body.length() > maxBodySize
+        if req.body.length() > maxBodySize * 1024 * 1024
             res.status(413).text("Request body too large")
             return
         end

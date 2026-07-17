@@ -104,7 +104,7 @@ class response
         end
 
         let raw = builder.build(bodyStr) + cookieStr
-        self._http._sendRaw(raw)
+        self._http.sendRaw(raw)
     end
 
     # ── Public send helpers ────────────────────────────────────────────────────
