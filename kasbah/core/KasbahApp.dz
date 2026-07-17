@@ -106,7 +106,7 @@ class kasbahApp
             "port":          3000,
             "host":          "0.0.0.0",
             "bodyParser":    True,
-            "maxBodySize":   2,
+            "maxBodySize":   2,     # MB — passed to bodyParser and httpServer
             "logger":        True,
             "session":       False,
             "sessionSecret": "kasbah",
@@ -367,7 +367,7 @@ class kasbahApp
             catch err
                 if isNull(res)
                     # If we crashed before req/res were fully initialized
-                    httpRes.status(500).text("Internal Server Error")
+                    httpRes.status(500).send("Internal Server Error")
                 else
                     self._handleError(err, req, res)
                 end

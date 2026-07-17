@@ -31,7 +31,6 @@ class kasbahLogger
 
     # ── Formatting Helpers ─────────────────────────────────────────────────────
 
-    # Returns the current timestamp in [HH:MM:SS] format
     _timestamp()
         let d = datetime.now()
         let h = str(d.hour())
@@ -53,19 +52,19 @@ class kasbahLogger
     # ── Manual Logging Methods ─────────────────────────────────────────────────
 
     debug(msg)
-        self._log("debug", 10, msg)
+        self._log("debug", self._levels["debug"], msg)
     end
 
     info(msg)
-        self._log("info",  20, msg)
+        self._log("info", self._levels["info"], msg)
     end
 
     warn(msg)
-        self._log("warn",  30, msg)
+        self._log("warn", self._levels["warn"], msg)
     end
 
     error(msg)
-        self._log("error", 40, msg)
+        self._log("error", self._levels["error"], msg)
     end
 
     # ── Framework Hooks ────────────────────────────────────────────────────────
@@ -82,8 +81,7 @@ class kasbahLogger
     # onComplete — Called after the response is sent.
     # Formats and prints the request summary.
     onComplete(req, res)
-        # 20 is "info" level
-        if self._currentLevel > 20
+        if self._currentLevel > self._levels["info"]
             return
         end
 

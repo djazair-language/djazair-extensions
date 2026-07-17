@@ -3,6 +3,7 @@
 # All mutating methods return `self` to support method chaining.
 
 use json as *
+use http
 use file
 use path
 use bytes
@@ -69,8 +70,8 @@ class response
     # ── Internal send ──────────────────────────────────────────────────────────
 
     # _sendRaw — serializes headers, cookies, and body into a raw HTTP/1.1
-    # response string and writes it to the socket. Idempotent: subsequent
-    # calls after the first are ignored via the _sent flag.
+    # response string using the http library's httpResponseBuilder, then
+    # writes it to the socket. Idempotent via the _sent flag.
     _sendRaw(body)
         if self._sent return end
         self._sent = True
@@ -85,12 +86,25 @@ class response
             bodyStr = str(body)
         end
 
-        let statusText = self._http._builder.statusText
-        let responseStr = buildHttpResponse(
-            self._status, statusText, self._headers, self._cookies, bodyStr
-        )
+        # Use the http library's builder to produce the raw HTTP/1.1 response
+        let builder = new http.httpResponseBuilder()
+        builder.status(self._status)
+        for key, val in self._headers
+            builder.setHeader(key, val)
+        end
+        builder.setHeader("Content-Length", str(bytes.length(bodyStr)))
+        builder.setHeader("Connection", "close")
 
-        self._http._send(responseStr)
+        # Serialize cookies as Set-Cookie headers
+        let cookieStr = ""
+        if self._cookies.length() > 0
+            for c in self._cookies
+                cookieStr += "Set-Cookie: ${serializeCookie(c["name"], c["value"], c["options"])}\r\n"
+            end
+        end
+
+        let raw = builder.build(bodyStr) + cookieStr
+        self._http._sendRaw(raw)
     end
 
     # ── Public send helpers ────────────────────────────────────────────────────
@@ -123,8 +137,9 @@ class response
         return self
     end
 
-    # file — reads a file from disk and streams its contents natively
-    # Content-Type derived from the file extension.
+    # file — serves a file from disk via the http library's native binary streaming.
+    # Content-Type is resolved by the http library (Content-Type: application/octet-stream default).
+    # Kasbah adds cookies (if any) before the native sendFile handles the rest.
     file(filePath)
         let safePath = path.normalize(filePath)
 
@@ -133,27 +148,16 @@ class response
             return self
         end
 
-        let ext = path.extname(safePath)
-        self.setHeader("Content-Type", mimeType(ext))
-
-        # Push Kasbah headers and cookies into the native httpResponse
-        self._http.status(self._status)
-        for key, val in self._headers
-            self._http.setHeader(key, val)
-        end
-
+        # Push Kasbah cookies into the native httpResponse before streaming
         if self._cookies.length() > 0
-            let cookieArr = []
             for c in self._cookies
-                cookieArr.append(serializeCookie(c["name"], c["value"], c["options"]))
+                self._http.setHeader("Set-Cookie", serializeCookie(c["name"], c["value"], c["options"]))
             end
-            self._http.setHeader("Set-Cookie", cookieArr)
         end
 
-        # Stream the file securely using Djazair's native low-memory sendFile
+        # Native sendFile handles Content-Type, Content-Length, binary streaming, and connection close
         self._http.sendFile(safePath)
         self._sent = True
-
         return self
     end
 
