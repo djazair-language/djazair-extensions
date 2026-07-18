@@ -90,10 +90,16 @@ fn _parseMultipart(req, res, boundary, maxBodySize = 2)
         let headerSection = cleanPart.slice(0, headerEnd)
         let contentSection = cleanPart.slice(headerEnd + contentOffset)
 
-        if contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "\r\n"
+        if contentSection.length() >= 4 && contentSection.slice(contentSection.length() - 4, contentSection.length()) == "\r\n--"
+            contentSection = contentSection.slice(0, contentSection.length() - 4)
+        elif contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "\n--"
+            contentSection = contentSection.slice(0, contentSection.length() - 2)
+        elif contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "\r\n"
             contentSection = contentSection.slice(0, contentSection.length() - 2)
         elif contentSection.length() >= 1 && contentSection.slice(contentSection.length() - 1, contentSection.length()) == "\n"
             contentSection = contentSection.slice(0, contentSection.length() - 1)
+        elif contentSection.length() >= 2 && contentSection.slice(contentSection.length() - 2, contentSection.length()) == "--"
+            contentSection = contentSection.slice(0, contentSection.length() - 2)
         end
 
         let cdHeader = ""

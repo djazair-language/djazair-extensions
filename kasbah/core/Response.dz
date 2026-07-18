@@ -148,6 +148,11 @@ class response
             return self
         end
 
+        # Push all Kasbah headers (set via res.setHeader/res.type/etc.) into the native httpResponse
+        for key, val in self._headers
+            self._http.setHeader(key, val)
+        end
+
         # Push Kasbah cookies into the native httpResponse before streaming
         if self._cookies.length() > 0
             for c in self._cookies
