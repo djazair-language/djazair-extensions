@@ -1,12 +1,23 @@
 # connection.dz — SQLite Connection module for Djazair
 let _s = __dynamic("sqlite")
 use assert
+use path
+use process
 import "result_set.dz" as rs
 
 class Connection
-    init(path)
-        assert.string(path, "path")
-        self.db = _s.open(path)
+    init(dbPath)
+        assert.string(dbPath, "path")
+        let targetPath = dbPath
+        if dbPath != ":memory:" and dbPath != "" and !dbPath.startsWith("file:") and !path.isAbsolute(dbPath)
+            let sDir = process.scriptDir()
+            if !isNull(sDir) and sDir != ""
+                targetPath = path.resolve(sDir, dbPath)
+            else
+                targetPath = path.resolve(dbPath)
+            end
+        end
+        self.db = _s.open(targetPath)
         self.connected = !isNull((self.db))
     end
 
