@@ -1,0 +1,28 @@
+# window/dialogs.dz — Dialogs & Modals
+let _qt = __dynamic("qt")
+
+class MessageBox
+    info(title, message)
+        _qt.messageboxInfo(title, message)
+    end
+end
+
+class FileDialog
+    getOpenFileName(title = "Open File", filter = "All Files (*.*)")
+        return _qt.filedialogOpen(title, filter)
+    end
+
+    getSaveFileName(title = "Save File", filter = "All Files (*.*)")
+        return _qt.filedialogSave(title, filter)
+    end
+
+    getExistingDirectory(title = "Select Directory")
+        return _qt.filedialogGetDirectory(title)
+    end
+end
+
+class InputDialog
+    getText(title, label)
+        return _qt.inputdialogGetText(title, label)
+    end
+end

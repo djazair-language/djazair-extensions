@@ -1,0 +1,27 @@
+# 01_hello_qt.dz — Hello World Qt Application in Djazair
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Qt Framework — Hello World")
+window.resize(500, 300)
+
+let layout = new qt.VBoxLayout()
+
+let label = new qt.Label("Welcome to Djazair Qt Native Desktop App!")
+label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; qproperty-alignment: AlignCenter;")
+
+let button = new qt.Button("Click Me!")
+button.setStyleSheet("background-color: #3498db; color: white; font-size: 14px; padding: 8px; border-radius: 4px;")
+
+layout.addWidget(label)
+layout.addWidget(button)
+
+let central = new qt.Widget()
+central.setLayout(layout)
+
+window.setCentralWidget(central)
+window.show()
+
+app.exec()

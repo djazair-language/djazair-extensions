@@ -1,0 +1,20 @@
+# layouts/hbox.dz — Horizontal Box Layout
+let _qt = __dynamic("qt")
+
+class HBoxLayout
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.hboxCreate(parentHandle)
+    end
+
+    addWidget(widget)
+        _qt.layoutAddWidget(self.handle, widget.handle)
+    end
+
+    setMargins(left, top, right, bottom)
+        _qt.layoutSetMargins(self.handle, left, top, right, bottom)
+    end
+end

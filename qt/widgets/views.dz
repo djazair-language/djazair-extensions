@@ -1,0 +1,59 @@
+# widgets/views.dz — List, Tree & Table Views
+let _qt = __dynamic("qt")
+
+import "base.dz" as baseMod
+
+let Widget = baseMod.Widget
+
+class ListWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.listwidgetCreate(parentHandle)
+    end
+
+    addItem(text)
+        _qt.listwidgetAddItem(self.handle, text)
+    end
+end
+
+class TreeWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.treewidgetCreate(parentHandle)
+    end
+
+    setHeaders(headers)
+        _qt.treewidgetSetHeaders(self.handle, headers, headers.length())
+    end
+
+    addItem(columns, parentItem = Null)
+        let parentHandle = Null
+        if parentItem != Null
+            parentHandle = parentItem.handle
+        end
+        let handle = _qt.treewidgetAddItem(self.handle, columns, parentHandle)
+        let res = new baseMod.Widget()
+        res.handle = handle
+        return res
+    end
+end
+
+class TableWidget is Widget
+    init(rows = 0, cols = 0, parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.tablewidgetCreate(rows, cols, parentHandle)
+    end
+
+    setItem(row, col, text)
+        _qt.tablewidgetSetItem(self.handle, row, col, text)
+    end
+end

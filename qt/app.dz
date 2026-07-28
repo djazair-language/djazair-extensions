@@ -1,0 +1,20 @@
+# app.dz — Qt Application Lifecycle Manager for Djazair
+let _qt = __dynamic("qt")
+
+class Application
+    init()
+        self.handle = _qt.appCreate()
+    end
+
+    exec()
+        return _qt.appExec(self.handle)
+    end
+
+    processEvents()
+        _qt.appProcessEvents(self.handle)
+    end
+
+    quit()
+        _qt.appQuit(self.handle)
+    end
+end

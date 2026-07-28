@@ -1,0 +1,16 @@
+# window/tray.dz — System Tray Icon Integration
+let _qt = __dynamic("qt")
+
+class SystemTrayIcon
+    init(tooltip = "Djazair Application")
+        self.handle = _qt.trayCreate(tooltip)
+    end
+
+    show()
+        _qt.trayShow(self.handle)
+    end
+
+    showMessage(title, message, iconType = 1, timeoutMs = 3000)
+        _qt.trayShowMessage(self.handle, title, message, iconType, timeoutMs)
+    end
+end

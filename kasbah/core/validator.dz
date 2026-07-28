@@ -1,0 +1,327 @@
+# Kasbah Core — validator class
+# Fluent input validation DSL for request handlers.
+# Automatically available via req.validate(data).
+
+use regex
+
+class fieldValidator
+    init(parent, name, value)
+        self.parentValidator = parent
+        self.fieldName       = name
+        self.fieldValue      = value
+        self.isOptional      = False
+        self.isMissing       = isNull(value) || (isString(value) && value == "")
+        self.hasFailed       = False
+    end
+
+    # Marks this field as required (must be non-null and non-empty).
+    required()
+        if self.isMissing
+            self.parentValidator.addError(self.fieldName, "is required")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Marks this field as optional (skips further checks if absent).
+    optional()
+        self.isOptional = True
+        return self
+    end
+
+    # Validates that the value is a string.
+    string()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if !isString(self.fieldValue)
+            self.parentValidator.addError(self.fieldName, "must be a string")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value is a number.
+    number()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if !isNumber(self.fieldValue)
+            self.parentValidator.addError(self.fieldName, "must be a number")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value is a boolean.
+    boolean()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if !isBool(self.fieldValue)
+            self.parentValidator.addError(self.fieldName, "must be a boolean")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value is an array.
+    array()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if !isArray(self.fieldValue)
+            self.parentValidator.addError(self.fieldName, "must be an array")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value matches a valid email address pattern.
+    email()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let pattern = "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$"
+        let m = regex.fullMatch(pattern, str(self.fieldValue))
+        if isNull(m)
+            self.parentValidator.addError(self.fieldName, "must be a valid email address")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value is a valid HTTP/HTTPS URL.
+    url()
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let s = str(self.fieldValue)
+        if !s.startsWith("http://") && !s.startsWith("https://")
+            self.parentValidator.addError(self.fieldName, "must be a valid URL (http or https)")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value matches a regex pattern.
+    matches(pattern)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let m = regex.fullMatch(pattern, str(self.fieldValue))
+        if isNull(m)
+            self.parentValidator.addError(self.fieldName, "does not match the required pattern")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates numeric minimum bound.
+    min(n)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if isNumber(self.fieldValue) && self.fieldValue < n
+            self.parentValidator.addError(self.fieldName, "must be at least ${n}")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates numeric maximum bound.
+    max(n)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        if isNumber(self.fieldValue) && self.fieldValue > n
+            self.parentValidator.addError(self.fieldName, "must be at most ${n}")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates string or array minimum length.
+    minLength(n)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let len = 0
+        if isString(self.fieldValue) || isArray(self.fieldValue)
+            len = self.fieldValue.length()
+        end
+        if len < n
+            self.parentValidator.addError(self.fieldName, "must have at least ${n} characters/items")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates string or array maximum length.
+    maxLength(n)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let len = 0
+        if isString(self.fieldValue) || isArray(self.fieldValue)
+            len = self.fieldValue.length()
+        end
+        if len > n
+            self.parentValidator.addError(self.fieldName, "must have at most ${n} characters/items")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Validates that the value is one of the allowed choices.
+    oneOf(allowed)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let found = False
+        for a in allowed
+            if a == self.fieldValue
+                found = True
+                break
+            end
+        end
+        if !found
+            self.parentValidator.addError(self.fieldName, "must be one of: ${allowed.join(', ')}")
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Executes a custom validation function `ruleFn(val)`.
+    custom(ruleFn)
+        if self.hasFailed
+            return self
+        end
+        if self.isOptional && self.isMissing
+            return self
+        end
+        let result = ruleFn(self.fieldValue)
+        if result != True
+            let msg = if isString(result) ? result else "failed custom validation"
+            self.parentValidator.addError(self.fieldName, msg)
+            self.hasFailed = True
+        end
+        return self
+    end
+
+    # Chains to the next field validator.
+    field(name, fallback = Null)
+        return self.parentValidator.field(name, fallback)
+    end
+end
+
+class validator
+    init(data)
+        self.inputData  = if isMap(data) ? data else {}
+        self.errorsMap  = {}
+        self.fieldsList = []
+    end
+
+    # Selects a field by name for validation rule chaining.
+    field(name, fallback = Null)
+        let value = fallback
+        if self.inputData.has(name)
+            value = self.inputData[name]
+        end
+        if !self.fieldsList.contains(name)
+            self.fieldsList.append(name)
+        end
+        return new fieldValidator(self, name, value)
+    end
+
+    # Records an error message for a field.
+    addError(name, msg)
+        if !self.errorsMap.has(name)
+            self.errorsMap[name] = []
+        end
+        self.errorsMap[name].append(msg)
+    end
+
+    # Returns True if validation passed with no errors.
+    passes()
+        return self.errorsMap.keys().length() == 0
+    end
+
+    # Returns True if validation failed with one or more errors.
+    fails()
+        return !self.passes()
+    end
+
+    # Returns the map of errors: `{ "field": ["error1", "error2"] }`.
+    errors()
+        return self.errorsMap
+    end
+
+    # Returns the first error message across all fields, or Null.
+    firstError()
+        for name, msgs in self.errorsMap
+            if msgs.length() > 0
+                return msgs[0]
+            end
+        end
+        return Null
+    end
+
+    # Returns an array of error messages for a specific field.
+    errorFor(name)
+        if self.errorsMap.has(name)
+            return self.errorsMap[name]
+        end
+        return []
+    end
+
+    # Returns a map containing only the fields that passed validation.
+    validated()
+        if !self.passes()
+            return {}
+        end
+        let result = {}
+        for name in self.fieldsList
+            if self.inputData.has(name)
+                result[name] = self.inputData[name]
+            end
+        end
+        return result
+    end
+end

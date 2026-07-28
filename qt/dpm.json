@@ -1,0 +1,10 @@
+{
+  "name": "qt",
+  "version": "0.1.0",
+  "description": "Official Qt 5/6 GUI library extension for Djazair Programming Language",
+  "source": "github:djazair-language/djazair-extensions/qt",
+  "developer": {
+    "name": "Harizi Riyadh",
+    "email": "hariziriyadh@gmail.com"
+  }
+}

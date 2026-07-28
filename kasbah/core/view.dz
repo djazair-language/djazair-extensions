@@ -1,5 +1,5 @@
 # Kasbah Core — View class
-# Handles reading HTML templates and injecting dynamic variables to keep Response.dz clean.
+# Handles reading HTML templates and injecting dynamic variables.
 
 use file
 use path
@@ -7,25 +7,27 @@ import "../helpers/utils.dz" as *
 
 class view
     init(config)
-        self._config = config
+        self.configMap = config
     end
 
+    # Renders an HTML template file with data interpolation and XSS escaping.
+    # Interpolation syntax:
+    #   {{ key }}   - Escaped HTML output
+    #   {{{ key }}} - Raw HTML output
     render(templateName, data = {})
         let viewsDir = ""
-        if self._config.has("views") && self._config["views"] != ""
-            viewsDir = path.normalize(self._config["views"])
+        if self.configMap.has("views") && self.configMap["views"] != ""
+            viewsDir = path.normalize(self.configMap["views"])
         else
             viewsDir = path.resolve("views")
         end
 
-        # Auto-append .html if there is no extension
         if !templateName.contains(".")
             templateName = "${templateName}.html"
         end
 
         let safePath = path.normalize("${viewsDir}/${templateName}")
 
-        # Path Traversal Protection
         let viewsDirLower = viewsDir.lower()
         if !viewsDirLower.endsWith("/") && !viewsDirLower.endsWith("\\")
             let okSlash = safePath.lower().startsWith("${viewsDirLower}/")
@@ -58,11 +60,9 @@ class view
                 let rawVal = str(v)
                 let escapedVal = escapeHtml(rawVal)
                 
-                # Raw injection with {{{key}}} or {{{ key }}}
                 content = content.replace("{{{${k}}}}", rawVal)
                 content = content.replace("{{{ ${k} }}}", rawVal)
                 
-                # Escaped injection with {{key}} or {{ key }}
                 content = content.replace("{{${k}}}", escapedVal)
                 content = content.replace("{{ ${k} }}", escapedVal)
             end

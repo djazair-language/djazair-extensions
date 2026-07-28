@@ -1,0 +1,48 @@
+# widgets/base.dz — Base Widget Component
+let _qt = __dynamic("qt")
+
+class Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.widgetCreate(parentHandle)
+    end
+
+    show()
+        _qt.widgetShow(self.handle)
+    end
+
+    hide()
+        _qt.widgetHide(self.handle)
+    end
+
+    setTitle(title)
+        _qt.widgetSetTitle(self.handle, title)
+    end
+
+    setGeometry(x, y, width, height)
+        _qt.widgetSetGeometry(self.handle, x, y, width, height)
+    end
+
+    resize(width, height)
+        _qt.widgetResize(self.handle, width, height)
+    end
+
+    setLayout(layout)
+        _qt.widgetSetLayout(self.handle, layout.handle)
+    end
+
+    setStyleSheet(css)
+        _qt.widgetSetStyleSheet(self.handle, css)
+    end
+
+    setEnabled(enabled)
+        _qt.widgetSetEnabled(self.handle, enabled)
+    end
+
+    setToolTip(text)
+        _qt.widgetSetToolTip(self.handle, text)
+    end
+end

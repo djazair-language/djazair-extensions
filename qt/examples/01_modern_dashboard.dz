@@ -1,0 +1,57 @@
+# 01_modern_dashboard.dz — Modern Dark Dashboard in Djazair Qt
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Enterprise Qt Dashboard")
+window.resize(900, 600)
+
+let theme = new qt.Theme()
+theme.applyDark(window)
+
+let tabs = new qt.TabWidget()
+
+# Tab 1: Overview
+let overviewWidget = new qt.Widget()
+let vbox = new qt.VBoxLayout()
+
+let groupMetrics = new qt.GroupBox("System Metrics")
+let grid = new qt.GridLayout()
+
+grid.addWidget(new qt.Label("CPU Usage:"), 0, 0)
+let cpuBar = new qt.ProgressBar()
+cpuBar.setRange(0, 100)
+cpuBar.setValue(42)
+grid.addWidget(cpuBar, 0, 1)
+
+grid.addWidget(new qt.Label("Memory Usage:"), 1, 0)
+let memBar = new qt.ProgressBar()
+memBar.setRange(0, 100)
+memBar.setValue(68)
+grid.addWidget(memBar, 1, 1)
+
+groupMetrics.setLayout(grid)
+vbox.addWidget(groupMetrics)
+
+let btnRefresh = new qt.Button("Refresh Metrics")
+vbox.addWidget(btnRefresh)
+
+overviewWidget.setLayout(vbox)
+tabs.addTab(overviewWidget, "System Overview")
+
+# Tab 2: Settings
+let settingsWidget = new qt.Widget()
+let form = new qt.FormLayout()
+form.addRow("Username:", new qt.LineEdit("Riyadh"))
+form.addRow("API Server:", new qt.LineEdit("https://api.djazair.org"))
+form.addRow("Auto-save:", new qt.CheckBox())
+
+settingsWidget.setLayout(form)
+tabs.addTab(settingsWidget, "Configuration")
+
+window.setCentralWidget(tabs)
+window.setStatusMessage("Dashboard loaded successfully.", 5000)
+window.show()
+
+app.exec()

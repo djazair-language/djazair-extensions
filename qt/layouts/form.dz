@@ -1,0 +1,16 @@
+# layouts/form.dz — Form Layout for Input Fields
+let _qt = __dynamic("qt")
+
+class FormLayout
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.formCreate(parentHandle)
+    end
+
+    addRow(labelText, widget)
+        _qt.formAddRow(self.handle, labelText, widget.handle)
+    end
+end

@@ -1,0 +1,16 @@
+# layouts/grid.dz — Grid Layout
+let _qt = __dynamic("qt")
+
+class GridLayout
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.gridCreate(parentHandle)
+    end
+
+    addWidget(widget, row, col, rowSpan = 1, colSpan = 1)
+        _qt.gridAddWidget(self.handle, widget.handle, row, col, rowSpan, colSpan)
+    end
+end

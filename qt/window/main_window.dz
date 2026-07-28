@@ -1,0 +1,43 @@
+# window/main_window.dz — Top-Level Main Window with ToolBar & Status Bar
+let _qt = __dynamic("qt")
+
+import "../widgets/base.dz" as baseMod
+
+let Widget = baseMod.Widget
+
+class MainWindow is Widget
+    init()
+        self.handle = _qt.mainwindowCreate()
+    end
+
+    setCentralWidget(widget)
+        _qt.mainwindowSetCentral(self.handle, widget.handle)
+    end
+
+    setTitle(title)
+        _qt.mainwindowSetTitle(self.handle, title)
+    end
+
+    resize(width, height)
+        _qt.mainwindowResize(self.handle, width, height)
+    end
+
+    show()
+        _qt.mainwindowShow(self.handle)
+    end
+
+    addMenu(title)
+        return _qt.mainwindowAddMenu(self.handle, title)
+    end
+
+    addToolBar(title)
+        let barHandle = _qt.mainwindowAddToolBar(self.handle, title)
+        let bar = new Widget()
+        bar.handle = barHandle
+        return bar
+    end
+
+    setStatusMessage(message, timeoutMs = 2000)
+        _qt.mainwindowSetStatus(self.handle, message, timeoutMs)
+    end
+end

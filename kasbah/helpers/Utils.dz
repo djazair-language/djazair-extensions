@@ -5,10 +5,8 @@ use random
 use file
 use path
 use bytes
-import "cookie.dz" as *
 
 # ── Module-level constants ─────────────────────────────────────────────────────
-# These maps are created once at import time, not on every function call.
 
 # MIME_TYPES — maps file extensions to their IANA media types.
 let MIME_TYPES = {
@@ -42,7 +40,6 @@ let MIME_TYPES = {
 }
 
 # HTTP_STATUS_TEXTS — maps numeric HTTP status codes to their reason phrases.
-# Kept in sync with http library STATUS_TEXTS for consistency.
 let HTTP_STATUS_TEXTS = {
     100: "Continue",
     101: "Switching Protocols",
@@ -108,11 +105,9 @@ let HTTP_STATUS_TEXTS = {
     511: "Network Authentication Required"
 }
 
-
 # ── Map helpers ────────────────────────────────────────────────────────────────
 
-# merge — combines two maps, with keys in `b` overriding keys in `a`.
-# Note: this is a shallow merge; nested maps are NOT recursively merged.
+# Combines two maps, with keys in `b` overriding keys in `a`.
 fn merge(a, b)
     let result = {}
     for key, val in a
@@ -126,8 +121,7 @@ end
 
 # ── ID generation ──────────────────────────────────────────────────────────────
 
-# generateId — returns a random lowercase hex string of `len` characters.
-# Backed by random.int() which uses the OS CSPRNG.
+# Returns a random lowercase hex string of `len` characters.
 fn generateId(len = 32)
     let hex = "0123456789abcdef"
     let result = ""
@@ -142,8 +136,7 @@ end
 
 # ── MIME / Content-Type helpers ────────────────────────────────────────────────
 
-# mimeType — returns the IANA media type for the given file extension.
-# Falls back to "application/octet-stream" for unknown extensions.
+# Returns the IANA media type for the given file extension.
 fn mimeType(ext)
     if MIME_TYPES.has(ext)
         return MIME_TYPES[ext]
@@ -151,7 +144,7 @@ fn mimeType(ext)
     return "application/octet-stream"
 end
 
-# httpStatusText — returns the reason phrase for a numeric HTTP status code.
+# Returns the reason phrase for a numeric HTTP status code.
 fn httpStatusText(code)
     if HTTP_STATUS_TEXTS.has(code)
         return HTTP_STATUS_TEXTS[code]
@@ -159,20 +152,17 @@ fn httpStatusText(code)
     return "Unknown"
 end
 
-# parseContentType — parses a Content-Type header value.
-# Returns a map with "type" and "boundary" (empty string if absent).
+# Parses a Content-Type header value.
 # Example: "multipart/form-data; boundary=----WebKit"
 #       -> { "type": "multipart/form-data", "boundary": "----WebKit" }
 fn parseContentType(header)
     let parts = header.split(";")
     let result = {"type": parts[0].strip(), "boundary": ""}
 
-    let pLen = parts.length()
-    for i in 1..pLen - 1
-        let p = parts[i].strip()
-        if p.slice(0, 9) == "boundary="
-            let b = p.slice(9)
-            # Strip surrounding quotes if present
+    for p in parts
+        let trimmed = p.strip()
+        if trimmed.slice(0, 9) == "boundary="
+            let b = trimmed.slice(9)
             if b.length() >= 2 && b[0] == "\"" && b[b.length() - 1] == "\""
                 b = b.slice(1, b.length() - 1)
             end
@@ -183,22 +173,17 @@ fn parseContentType(header)
     return result
 end
 
-# parseContentDisposition — extracts "name" and "filename" from a
-# Content-Disposition header value in a multipart/form-data part.
-# Example: 'form-data; name="avatar"; filename="photo.png"'
-#       -> { "name": "avatar", "filename": "photo.png" }
+# Extracts "name" and "filename" from a Content-Disposition header.
 fn parseContentDisposition(header)
     let parts = header.split(";")
     let result = {"name": "", "filename": ""}
 
-    let pLen = parts.length()
-    for i in 1..pLen - 1
-        let p = parts[i].strip()
-        let eqIdx = p.index("=")
+    for p in parts
+        let trimmed = p.strip()
+        let eqIdx = trimmed.index("=")
         if eqIdx > 0
-            let key = p.slice(0, eqIdx).strip()
-            let val = p.slice(eqIdx + 1).strip()
-            # Strip surrounding quotes
+            let key = trimmed.slice(0, eqIdx).strip().lower()
+            let val = trimmed.slice(eqIdx + 1).strip()
             if val.length() >= 2 && val[0] == "\"" && val[val.length() - 1] == "\""
                 val = val.slice(1, val.length() - 1)
             end
@@ -213,20 +198,16 @@ fn parseContentDisposition(header)
     return result
 end
 
-# sanitizeFilename — strips path separators from a client-supplied filename
-# to prevent path traversal attacks (e.g. "../../etc/passwd" → "passwd").
-# Only the final basename component is kept.
+# Strips path separators from a client-supplied filename to prevent path traversal attacks.
 fn sanitizeFilename(filename)
     if isNull(filename) || filename == ""
         return ""
     end
     let name = filename
-    # Strip everything up to and including the last forward slash
     let slashParts = name.split("/")
     if slashParts.length() > 0
         name = slashParts[slashParts.length() - 1]
     end
-    # Strip everything up to and including the last back slash (Windows paths)
     let backSlashParts = name.split("\\")
     if backSlashParts.length() > 0
         name = backSlashParts[backSlashParts.length() - 1]
@@ -234,11 +215,13 @@ fn sanitizeFilename(filename)
     return name
 end
 
-# urlDecode — decodes URL-encoded parameters (e.g. %20 -> space).
-# Handles + as space.
+# Decodes URL-encoded parameters (e.g. %20 -> space), with full multi-byte UTF-8 support.
 fn urlDecode(strVal)
-    if isNull(strVal) return "" end
+    if isNull(strVal)
+        return ""
+    end
     let res = ""
+    let byteSeq = []
     let i = 0
     let len = strVal.length()
     let hexMap = {
@@ -250,31 +233,48 @@ fn urlDecode(strVal)
     while i < len
         let c = strVal[i]
         if c == "+"
-            res = res + " "
-            i = i + 1
+            if byteSeq.length() > 0
+                res += bytes.toString(byteSeq)
+                byteSeq = []
+            end
+            res += " "
+            i += 1
         elif c == "%" && i + 2 < len
-            let h1 = strVal[i+1]
-            let h2 = strVal[i+2]
+            let h1 = strVal[i + 1]
+            let h2 = strVal[i + 2]
             if !isNull(hexMap[h1]) && !isNull(hexMap[h2])
-                let code = (hexMap[h1] * 16) + hexMap[h2]
-                res = res + chr(code)
-                i = i + 3
+                byteSeq.append(hexMap[h1] * 16 + hexMap[h2])
+                i += 3
             else
-                res = res + "%"
-                i = i + 1
+                if byteSeq.length() > 0
+                    res += bytes.toString(byteSeq)
+                    byteSeq = []
+                end
+                res += "%"
+                i += 1
             end
         else
-            res = res + c
-            i = i + 1
+            if byteSeq.length() > 0
+                res += bytes.toString(byteSeq)
+                byteSeq = []
+            end
+            res += c
+            i += 1
         end
     end
+
+    if byteSeq.length() > 0
+        res += bytes.toString(byteSeq)
+    end
+
     return res
 end
 
-# escapeHtml — converts special characters to their HTML entities
-# to prevent Cross-Site Scripting (XSS) attacks in views.
+# Converts special characters to their HTML entities to prevent XSS attacks in rendered views.
 fn escapeHtml(strVal)
-    if isNull(strVal) return "" end
+    if isNull(strVal)
+        return ""
+    end
     let res = strVal.replace("&", "&amp;")
     res = res.replace("<", "&lt;")
     res = res.replace(">", "&gt;")

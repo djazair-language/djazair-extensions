@@ -1,0 +1,72 @@
+# widgets/containers.dz — Container Components
+let _qt = __dynamic("qt")
+
+import "base.dz" as baseMod
+
+let Widget = baseMod.Widget
+
+class TabWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.tabwidgetCreate(parentHandle)
+    end
+
+    addTab(widget, title)
+        _qt.tabwidgetAddTab(self.handle, widget.handle, title)
+    end
+end
+
+class StackedWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.stackedwidgetCreate(parentHandle)
+    end
+
+    addWidget(widget)
+        return _qt.stackedwidgetAddWidget(self.handle, widget.handle)
+    end
+end
+
+class GroupBox is Widget
+    init(title = "", parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.groupboxCreate(title, parentHandle)
+    end
+end
+
+class ScrollArea is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.scrollareaCreate(parentHandle)
+    end
+
+    setWidget(widget)
+        _qt.scrollareaSetWidget(self.handle, widget.handle)
+    end
+end
+
+class Splitter is Widget
+    init(orientation = 0, parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.splitterCreate(orientation, parentHandle)
+    end
+
+    addWidget(widget)
+        _qt.splitterAddWidget(self.handle, widget.handle)
+    end
+end

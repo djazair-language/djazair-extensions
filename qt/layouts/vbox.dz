@@ -1,0 +1,20 @@
+# layouts/vbox.dz — Vertical Box Layout
+let _qt = __dynamic("qt")
+
+class VBoxLayout
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.vboxCreate(parentHandle)
+    end
+
+    addWidget(widget)
+        _qt.layoutAddWidget(self.handle, widget.handle)
+    end
+
+    setMargins(left, top, right, bottom)
+        _qt.layoutSetMargins(self.handle, left, top, right, bottom)
+    end
+end

@@ -1,0 +1,25 @@
+# 02_pro_text_editor.dz — Professional IDE Code Editor in Djazair Qt
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Studio — Code Editor")
+window.resize(950, 650)
+
+let theme = new qt.Theme()
+theme.applyDark(window)
+
+let editor = new qt.TextEdit()
+window.setCentralWidget(editor)
+
+let fileMenu = window.addMenu("File")
+let editMenu = window.addMenu("Edit")
+let helpMenu = window.addMenu("Help")
+
+let toolbar = window.addToolBar("Main Toolbar")
+
+window.setStatusMessage("Ready", 3000)
+window.show()
+
+app.exec()

@@ -4,20 +4,28 @@
 #        app.get("/", fn(req, res) res.send("Hello") end)
 #        app.listen()
 
-import "core/kasbahApp.dz" as _app_mod
-import "core/request.dz" as _req_mod
-import "core/response.dz" as _res_mod
-import "core/view.dz" as _view_mod
-import "middleware/bodyParser.dz" as _body_mod
-import "middleware/logger.dz" as _log_mod
-import "middleware/session.dz" as _sess_mod
-import "middleware/static.dz" as _static_mod
+import "core/kasbahApp.dz" as appMod
+import "core/kasbahRequest.dz" as reqMod
+import "core/kasbahResponse.dz" as resMod
+import "core/view.dz" as viewMod
+import "core/cookieJar.dz" as cookieMod
+import "core/sessionManager.dz" as sessMgrMod
+import "core/validator.dz" as valMod
+import "core/fileManager.dz" as fileMgrMod
+import "middleware/bodyParser.dz" as bodyMod
+import "middleware/logger.dz" as logMod
+import "middleware/session.dz" as sessMod
+import "middleware/static.dz" as staticMod
 
-let kasbahApp = _app_mod.kasbahApp
-let request = _req_mod.request
-let response = _res_mod.response
-let view = _view_mod.view
-let bodyParser = _body_mod.bodyParser
-let logger = _log_mod.logger
-let session = _sess_mod.session
-let serveStatic = _static_mod.serveStatic
+let kasbahApp      = appMod.kasbahApp
+let request        = reqMod.kasbahRequest
+let response       = resMod.kasbahResponse
+let view           = viewMod.view
+let cookieJar      = cookieMod.cookieJar
+let sessionManager = sessMgrMod.sessionManager
+let validator      = valMod.validator
+let fileManager    = fileMgrMod.fileManager
+let bodyParser     = bodyMod.bodyParser
+let kasbahLogger   = logMod.kasbahLogger
+let session        = sessMod.session
+let serveStatic    = staticMod.serveStatic

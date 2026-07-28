@@ -1,6 +1,5 @@
 # Kasbah Middleware — BodyParser
 # Parses JSON, URL-encoded, and multipart/form-data request bodies.
-# Populated fields: req.body (map or string) and req.files (map of uploaded files).
 
 use json as *
 use os
@@ -9,10 +8,11 @@ use dir
 use bytes
 import "../helpers/utils.dz" as *
 
-# ── JSON parser ────────────────────────────────────────────────────────────────
-
-fn _parseJson(req, res)
-    if req.body == "" return end
+# Parses JSON payload into req.body map/array.
+fn parseJson(req, res)
+    if req.body == ""
+        return
+    end
     try
         req.body = decode(req.body)
     catch err
@@ -21,9 +21,8 @@ fn _parseJson(req, res)
     end
 end
 
-# ── URL-encoded parser ─────────────────────────────────────────────────────────
-
-fn _parseUrlEncoded(req, res)
+# Parses URL-encoded form data into req.body map.
+fn parseUrlEncoded(req, res)
     let rawBody = req.body
     req.body = {}
     if rawBody != ""
@@ -39,17 +38,8 @@ fn _parseUrlEncoded(req, res)
     end
 end
 
-# ── Multipart parser ───────────────────────────────────────────────────────────
-
-# _parseMultipart — parses a multipart/form-data body.
-# Text fields are stored in req.body; binary file parts are written to a
-# temporary directory and their metadata is stored in req.files.
-#
-# Security:
-#   - Client-supplied filenames are sanitized via sanitizeFilename() to prevent
-#     path traversal attacks (e.g. "../../etc/passwd" -> "passwd").
-#   - Parts whose size exceeds maxBodySize trigger a 413 response immediately.
-fn _parseMultipart(req, res, boundary, maxBodySize = 2)
+# Parses multipart/form-data payload, extracting text fields and saving file uploads to temp storage.
+fn parseMultipart(req, res, boundary, maxBodySize = 10)
     if boundary == ""
         res.status(400).json({"error": "Missing boundary in multipart/form-data"})
         return
@@ -143,9 +133,9 @@ fn _parseMultipart(req, res, boundary, maxBodySize = 2)
             let tempPath = "${tempDir}/${generateId(32)}"
             file.writeBytes(tempPath, byteArr)
 
-            let tracked = req.get("_uploadedFiles")
+            let tracked = req.get("uploadedFiles")
             if isNull(tracked)
-                req.set("_uploadedFiles", [tempPath])
+                req.set("uploadedFiles", [tempPath])
             else
                 tracked.append(tempPath)
             end
@@ -163,13 +153,8 @@ fn _parseMultipart(req, res, boundary, maxBodySize = 2)
     end
 end
 
-# ── Factory ────────────────────────────────────────────────────────────────────
-
-# bodyParser — returns a middleware function that parses the request body
-# according to its Content-Type header.
-#
-# `maxBodySize` sets the maximum allowed total body size in MB (default 2 MB).
-fn bodyParser(maxBodySize = 2)
+# Creates a body parser middleware function with configurable max size limit.
+fn bodyParser(maxBodySize = 10)
     return fn(req, res)
         if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS"
             return
@@ -180,19 +165,21 @@ fn bodyParser(maxBodySize = 2)
             return
         end
 
-        let ct = req._http.header("content-type")
-        if ct == "" return end
+        let ct = req.header("content-type")
+        if ct == ""
+            return
+        end
 
         let parts = ct.split(";")
         let mainType = parts[0].strip()
 
         if mainType == "application/json"
-            _parseJson(req, res)
+            parseJson(req, res)
         elif mainType == "application/x-www-form-urlencoded"
-            _parseUrlEncoded(req, res)
+            parseUrlEncoded(req, res)
         elif mainType == "multipart/form-data"
             let parsedCt = parseContentType(ct)
-            _parseMultipart(req, res, parsedCt["boundary"], maxBodySize)
+            parseMultipart(req, res, parsedCt["boundary"], maxBodySize)
         end
     end
 end

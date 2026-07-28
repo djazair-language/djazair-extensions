@@ -1,0 +1,30 @@
+# 04_drawing_canvas.dz — System Tray & Dialog Controls in Djazair Qt
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair System Tray App")
+window.resize(400, 250)
+
+let theme = new qt.Theme()
+theme.applyDark(window)
+
+let vbox = new qt.VBoxLayout()
+
+let label = new qt.Label("System Tray Integration Active")
+let btnNotify = new qt.Button("Send Tray Notification")
+
+vbox.addWidget(label)
+vbox.addWidget(btnNotify)
+
+let container = new qt.Widget()
+container.setLayout(vbox)
+
+window.setCentralWidget(container)
+window.show()
+
+let tray = new qt.SystemTrayIcon("Djazair Qt Service")
+tray.show()
+
+app.exec()

@@ -1,0 +1,140 @@
+# widgets.dz — Qt Controls & Component Classes for Djazair
+let _qt = __dynamic("qt")
+
+class Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.widgetCreate(parentHandle)
+    end
+
+    show()
+        _qt.widgetShow(self.handle)
+    end
+
+    hide()
+        _qt.widgetHide(self.handle)
+    end
+
+    setTitle(title)
+        _qt.widgetSetTitle(self.handle, title)
+    end
+
+    setGeometry(x, y, width, height)
+        _qt.widgetSetGeometry(self.handle, x, y, width, height)
+    end
+
+    resize(width, height)
+        _qt.widgetResize(self.handle, width, height)
+    end
+
+    setLayout(layout)
+        _qt.widgetSetLayout(self.handle, layout.handle)
+    end
+
+    setStyleSheet(css)
+        _qt.widgetSetStyleSheet(self.handle, css)
+    end
+end
+
+class Button is Widget
+    init(text = "", parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.buttonCreate(text, parentHandle)
+    end
+
+    setText(text)
+        _qt.buttonSetText(self.handle, text)
+    end
+end
+
+class Label is Widget
+    init(text = "", parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.labelCreate(text, parentHandle)
+    end
+
+    setText(text)
+        _qt.labelSetText(self.handle, text)
+    end
+
+    getText()
+        return _qt.labelGetText(self.handle)
+    end
+end
+
+class LineEdit is Widget
+    init(text = "", parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.lineeditCreate(text, parentHandle)
+    end
+
+    setText(text)
+        _qt.lineeditSetText(self.handle, text)
+    end
+
+    getText()
+        return _qt.lineeditGetText(self.handle)
+    end
+end
+
+class TextEdit is Widget
+    init(text = "", parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.texteditCreate(text, parentHandle)
+    end
+
+    setText(text)
+        _qt.texteditSetText(self.handle, text)
+    end
+
+    getText()
+        return _qt.texteditGetText(self.handle)
+    end
+end
+
+class ListWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.listwidgetCreate(parentHandle)
+    end
+
+    addItem(text)
+        _qt.listwidgetAddItem(self.handle, text)
+    end
+
+    getCurrentItem()
+        return _qt.listwidgetGetCurrent(self.handle)
+    end
+end
+
+class TableWidget is Widget
+    init(rows = 0, cols = 0, parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.tablewidgetCreate(rows, cols, parentHandle)
+    end
+
+    setItem(row, col, text)
+        _qt.tablewidgetSetItem(self.handle, row, col, text)
+    end
+end

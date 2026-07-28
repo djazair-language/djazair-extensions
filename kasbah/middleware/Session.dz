@@ -1,7 +1,5 @@
 # Kasbah Middleware — Session
 # Server-side session management with file-based storage.
-# Session data is persisted in os.tmpDir()/kasbah_sessions/ as JSON files.
-# Each session is identified by a 32-character hex ID stored in a signed cookie.
 
 use os
 use file
@@ -10,23 +8,19 @@ use json
 use regex
 import "../helpers/utils.dz" as *
 import "../helpers/cookie.dz" as *
+import "../core/sessionManager.dz" as sm
 
-# ── fileStore ──────────────────────────────────────────────────────────────────
-
-# fileStore — persists session data to the local filesystem as JSON files.
-# Each session is one file named "<sid>.json" inside the storage directory.
 class fileStore
-    # Initialize the store and create the storage directory if needed.
     init(dirPath)
-        self._dir = dirPath
+        self.storeDir = dirPath
         if !file.exists(dirPath)
             dir.createAll(dirPath)
         end
     end
 
-    # read — loads session data for `sid`. Returns an empty map on miss or error.
+    # Reads session JSON data from disk for a session ID.
     read(sid)
-        let spath = "${self._dir}/${sid}.json"
+        let spath = "${self.storeDir}/${sid}.json"
         if !file.exists(spath)
             return {}
         end
@@ -34,49 +28,36 @@ class fileStore
             let raw = file.read(spath)
             return json.decode(raw)
         catch err
-            # Corrupted file — treat as empty session
             return {}
         end
     end
 
-    # write — persists `data` for `sid`. Writes only when the map is non-empty.
-    # If data is empty the session file is destroyed instead of writing "{}"
-    # so that `req.session = {}` in a handler properly clears the session.
+    # Writes session JSON data to disk for a session ID.
     write(sid, data)
         if data.keys().length() == 0
             self.destroy(sid)
             return
         end
-        let spath = "${self._dir}/${sid}.json"
+        let spath = "${self.storeDir}/${sid}.json"
         try
             file.write(spath, json.encode(data))
         catch err
-            # Log or ignore, but do not crash
         end
     end
 
-    # destroy — deletes the session file for `sid`, if it exists.
+    # Deletes session JSON file from disk.
     destroy(sid)
-        let spath = "${self._dir}/${sid}.json"
+        let spath = "${self.storeDir}/${sid}.json"
         try
             if file.exists(spath)
                 file.delete(spath)
             end
         catch err
-            # Ignore
         end
     end
 end
 
-# ── Factory ────────────────────────────────────────────────────────────────────
-
-# session — returns a middleware function that manages server-side sessions.
-#
-# Options (all optional):
-#   secret  — secret key used to sign the session cookie (recommended)
-#   name    — cookie name (default: "kasbah.sid")
-#   maxAge  — cookie lifetime in seconds (default: 86400 = 24 h)
-#   dir     — directory for session files (default: os.tmpDir()/kasbah_sessions)
+# Creates a session middleware function with file-backed storage and cookie rotation support.
 fn session(options = {})
     let cookieName = "kasbah.sid"
     if options.has("name")
@@ -98,28 +79,21 @@ fn session(options = {})
     return fn(req, res)
         let sid = Null
 
-        # ── Look for an existing session cookie ────────────────────────────────
-        # Read from req.cookies which was already populated by _prepareRequest,
-        # avoiding a second parse of the raw Cookie header.
-        if req.cookies.has(cookieName)
-            let rawSid = req.cookies[cookieName]
-            # Security: validate that the session ID contains only hex characters.
-            # This rejects path-traversal payloads such as "../../etc/passwd".
+        let rawSid = req.cookies.get(cookieName)
+
+        if !isNull(rawSid)
             let validSid = regex.fullMatch("[0-9a-f]+", rawSid)
             if !isNull(validSid)
                 sid = rawSid
             end
         end
 
+        let sessData = {}
+        let isNew    = False
+
         if isNull(sid) || sid == ""
-            # ── No valid session found — create a fresh one ────────────────────
-            sid = generateId(32)
-            req.session = {}
-            req.set("_sid", sid)
-            req.set("_isNew", True)
-            # Set the session cookie with security defaults:
-            #   httpOnly — not accessible from JavaScript
-            #   sameSite=Lax — mitigates CSRF for same-origin navigations
+            sid   = generateId(32)
+            isNew = True
             res.cookie(cookieName, sid, {
                 "httpOnly": True,
                 "path":     "/",
@@ -127,14 +101,14 @@ fn session(options = {})
                 "sameSite": "Lax"
             })
         else
-            # ── Existing session — load its data ───────────────────────────────
-            req.session = store.read(sid)
-            req.set("_sid", sid)
-            req.set("_isNew", False)
+            sessData = store.read(sid)
         end
 
-        # Pass the store reference so KasbahApp can persist the session
-        # automatically after the response is sent.
-        req.set("_store", store)
+        let mgr = new sm.sessionManager(sessData, sid, isNew)
+        req.session = mgr
+        res.session = mgr
+
+        req.set("store", store)
+        req.set("sid", sid)
     end
 end
