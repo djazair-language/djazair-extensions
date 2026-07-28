@@ -1,4 +1,4 @@
-# widgets/base.dz — Base Widget Component
+# widgets/base.dz — Base QWidget OOP Wrapper
 let _qt = __dynamic("qt")
 
 class Widget
@@ -18,16 +18,28 @@ class Widget
         _qt.widgetHide(self.handle)
     end
 
+    setVisible(visible)
+        if visible
+            _qt.widgetShow(self.handle)
+        else
+            _qt.widgetHide(self.handle)
+        end
+    end
+
     setTitle(title)
         _qt.widgetSetTitle(self.handle, title)
     end
 
-    setGeometry(x, y, width, height)
-        _qt.widgetSetGeometry(self.handle, x, y, width, height)
+    setWindowTitle(title)
+        _qt.widgetSetTitle(self.handle, title)
     end
 
-    resize(width, height)
-        _qt.widgetResize(self.handle, width, height)
+    setGeometry(x, y, w, h)
+        _qt.widgetSetGeometry(self.handle, x, y, w, h)
+    end
+
+    resize(w, h)
+        _qt.widgetResize(self.handle, w, h)
     end
 
     setLayout(layout)
@@ -44,5 +56,21 @@ class Widget
 
     setToolTip(text)
         _qt.widgetSetToolTip(self.handle, text)
+    end
+
+    update()
+        _qt.widgetUpdate(self.handle)
+    end
+
+    destroy()
+        _qt.widgetDestroy(self.handle)
+    end
+
+    setAcceptDrops(accept)
+        _qt.widgetSetAcceptDrops(self.handle, accept)
+    end
+
+    onDrop(callback)
+        _qt.widgetOnDrop(self.handle, callback)
     end
 end

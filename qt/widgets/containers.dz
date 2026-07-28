@@ -17,6 +17,10 @@ class TabWidget is Widget
     addTab(widget, title)
         _qt.tabwidgetAddTab(self.handle, widget.handle, title)
     end
+
+    setCurrentIndex(idx)
+        _qt.tabwidgetSetCurrentIndex(self.handle, idx)
+    end
 end
 
 class StackedWidget is Widget
@@ -31,6 +35,10 @@ class StackedWidget is Widget
     addWidget(widget)
         return _qt.stackedwidgetAddWidget(self.handle, widget.handle)
     end
+
+    setCurrentIndex(idx)
+        _qt.stackedwidgetSetCurrentIndex(self.handle, idx)
+    end
 end
 
 class GroupBox is Widget
@@ -40,6 +48,10 @@ class GroupBox is Widget
             parentHandle = parent.handle
         end
         self.handle = _qt.groupboxCreate(title, parentHandle)
+    end
+
+    setTitle(title)
+        _qt.groupboxSetTitle(self.handle, title)
     end
 end
 

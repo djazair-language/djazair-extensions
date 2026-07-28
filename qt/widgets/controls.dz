@@ -1,4 +1,4 @@
-# widgets/controls.dz — Buttons & Input Controls
+# widgets/controls.dz — Enterprise GUI Controls (Button, Label, CheckBox, Radio, ProgressBar, Slider, SpinBox)
 let _qt = __dynamic("qt")
 
 import "base.dz" as baseMod
@@ -17,6 +17,10 @@ class Button is Widget
     setText(text)
         _qt.buttonSetText(self.handle, text)
     end
+
+    onClicked(callback)
+        _qt.buttonOnClicked(self.handle, callback)
+    end
 end
 
 class Label is Widget
@@ -32,6 +36,14 @@ class Label is Widget
         _qt.labelSetText(self.handle, text)
     end
 
+    setAlignment(align_flag)
+        _qt.labelSetAlignment(self.handle, align_flag)
+    end
+
+    setPixmap(pixmap)
+        _qt.labelSetPixmap(self.handle, pixmap.handle)
+    end
+
     getText()
         return _qt.labelGetText(self.handle)
     end
@@ -45,6 +57,18 @@ class CheckBox is Widget
         end
         self.handle = _qt.checkboxCreate(text, parentHandle)
     end
+
+    isChecked()
+        return _qt.checkboxIsChecked(self.handle)
+    end
+
+    setChecked(checked)
+        _qt.checkboxSetChecked(self.handle, checked)
+    end
+
+    onToggled(callback)
+        _qt.checkboxOnToggled(self.handle, callback)
+    end
 end
 
 class RadioButton is Widget
@@ -54,6 +78,14 @@ class RadioButton is Widget
             parentHandle = parent.handle
         end
         self.handle = _qt.radiobuttonCreate(text, parentHandle)
+    end
+
+    setChecked(checked)
+        _qt.radiobuttonSetChecked(self.handle, checked)
+    end
+
+    isChecked()
+        return _qt.radiobuttonIsChecked(self.handle)
     end
 end
 
@@ -66,30 +98,68 @@ class ProgressBar is Widget
         self.handle = _qt.progressbarCreate(parentHandle)
     end
 
-    setRange(min, max)
-        _qt.progressbarSetRange(self.handle, min, max)
+    setRange(minVal, maxVal)
+        _qt.progressbarSetRange(self.handle, minVal, maxVal)
     end
 
     setValue(val)
         _qt.progressbarSetValue(self.handle, val)
     end
+
+    getValue()
+        return _qt.progressbarGetValue(self.handle)
+    end
 end
 
 class Slider is Widget
-    init(orientation = 0, parent = Null)
+    init(orient = 0, parent = Null)
         let parentHandle = Null
         if parent != Null
             parentHandle = parent.handle
         end
-        self.handle = _qt.sliderCreate(orientation, parentHandle)
+        self.handle = _qt.sliderCreate(orient, parentHandle)
     end
 
-    setRange(min, max)
-        _qt.sliderSetRange(self.handle, min, max)
+    setRange(minVal, maxVal)
+        _qt.sliderSetRange(self.handle, minVal, maxVal)
     end
 
     setValue(val)
         _qt.sliderSetValue(self.handle, val)
+    end
+
+    getValue()
+        return _qt.sliderGetValue(self.handle)
+    end
+
+    onValueChanged(callback)
+        _qt.sliderOnValueChanged(self.handle, callback)
+    end
+end
+
+class DoubleSpinBox is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.doublespinboxCreate(parentHandle)
+    end
+
+    setRange(minVal, maxVal)
+        _qt.doublespinboxSetRange(self.handle, minVal, maxVal)
+    end
+
+    getValue()
+        return _qt.doublespinboxGetValue(self.handle)
+    end
+
+    setValue(val)
+        _qt.doublespinboxSetValue(self.handle, val)
+    end
+
+    setDecimals(prec)
+        _qt.doublespinboxSetDecimals(self.handle, prec)
     end
 end
 
@@ -102,7 +172,19 @@ class SpinBox is Widget
         self.handle = _qt.spinboxCreate(parentHandle)
     end
 
-    setRange(min, max)
-        _qt.spinboxSetRange(self.handle, min, max)
+    setRange(minVal, maxVal)
+        _qt.spinboxSetRange(self.handle, minVal, maxVal)
+    end
+
+    getValue()
+        return _qt.spinboxGetValue(self.handle)
+    end
+
+    setValue(val)
+        _qt.spinboxSetValue(self.handle, val)
+    end
+
+    onChange(callback)
+        _qt.spinboxOnChange(self.handle, callback)
     end
 end

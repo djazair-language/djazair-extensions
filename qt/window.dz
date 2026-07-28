@@ -1,48 +1,12 @@
-# window.dz — Top-Level Window and Dialog Classes for Djazair
-let _qt = __dynamic("qt")
+# window.dz — Root Module Alias
+import "window/main_window.dz" as winMod
+import "window/dialogs.dz" as dialogMod
+import "window/tray.dz" as trayMod
 
-import "widgets.dz" as widgets
-
-let Widget = widgets.Widget
-
-class MainWindow is Widget
-    init()
-        self.handle = _qt.mainwindowCreate()
-    end
-
-    setCentralWidget(widget)
-        _qt.mainwindowSetCentral(self.handle, widget.handle)
-    end
-
-    setTitle(title)
-        _qt.mainwindowSetTitle(self.handle, title)
-    end
-
-    resize(width, height)
-        _qt.mainwindowResize(self.handle, width, height)
-    end
-
-    show()
-        _qt.mainwindowShow(self.handle)
-    end
-
-    addMenu(title)
-        return _qt.mainwindowAddMenu(self.handle, title)
-    end
-end
-
-class MessageBox
-    info(title, message)
-        _qt.messageboxInfo(title, message)
-    end
-end
-
-class FileDialog
-    getOpenFileName(title = "Open File", filter = "All Files (*.*)")
-        return _qt.filedialogOpen(title, filter)
-    end
-
-    getSaveFileName(title = "Save File", filter = "All Files (*.*)")
-        return _qt.filedialogSave(title, filter)
-    end
-end
+let MainWindow     = winMod.MainWindow
+let Menu           = winMod.Menu
+let Action         = winMod.Action
+let MessageBox     = dialogMod.MessageBox
+let FileDialog     = dialogMod.FileDialog
+let InputDialog    = dialogMod.InputDialog
+let SystemTrayIcon = trayMod.SystemTrayIcon

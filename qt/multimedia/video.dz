@@ -1,0 +1,16 @@
+# multimedia/video.dz — Native Qt QVideoWidget Wrapper
+let _qt = __dynamic("qt")
+
+import "../widgets/base.dz" as baseMod
+
+let Widget = baseMod.Widget
+
+class VideoWidget is Widget
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.videowidgetCreate(parentHandle)
+    end
+end

@@ -1,6 +1,10 @@
 # init.dz — Enterprise Public Exports for Qt Framework Extension
 
 import "core/app.dz" as appMod
+import "core/timer.dz" as timerMod
+import "core/uiloader.dz" as uiMod
+import "multimedia/player.dz" as playerMod
+import "multimedia/video.dz" as videoMod
 import "widgets/base.dz" as baseMod
 import "widgets/controls.dz" as ctrlMod
 import "widgets/inputs.dz" as inputMod
@@ -11,11 +15,20 @@ import "layouts/hbox.dz" as hboxMod
 import "layouts/grid.dz" as gridMod
 import "layouts/form.dz" as formMod
 import "window/main_window.dz" as winMod
+import "window/dialog.dz" as dlgMod
 import "window/dialogs.dz" as dialogMod
 import "window/tray.dz" as trayMod
 import "styles/theme.dz" as themeMod
+import "drawing/painter.dz" as painterMod
+import "drawing/canvas.dz" as canvasMod
+import "widgets/charts.dz" as chartMod
 
 let Application = appMod.Application
+let Timer       = timerMod.Timer
+let loadUi      = uiMod.loadUi
+
+let MediaPlayer = playerMod.MediaPlayer
+let VideoWidget = videoMod.VideoWidget
 
 let Widget      = baseMod.Widget
 
@@ -26,9 +39,11 @@ let RadioButton = ctrlMod.RadioButton
 let ProgressBar = ctrlMod.ProgressBar
 let Slider      = ctrlMod.Slider
 let SpinBox     = ctrlMod.SpinBox
+let DoubleSpinBox = ctrlMod.DoubleSpinBox
 
 let LineEdit    = inputMod.LineEdit
 let TextEdit    = inputMod.TextEdit
+let PlainTextEdit = inputMod.PlainTextEdit
 let ComboBox    = inputMod.ComboBox
 
 let TabWidget    = containerMod.TabWidget
@@ -39,17 +54,35 @@ let Splitter     = containerMod.Splitter
 
 let ListWidget  = viewMod.ListWidget
 let TreeWidget  = viewMod.TreeWidget
+let TreeItem    = viewMod.TreeItem
 let TableWidget = viewMod.TableWidget
 
 let VBoxLayout  = vboxMod.VBoxLayout
 let HBoxLayout  = hboxMod.HBoxLayout
-let GridLayout = gridMod.GridLayout
+let GridLayout  = gridMod.GridLayout
 let FormLayout  = formMod.FormLayout
 
 let MainWindow  = winMod.MainWindow
+let Menu        = winMod.Menu
+let Action      = winMod.Action
+let ToolBar     = winMod.ToolBar
+let Dialog      = dlgMod.Dialog
 let MessageBox  = dialogMod.MessageBox
 let FileDialog  = dialogMod.FileDialog
 let InputDialog = dialogMod.InputDialog
 let SystemTrayIcon = trayMod.SystemTrayIcon
 
 let Theme       = themeMod.Theme
+
+let Pixmap      = painterMod.Pixmap
+let Painter     = painterMod.Painter
+let pixmapLoad  = painterMod.pixmapLoad
+let Canvas      = canvasMod.Canvas
+
+let Chart       = chartMod.Chart
+let ChartView   = chartMod.ChartView
+let LineSeries  = chartMod.LineSeries
+let PieSeries   = chartMod.PieSeries
+let BarSet      = chartMod.BarSet
+let BarSeries   = chartMod.BarSeries
+let ScatterSeries = chartMod.ScatterSeries

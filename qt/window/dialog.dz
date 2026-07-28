@@ -1,0 +1,32 @@
+# window/dialog.dz — Modal Dialog Window
+let _qt = __dynamic("qt")
+
+class Dialog
+    init(parent = Null)
+        let parentHandle = Null
+        if parent != Null
+            parentHandle = parent.handle
+        end
+        self.handle = _qt.dialogCreate(parentHandle)
+    end
+
+    setTitle(text)
+        _qt.widgetSetTitle(self.handle, text)
+    end
+
+    resize(w, h)
+        _qt.widgetResize(self.handle, w, h)
+    end
+
+    setLayout(layout)
+        _qt.widgetSetLayout(self.handle, layout.handle)
+    end
+
+    setStyleSheet(css)
+        _qt.widgetSetStyleSheet(self.handle, css)
+    end
+
+    exec()
+        return _qt.dialogExec(self.handle)
+    end
+end

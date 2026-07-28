@@ -1,93 +1,26 @@
-# styles/theme.dz — Modern Dark Theme & QSS Engine Preset
+# styles/theme.dz — Modern Preset Light & Dark Themes
+let _qt = __dynamic("qt")
 
 class Theme
     applyDark(widget)
-        let darkStyle = "
-            QWidget {
-                background-color: #1e1e2e;
-                color: #cdd6f4;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 13px;
-            }
-            QMainWindow {
-                background-color: #181825;
-            }
-            QGroupBox {
-                border: 1px solid #45475a;
-                border-radius: 6px;
-                margin-top: 10px;
-                font-weight: bold;
-                color: #89b4fa;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                padding: 0 5px;
-            }
-            QPushButton {
-                background-color: #313244;
-                border: 1px solid #45475a;
-                border-radius: 5px;
-                padding: 6px 14px;
-                color: #cdd6f4;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45475a;
-                border-color: #89b4fa;
-            }
-            QPushButton:pressed {
-                background-color: #89b4fa;
-                color: #11111b;
-            }
-            QLineEdit, QTextEdit, QPlainTextEdit {
-                background-color: #11111b;
-                border: 1px solid #45475a;
-                border-radius: 5px;
-                padding: 5px;
-                color: #a6adc8;
-            }
-            QLineEdit:focus, QTextEdit:focus {
-                border: 1px solid #89b4fa;
-            }
-            QTabWidget::pane {
-                border: 1px solid #45475a;
-                background-color: #1e1e2e;
-            }
-            QTabBar::tab {
-                background: #181825;
-                border: 1px solid #45475a;
-                padding: 8px 16px;
-                margin-right: 2px;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            QTabBar::tab:selected {
-                background: #313244;
-                color: #89b4fa;
-                border-bottom-color: #313244;
-            }
-            QProgressBar {
-                border: 1px solid #45475a;
-                border-radius: 5px;
-                text-align: center;
-                background-color: #11111b;
-            }
-            QProgressBar::chunk {
-                background-color: #a6e3a1;
-                border-radius: 4px;
-            }
-            QHeaderView::section {
-                background-color: #181825;
-                color: #89b4fa;
-                padding: 5px;
-                border: 1px solid #313244;
-            }
-            QTableWidget, QListWidget, QTreeWidget {
-                background-color: #11111b;
-                gridline-color: #313244;
-            }
-        "
-        widget.setStyleSheet(darkStyle)
+        let darkStyle = "QWidget { background-color: #121212; color: #E0E0E0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }" +
+                        "QPushButton { background-color: #1E1E1E; border: 1px solid #333333; border-radius: 4px; padding: 6px 12px; color: #FFFFFF; }" +
+                        "QPushButton:hover { background-color: #007ACC; border-color: #007ACC; }" +
+                        "QLineEdit, QTextEdit { background-color: #1E1E1E; border: 1px solid #333333; border-radius: 4px; padding: 4px; color: #FFFFFF; }" +
+                        "QTabWidget::pane { border: 1px solid #333333; background: #121212; }" +
+                        "QTabBar::tab { background: #1E1E1E; color: #AAAAAA; padding: 8px 16px; border: 1px solid #333333; }" +
+                        "QTabBar::tab:selected { background: #007ACC; color: #FFFFFF; font-weight: bold; }"
+        _qt.widgetSetStyleSheet(widget.handle, darkStyle)
+    end
+
+    applyLight(widget)
+        let lightStyle = "QWidget { background-color: #F8F9FA; color: #212529; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }" +
+                         "QPushButton { background-color: #FFFFFF; border: 1px solid #CED4DA; border-radius: 4px; padding: 6px 12px; color: #212529; }" +
+                         "QPushButton:hover { background-color: #0D6EFD; color: #FFFFFF; border-color: #0D6EFD; }" +
+                         "QLineEdit, QTextEdit { background-color: #FFFFFF; border: 1px solid #CED4DA; border-radius: 4px; padding: 4px; color: #212529; }" +
+                         "QTabWidget::pane { border: 1px solid #CED4DA; background: #FFFFFF; }" +
+                         "QTabBar::tab { background: #E9ECEF; color: #495057; padding: 8px 16px; border: 1px solid #CED4DA; }" +
+                         "QTabBar::tab:selected { background: #0D6EFD; color: #FFFFFF; font-weight: bold; }"
+        _qt.widgetSetStyleSheet(widget.handle, lightStyle)
     end
 end

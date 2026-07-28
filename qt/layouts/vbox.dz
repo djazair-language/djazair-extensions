@@ -1,4 +1,4 @@
-# layouts/vbox.dz — Vertical Box Layout
+# layouts/vbox.dz — Vertical Layout Manager
 let _qt = __dynamic("qt")
 
 class VBoxLayout
@@ -14,7 +14,15 @@ class VBoxLayout
         _qt.layoutAddWidget(self.handle, widget.handle)
     end
 
+    addLayout(childLayout)
+        _qt.layoutAddLayout(self.handle, childLayout.handle)
+    end
+
     setMargins(left, top, right, bottom)
         _qt.layoutSetMargins(self.handle, left, top, right, bottom)
+    end
+
+    setSpacing(spacing)
+        _qt.layoutSetSpacing(self.handle, spacing)
     end
 end

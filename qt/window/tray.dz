@@ -1,4 +1,4 @@
-# window/tray.dz — System Tray Icon Integration
+# window/tray.dz — Native QSystemTrayIcon Wrapper
 let _qt = __dynamic("qt")
 
 class SystemTrayIcon
@@ -10,7 +10,19 @@ class SystemTrayIcon
         _qt.trayShow(self.handle)
     end
 
-    showMessage(title, message, iconType = 1, timeoutMs = 3000)
-        _qt.trayShowMessage(self.handle, title, message, iconType, timeoutMs)
+    hide()
+        _qt.trayHide(self.handle)
+    end
+
+    setIcon(iconPath)
+        _qt.traySetIcon(self.handle, iconPath)
+    end
+
+    setContextMenu(menu)
+        _qt.traySetMenu(self.handle, menu.handle)
+    end
+
+    showMessage(title, message, iconType = 1, timeout = 5000)
+        _qt.trayShowMessage(self.handle, title, message, iconType, timeout)
     end
 end

@@ -1,4 +1,4 @@
-# layouts/form.dz — Form Layout for Input Fields
+# layouts/form.dz — Two-Column Label-Field Form Layout Manager
 let _qt = __dynamic("qt")
 
 class FormLayout
@@ -10,7 +10,19 @@ class FormLayout
         self.handle = _qt.formCreate(parentHandle)
     end
 
-    addRow(labelText, widget)
-        _qt.formAddRow(self.handle, labelText, widget.handle)
+    addRow(labelText, fieldWidget)
+        _qt.formAddRow(self.handle, labelText, fieldWidget.handle)
+    end
+
+    addLayout(childLayout)
+        _qt.layoutAddLayout(self.handle, childLayout.handle)
+    end
+
+    setMargins(left, top, right, bottom)
+        _qt.layoutSetMargins(self.handle, left, top, right, bottom)
+    end
+
+    setSpacing(spacing)
+        _qt.layoutSetSpacing(self.handle, spacing)
     end
 end

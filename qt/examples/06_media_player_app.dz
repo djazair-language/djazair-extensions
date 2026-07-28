@@ -1,0 +1,40 @@
+# 06_media_player_app.dz — Multimedia Video & Audio Player in Djazair Qt
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Media Player")
+window.resize(800, 500)
+
+let theme = new qt.Theme()
+theme.applyDark(window)
+
+let videoWidget = new qt.VideoWidget()
+let player = new qt.MediaPlayer()
+player.setVideoOutput(videoWidget)
+
+let vbox = new qt.VBoxLayout()
+vbox.addWidget(videoWidget)
+
+let hbox = new qt.HBoxLayout()
+let btnPlay = new qt.Button("Play")
+let btnPause = new qt.Button("Pause")
+let btnStop = new qt.Button("Stop")
+
+hbox.addWidget(btnPlay)
+hbox.addWidget(btnPause)
+hbox.addWidget(btnStop)
+
+let ctrlContainer = new qt.Widget()
+ctrlContainer.setLayout(hbox)
+
+vbox.addWidget(ctrlContainer)
+
+let mainContainer = new qt.Widget()
+mainContainer.setLayout(vbox)
+
+window.setCentralWidget(mainContainer)
+window.show()
+
+app.exec()

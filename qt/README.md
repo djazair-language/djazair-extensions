@@ -1,65 +1,48 @@
-# Qt Extension for Djazair
+# Djazair Qt Framework Extension (`qt`)
 
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Organization](https://img.shields.io/badge/organization-djazair--language-blue.svg)](https://github.com/djazair-language)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/djazair-language/djazair-extensions/pulls)
-
-**Official Qt 5 / Qt 6 cross-platform GUI framework extension for the Djazair Programming Language.**
-
-</div>
+Enterprise GUI, Multimedia, Dynamic UI Designer (.ui) Loader, and System Integration extension for the **Djazair Programming Language**.
 
 ---
 
-## ⚡ Installation
+## 🌟 Key Features
 
-Install the package using **DPM (Djazair Package Manager)**:
-
-```bash
-dpm install qt
-```
-
----
-
-## 🛠️ Building Native Extension
-
-Build the native C++ dynamic library (`qt.dll` / `qt.so`):
-
-```bash
-dpm build qt
-```
-
-> **Requirements**: MinGW-w64 with Qt5 / Qt6 on Windows, or GCC with `pkg-config Qt5Widgets` on Linux/macOS.
+- **Modern Desktop Widgets**: Buttons, Labels, LineEdits, TextEdits, CheckBoxes, RadioButtons, ComboBoxes, ProgressBars, Sliders, SpinBoxes.
+- **Dynamic Qt Designer Loader (`qt.loadUi`)**: Dynamically parse `.ui` XML layout files created with Qt Designer at runtime.
+- **Multimedia Engine (`qt.MediaPlayer` & `qt.VideoWidget`)**: Native video and audio playback directly inside Djazair applications.
+- **Complex Data Views**: Multi-column `TreeWidget` (with `TreeItem` wrappers), `TableWidget`, and `ListWidget`.
+- **Flexible Layout Managers**: `VBoxLayout`, `HBoxLayout`, `GridLayout`, and `FormLayout` with `setMargins()` & `setSpacing()`.
+- **System Integration**: Modals (`MessageBox` with info/warning/error/question), `FileDialog`, `InputDialog`, `QTimer`, and `SystemTrayIcon`.
+- **Preset Themes**: Instant modern styling via `Theme.applyDark()` and `Theme.applyLight()`.
 
 ---
 
-## 🚀 Quick Example
+## 🚀 Quick Start Example
 
 ```djazair
-import "qt" as qt
+use qt
 
 let app = new qt.Application()
 
 let window = new qt.MainWindow()
-window.setTitle("Hello Djazair Qt")
+window.setWindowTitle("Djazair Qt Quick Start")
 window.resize(600, 400)
 
-let layout = new qt.VBoxLayout()
+let label = new qt.Label("Hello from Djazair Qt!")
+let button = new qt.Button("Click Me")
 
-let label = new qt.Label("Native GUI with Djazair & Qt!")
-label.setStyleSheet("font-size: 18px; color: #2980b9; font-weight: bold;")
+let vbox = new qt.VBoxLayout()
+vbox.setMargins(15, 15, 15, 15)
+vbox.setSpacing(10)
+vbox.addWidget(label)
+vbox.addWidget(button)
 
-let btn = new qt.Button("Click Me")
-btn.setStyleSheet("background-color: #27ae60; color: white; padding: 8px; border-radius: 4px;")
+let central = new qt.Widget()
+central.setLayout(vbox)
 
-layout.addWidget(label)
-layout.addWidget(btn)
+let theme = new qt.Theme()
+theme.applyDark(window)
 
-let container = new qt.Widget()
-container.setLayout(layout)
-
-window.setCentralWidget(container)
+window.setCentralWidget(central)
 window.show()
 
 app.exec()
@@ -67,36 +50,53 @@ app.exec()
 
 ---
 
-## 📖 API Reference
+## 📚 API Reference Overview
 
-### Application & Lifecycle
-- `Application()`: Initializes Qt application instance.
-- `app.exec()`: Starts the main event loop.
-- `app.processEvents()`: Processes pending events manually.
-- `app.quit()`: Exits application execution.
+### Core & Application
+- `new qt.Application()`
+- `app.exec()`
+- `new qt.Timer()`: `.start(msec)`, `.stop()`
+- `qt.loadUi(filepath)`: Load `.ui` XML file dynamically.
 
-### Components & Widgets
-- `Widget(parent = null)`: Base widget component.
-- `Button(text, parent = null)`: Push button component.
-- `Label(text, parent = null)`: Text label component.
-- `LineEdit(text, parent = null)`: Single-line input field.
-- `TextEdit(text, parent = null)`: Multi-line rich/plain text editor.
-- `ListWidget(parent = null)`: Items list view component.
-- `TableWidget(rows, cols, parent = null)`: Grid data table component.
+### Widgets & Controls
+- `new qt.Widget(parent)`: `.show()`, `.hide()`, `.setVisible(bool)`, `.setWindowTitle(title)`, `.resize(w, h)`, `.setLayout(layout)`, `.setStyleSheet(css)`, `.setToolTip(text)`
+- `new qt.Button(text, parent)`: `.setText(text)`
+- `new qt.Label(text, parent)`: `.setText(text)`, `.getText()`
+- `new qt.LineEdit(text, parent)`: `.setText(text)`, `.getText()`, `.setPlaceholder(text)`, `.setEchoMode(mode)`
+- `new qt.TextEdit(text, parent)`: `.setText(text)`, `.getText()`, `.clear()`, `.append(text)`
+- `new qt.CheckBox(text, parent)`: `.isChecked()`
+- `new qt.ComboBox(parent)`: `.addItem(text)`, `.getCurrentText()`
+- `new qt.ProgressBar(parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
+- `new qt.Slider(orient, parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
+- `new qt.SpinBox(parent)`: `.setRange(min, max)`, `.getValue()`
+
+### Containers & Views
+- `new qt.TabWidget(parent)`: `.addTab(widget, title)`
+- `new qt.StackedWidget(parent)`: `.addWidget(widget)`
+- `new qt.GroupBox(title, parent)`
+- `new qt.ScrollArea(parent)`: `.setWidget(widget)`
+- `new qt.Splitter(orient, parent)`: `.addWidget(widget)`
+- `new qt.ListWidget(parent)`: `.addItem(text)`
+- `new qt.TreeWidget(parent)`: `.setHeaders(headersArray)`, `.addItem(colsArray, parentItem)` -> returns `TreeItem`
+- `new qt.TableWidget(rows, cols, parent)`: `.setItem(row, col, text)`
 
 ### Layout Managers
-- `VBoxLayout()`: Vertical box layout manager.
-- `HBoxLayout()`: Horizontal box layout manager.
-- `GridLayout()`: Grid layout manager.
+- `new qt.VBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.HBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.GridLayout(parent)`: `.addWidget(widget, row, col, rowSpan, colSpan)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.FormLayout(parent)`: `.addRow(label, fieldWidget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
 
 ### Windows & Dialogs
-- `MainWindow()`: Top-level desktop main window.
-- `MessageBox.info(title, message)`: Informational alert modal.
-- `FileDialog.getOpenFileName(title, filter)`: File picker dialog.
-- `FileDialog.getSaveFileName(title, filter)`: File saver dialog.
+- `new qt.MainWindow()`: `.setCentralWidget(widget)`, `.setWindowTitle(title)`, `.addMenu(title)` -> returns `Menu`, `.addToolBar(title)`, `.setStatusMessage(msg, timeout)`
+- `Menu`: `.addMenu(title)`, `.addAction(title)` -> returns `Action`, `.addSeparator()`
+- `qt.MessageBox`: `.info(title, msg)`, `.warning(title, msg)`, `.error(title, msg)`, `.question(title, msg)` (returns `bool`)
+- `qt.FileDialog`: `.getOpenFileName()`, `.getSaveFileName()`, `.getExistingDirectory()`
+- `qt.InputDialog`: `.getText(title, label)`
+- `new qt.SystemTrayIcon(tooltip)`: `.show()`, `.setContextMenu(menu)`, `.showMessage(title, msg, iconType, timeout)`
 
----
+### Multimedia Engine
+- `new qt.MediaPlayer()`: `.setMedia(pathOrUrl)`, `.play()`, `.pause()`, `.stop()`, `.setVideoOutput(videoWidget)`
+- `new qt.VideoWidget(parent)`
 
-## 📄 License
-
-Licensed under the MIT License.
+### Themes
+- `new qt.Theme()`: `.applyDark(widget)`, `.applyLight(widget)`

@@ -1,44 +1,10 @@
-# layouts.dz — Qt Layout Managers for Djazair
-let _qt = __dynamic("qt")
+# layouts.dz — Root Module Alias
+import "layouts/vbox.dz" as vboxMod
+import "layouts/hbox.dz" as hboxMod
+import "layouts/grid.dz" as gridMod
+import "layouts/form.dz" as formMod
 
-class VBoxLayout
-    init(parent = Null)
-        let parentHandle = Null
-        if parent != Null
-            parentHandle = parent.handle
-        end
-        self.handle = _qt.vboxCreate(parentHandle)
-    end
-
-    addWidget(widget)
-        _qt.layoutAddWidget(self.handle, widget.handle)
-    end
-end
-
-class HBoxLayout
-    init(parent = Null)
-        let parentHandle = Null
-        if parent != Null
-            parentHandle = parent.handle
-        end
-        self.handle = _qt.hboxCreate(parentHandle)
-    end
-
-    addWidget(widget)
-        _qt.layoutAddWidget(self.handle, widget.handle)
-    end
-end
-
-class GridLayout
-    init(parent = Null)
-        let parentHandle = Null
-        if parent != Null
-            parentHandle = parent.handle
-        end
-        self.handle = _qt.gridCreate(parentHandle)
-    end
-
-    addWidget(widget, row, col, rowSpan = 1, colSpan = 1)
-        _qt.gridAddWidget(self.handle, widget.handle, row, col, rowSpan, colSpan)
-    end
-end
+let VBoxLayout = vboxMod.VBoxLayout
+let HBoxLayout = hboxMod.HBoxLayout
+let GridLayout = gridMod.GridLayout
+let FormLayout = formMod.FormLayout

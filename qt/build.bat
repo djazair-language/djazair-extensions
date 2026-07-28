@@ -23,51 +23,40 @@ if exist "C:\msys64\mingw64\bin\g++.exe" (
 
 echo [INFO] Using C++ Compiler: %GXX%
 
-set "QT_INC="
-set "QT_LIB="
-set "QT_FOUND=0"
+set "QT_INC=-IC:\msys64\mingw64\include -IC:\msys64\mingw64\include\QtWidgets -IC:\msys64\mingw64\include\QtCore -IC:\msys64\mingw64\include\QtGui -IC:\msys64\mingw64\include\QtUiTools -IC:\msys64\mingw64\include\QtMultimedia -IC:\msys64\mingw64\include\QtMultimediaWidgets"
+set "QT_LIB=-LC:\msys64\mingw64\lib"
 
 if defined QTDIR (
     if exist "%QTDIR%\include\QtWidgets" (
-        set "QT_INC=-I"%QTDIR%\include" -I"%QTDIR%\include\QtWidgets" -I"%QTDIR%\include\QtCore" -I"%QTDIR%\include\QtGui""
-        set "QT_LIB=-L"%QTDIR%\lib""
-        set "QT_FOUND=1"
+        set "QT_INC=-I%QTDIR%\include -I%QTDIR%\include\QtWidgets -I%QTDIR%\include\QtCore -I%QTDIR%\include\QtGui -I%QTDIR%\include\QtUiTools -I%QTDIR%\include\QtMultimedia -I%QTDIR%\include\QtMultimediaWidgets"
+        set "QT_LIB=-L%QTDIR%\lib"
         echo [INFO] Found Qt via %%QTDIR%%: %QTDIR%
-    )
-)
-
-if "%QT_FOUND%"=="0" (
-    if exist "C:\msys64\mingw64\include\QtWidgets" (
-        set "QT_INC=-I"C:\msys64\mingw64\include" -I"C:\msys64\mingw64\include\QtWidgets" -I"C:\msys64\mingw64\include\QtCore" -I"C:\msys64\mingw64\include\QtGui""
-        set "QT_LIB=-L"C:\msys64\mingw64\lib""
-        set "QT_FOUND=1"
-        echo [INFO] Found Qt via MSYS2 MinGW system directory.
     )
 )
 
 echo [INFO] Compiling Qt dynamic extension (qt.dll)...
 
 "%GXX%" -shared -O2 -std=c++17 ^
-    -I"%ROOT%\src\include" ^
-    -I"%ROOT%\src\core" ^
-    -I"%ROOT%\src\libs" ^
-    %QT_INC% ^
+    "-I%ROOT%\src\include" ^
+    "-I%ROOT%\src\core" ^
+    "-I%ROOT%\src\libs" ^
+    %QT_INC% -DQT_CHARTS_LIB ^
     src\qt_wrapper.cpp src\qt_djazair.cpp ^
     -o qt.dll ^
-    -L"%ROOT%\build\bin" %QT_LIB% ^
-    -ldjazair -lQt5Widgets -lQt5Core -lQt5Gui
+    "-L%ROOT%\build\bin" %QT_LIB% ^
+    -ldjazair -lQt5UiTools -lQt5MultimediaWidgets -lQt5Multimedia -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Xml -lQt5Core
 
 if errorlevel 1 (
     echo [INFO] Trying Qt6 library linking...
     "%GXX%" -shared -O2 -std=c++17 ^
-        -I"%ROOT%\src\include" ^
-        -I"%ROOT%\src\core" ^
-        -I"%ROOT%\src\libs" ^
-        %QT_INC% ^
+        "-I%ROOT%\src\include" ^
+        "-I%ROOT%\src\core" ^
+        "-I%ROOT%\src\libs" ^
+        %QT_INC% -DQT_CHARTS_LIB ^
         src\qt_wrapper.cpp src\qt_djazair.cpp ^
         -o qt.dll ^
-        -L"%ROOT%\build\bin" %QT_LIB% ^
-        -ldjazair -lQt6Widgets -lQt6Core -lQt6Gui
+        "-L%ROOT%\build\bin" %QT_LIB% ^
+        -ldjazair -lQt6UiTools -lQt6MultimediaWidgets -lQt6Multimedia -lQt6Charts -lQt6Widgets -lQt6Gui -lQt6Xml -lQt6Core
 )
 
 if errorlevel 1 (

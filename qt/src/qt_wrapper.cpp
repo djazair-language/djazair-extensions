@@ -17,11 +17,15 @@
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QCheckBox>
+#include <QDialog>
+#include <QDoubleSpinBox>
+#include <QPlainTextEdit>
 #include <QRadioButton>
 #include <QComboBox>
 #include <QProgressBar>
 #include <QSlider>
 #include <QSpinBox>
+#include <QResizeEvent>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -50,20 +54,198 @@
 #include <QByteArray>
 #include <QObject>
 #include <QStyleFactory>
+#include <QStyle>
+#include <QFile>
+#include <QUrl>
+#include <QIcon>
+
+#include <QUiLoader>
+#include <QMediaPlayer>
+#include <QVideoWidget>
+
+#include <QPixmap>
+#include <QPainter>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QEvent>
+
+#if __has_include(<QtCharts/QChartView>) || defined(QT_CHARTS_LIB)
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QScatterSeries>
+#include <QtCharts/QValueAxis>
+using namespace QtCharts;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+QT_CHARTS_USE_NAMESPACE
+#endif
+#endif
 
 #include <cstdlib>
 #include <cstring>
-#include <vector>
 #include <string>
 
-static std::string g_temp_str_buffer;
+/* Thread-local string buffer to prevent concurrent/rapid getter buffer collisions */
+static thread_local std::string tls_temp_str_buffer;
 
 static const char* copy_qstring_to_temp(const QString& qstr) {
-    g_temp_str_buffer = qstr.toStdString();
-    return g_temp_str_buffer.c_str();
+    tls_temp_str_buffer = qstr.toStdString();
+    return tls_temp_str_buffer.c_str();
 }
 
+/* ============================================================
+ * CanvasWidget — QWidget with double-buffered QPixmap backing
+ * ============================================================ */
+class CanvasWidget : public QWidget {
+public:
+    QPixmap* backing;
+    QPainter* activePainter;
+
+    CanvasWidget(QWidget* parent)
+        : QWidget(parent), backing(nullptr), activePainter(nullptr)
+    {
+        backing = new QPixmap(200, 200);
+        backing->fill(Qt::white);
+        setMinimumSize(50, 50);
+    }
+
+    ~CanvasWidget() {
+        delete activePainter;
+        delete backing;
+    }
+
+    void resizeBacking(int w, int h) {
+        if (w < 1) w = 1;
+        if (h < 1) h = 1;
+        QPixmap* nb = new QPixmap(w, h);
+        nb->fill(Qt::white);
+        QPainter p(nb);
+        p.drawPixmap(0, 0, *backing);
+        p.end();
+        delete backing;
+        backing = nb;
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        painter.drawPixmap(0, 0, *backing);
+    }
+
+    void resizeEvent(QResizeEvent* event) override {
+        resizeBacking(event->size().width(), event->size().height());
+    }
+};
+
 extern "C" {
+
+/* Generic Resource Cleanup Helper */
+void qt_object_delete(void* handle) {
+    if (!handle) return;
+    QObject* obj = (QObject*)handle;
+    if (!obj->parent()) {
+        delete obj;
+    }
+}
+
+class DropEventFilter : public QObject {
+public:
+    QtStringCallback callback;
+    void* userdata;
+
+    DropEventFilter(QtStringCallback cb, void* ud, QObject* parent = nullptr) 
+        : QObject(parent), callback(cb), userdata(ud) {}
+
+    bool eventFilter(QObject* watched, QEvent* event) override {
+        if (event->type() == QEvent::DragEnter) {
+            QDragEnterEvent* de = static_cast<QDragEnterEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                de->acceptProposedAction();
+                return true;
+            }
+        } else if (event->type() == QEvent::Drop) {
+            QDropEvent* de = static_cast<QDropEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                QString paths;
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (!paths.isEmpty()) paths += "\n";
+                    paths += url.toLocalFile();
+                }
+                if (callback) callback(paths.toUtf8().constData(), userdata);
+                de->acceptProposedAction();
+                return true;
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+/* ============================================================
+ * Dynamic UI Designer Loader (QtUiTools & QUiLoader)
+ * ============================================================ */
+QtWidgetHandle qt_uiloader_load_file(const char* filepath, QtWidgetHandle parent) {
+    if (!filepath) return nullptr;
+    QFile file(QString::fromUtf8(filepath));
+    if (!file.open(QFile::ReadOnly)) {
+        return nullptr;
+    }
+    QUiLoader loader;
+    QWidget* widget = loader.load(&file, (QWidget*)parent);
+    file.close();
+    return (QtWidgetHandle)widget;
+}
+
+/* ============================================================
+ * Multimedia Engine (QtMultimedia & QMediaPlayer)
+ * ============================================================ */
+QtMediaPlayerHandle qt_mediaplayer_create(void) {
+    return (QtMediaPlayerHandle)new QMediaPlayer();
+}
+
+void qt_mediaplayer_set_media(QtMediaPlayerHandle player, const char* file_or_url) {
+    if (player && file_or_url) {
+        QUrl url = QUrl::fromUserInput(QString::fromUtf8(file_or_url));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        ((QMediaPlayer*)player)->setSource(url);
+#else
+        ((QMediaPlayer*)player)->setMedia(QMediaContent(url));
+#endif
+    }
+}
+
+void qt_mediaplayer_play(QtMediaPlayerHandle player) {
+    if (player) ((QMediaPlayer*)player)->play();
+}
+
+void qt_mediaplayer_pause(QtMediaPlayerHandle player) {
+    if (player) ((QMediaPlayer*)player)->pause();
+}
+
+void qt_mediaplayer_stop(QtMediaPlayerHandle player) {
+    if (player) ((QMediaPlayer*)player)->stop();
+}
+
+void qt_mediaplayer_set_volume(QtMediaPlayerHandle player, int volume) {
+    if (player) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        ((QMediaPlayer*)player)->setVolume(volume);
+#endif
+    }
+}
+
+QtWidgetHandle qt_videowidget_create(QtWidgetHandle parent) {
+    return (QtWidgetHandle)new QVideoWidget((QWidget*)parent);
+}
+
+void qt_mediaplayer_set_video_output(QtMediaPlayerHandle player, QtWidgetHandle video_widget) {
+    if (player && video_widget) {
+        ((QMediaPlayer*)player)->setVideoOutput((QVideoWidget*)video_widget);
+    }
+}
 
 /* ============================================================
  * Application Life Cycle & Theme
@@ -164,8 +346,18 @@ void qt_widget_destroy(QtWidgetHandle widget) {
     if (widget) delete (QWidget*)widget;
 }
 
+void qt_widget_set_accept_drops(QtWidgetHandle widget, bool accept) {
+    if (widget) ((QWidget*)widget)->setAcceptDrops(accept);
+}
+
+void qt_widget_on_drop(QtWidgetHandle widget, QtStringCallback callback, void* user_data) {
+    if (!widget || !callback) return;
+    QObject* obj = (QObject*)widget;
+    obj->installEventFilter(new DropEventFilter(callback, user_data, obj));
+}
+
 /* ============================================================
- * QMainWindow & Bars
+ * QMainWindow & Bars & Menus
  * ============================================================ */
 QtMainWindowHandle qt_mainwindow_create(void) {
     return (QtMainWindowHandle)new QMainWindow();
@@ -195,6 +387,12 @@ QtMenuHandle qt_mainwindow_add_menu(QtMainWindowHandle main_win, const char* tit
     if (!main_win || !title) return nullptr;
     QMenuBar* bar = ((QMainWindow*)main_win)->menuBar();
     return (QtMenuHandle)bar->addMenu(QString::fromUtf8(title));
+}
+
+QtMenuHandle qt_menu_add_submenu(QtMenuHandle menu, const char* title) {
+    if (!menu || !title) return nullptr;
+    QMenu* parentMenu = (QMenu*)menu;
+    return (QtMenuHandle)parentMenu->addMenu(QString::fromUtf8(title));
 }
 
 QtActionHandle qt_menu_add_action(QtMenuHandle menu, const char* text, QtVoidCallback callback, void* user_data) {
@@ -238,7 +436,7 @@ void qt_mainwindow_set_status_message(QtMainWindowHandle main_win, const char* m
 }
 
 /* ============================================================
- * Basic Controls
+ * Basic Controls & Signals
  * ============================================================ */
 QtWidgetHandle qt_button_create(const char* text, QtWidgetHandle parent) {
     return (QtWidgetHandle)new QPushButton(QString::fromUtf8(text ? text : ""), (QWidget*)parent);
@@ -275,6 +473,65 @@ void qt_label_set_alignment(QtWidgetHandle label, int align_flag) {
 
 void qt_label_set_pixmap(QtWidgetHandle label, QtPixmapHandle pixmap) {
     if (label && pixmap) ((QLabel*)label)->setPixmap(*(QPixmap*)pixmap);
+}
+
+QtPixmapHandle qt_pixmap_create(int w, int h) {
+    QPixmap* p = new QPixmap(w, h);
+    p->fill(Qt::transparent);
+    return (QtPixmapHandle)p;
+}
+
+void qt_pixmap_fill(QtPixmapHandle pixmap, const char* color_hex) {
+    if (pixmap && color_hex) {
+        ((QPixmap*)pixmap)->fill(QColor(QString::fromUtf8(color_hex)));
+    }
+}
+
+void qt_pixmap_destroy(QtPixmapHandle pixmap) {
+    if (pixmap) delete (QPixmap*)pixmap;
+}
+
+QtPainterHandle qt_painter_create(QtPixmapHandle pixmap) {
+    if (!pixmap) return nullptr;
+    QPainter* p = new QPainter((QPixmap*)pixmap);
+    return (QtPainterHandle)p;
+}
+
+void qt_painter_set_pen(QtPainterHandle painter, const char* color_hex, int width) {
+    if (painter && color_hex) {
+        ((QPainter*)painter)->setPen(QPen(QColor(QString::fromUtf8(color_hex)), width));
+    }
+}
+
+void qt_painter_set_brush(QtPainterHandle painter, const char* color_hex) {
+    if (painter && color_hex) {
+        ((QPainter*)painter)->setBrush(QBrush(QColor(QString::fromUtf8(color_hex))));
+    }
+}
+
+void qt_painter_draw_line(QtPainterHandle painter, int x1, int y1, int x2, int y2) {
+    if (painter) ((QPainter*)painter)->drawLine(x1, y1, x2, y2);
+}
+
+void qt_painter_draw_rect(QtPainterHandle painter, int x, int y, int w, int h) {
+    if (painter) ((QPainter*)painter)->drawRect(x, y, w, h);
+}
+
+void qt_painter_draw_ellipse(QtPainterHandle painter, int x, int y, int w, int h) {
+    if (painter) ((QPainter*)painter)->drawEllipse(x, y, w, h);
+}
+
+void qt_painter_draw_text(QtPainterHandle painter, int x, int y, const char* text) {
+    if (painter && text) {
+        ((QPainter*)painter)->drawText(x, y, QString::fromUtf8(text));
+    }
+}
+
+void qt_painter_end(QtPainterHandle painter) {
+    if (painter) {
+        ((QPainter*)painter)->end();
+        delete (QPainter*)painter;
+    }
 }
 
 QtWidgetHandle qt_lineedit_create(const char* text, QtWidgetHandle parent) {
@@ -651,6 +908,9 @@ const char* qt_tablewidget_get_item(QtWidgetHandle table, int row, int col) {
  * ============================================================ */
 QtTrayHandle qt_tray_create(const char* tooltip) {
     QSystemTrayIcon* tray = new QSystemTrayIcon();
+    if (QApplication::style()) {
+        tray->setIcon(QApplication::style()->standardIcon(QStyle::SP_ComputerIcon));
+    }
     if (tooltip) tray->setToolTip(QString::fromUtf8(tooltip));
     return (QtTrayHandle)tray;
 }
@@ -661,6 +921,14 @@ void qt_tray_show(QtTrayHandle tray) {
 
 void qt_tray_hide(QtTrayHandle tray) {
     if (tray) ((QSystemTrayIcon*)tray)->hide();
+}
+
+void qt_tray_set_icon(QtTrayHandle tray, const char* icon_path) {
+    if (!tray) return;
+    QSystemTrayIcon* qtray = (QSystemTrayIcon*)tray;
+    if (icon_path && strlen(icon_path) > 0) {
+        qtray->setIcon(QIcon(QString::fromUtf8(icon_path)));
+    }
 }
 
 void qt_tray_set_menu(QtTrayHandle tray, QtMenuHandle menu) {
@@ -769,6 +1037,290 @@ void qt_timer_on_timeout(QtTimerHandle timer, QtVoidCallback callback, void* use
 
 void qt_timer_destroy(QtTimerHandle timer) {
     if (timer) delete (QTimer*)timer;
+}
+
+/* ============================================================
+ * Qt Charts
+ * ============================================================ */
+#if __has_include(<QtCharts/QChartView>) || defined(QT_CHARTS_LIB)
+QtChartViewHandle qt_chartview_create(QtWidgetHandle parent) {
+    QChartView* view = new QChartView((QWidget*)parent);
+    view->setRenderHint(QPainter::Antialiasing);
+    return (QtChartViewHandle)view;
+}
+void qt_chartview_set_chart(QtChartViewHandle view, QtChartHandle chart) {
+    if (view && chart) ((QChartView*)view)->setChart((QChart*)chart);
+}
+QtChartHandle qt_chart_create(void) {
+    return (QtChartHandle)new QChart();
+}
+void qt_chart_set_title(QtChartHandle chart, const char* title) {
+    if (chart && title) ((QChart*)chart)->setTitle(QString::fromUtf8(title));
+}
+void qt_chart_add_series(QtChartHandle chart, QtSeriesHandle series) {
+    if (chart && series) ((QChart*)chart)->addSeries((QAbstractSeries*)series);
+}
+void qt_chart_create_default_axes(QtChartHandle chart) {
+    if (chart) ((QChart*)chart)->createDefaultAxes();
+}
+QtSeriesHandle qt_lineseries_create(void) {
+    return (QtSeriesHandle)new QLineSeries();
+}
+void qt_lineseries_append(QtSeriesHandle series, double x, double y) {
+    if (series) ((QLineSeries*)series)->append(x, y);
+}
+QtSeriesHandle qt_pieseries_create(void) {
+    return (QtSeriesHandle)new QPieSeries();
+}
+void qt_pieseries_append(QtSeriesHandle series, const char* label, double value) {
+    if (series && label) ((QPieSeries*)series)->append(QString::fromUtf8(label), value);
+}
+
+/* Bar Series */
+QtSeriesHandle qt_barseries_create(void) {
+    return (QtSeriesHandle)new QBarSeries();
+}
+QtSeriesHandle qt_barset_create(const char* label) {
+    return (QtSeriesHandle)new QBarSet(QString::fromUtf8(label ? label : ""));
+}
+void qt_barset_append(QtSeriesHandle barset, double value) {
+    if (barset) ((QBarSet*)barset)->append(value);
+}
+void qt_barseries_append(QtSeriesHandle series, QtSeriesHandle barset) {
+    if (series && barset) ((QBarSeries*)series)->append((QBarSet*)barset);
+}
+
+/* Scatter Series */
+QtSeriesHandle qt_scatterseries_create(void) {
+    return (QtSeriesHandle)new QScatterSeries();
+}
+void qt_scatterseries_append(QtSeriesHandle series, double x, double y) {
+    if (series) ((QScatterSeries*)series)->append(x, y);
+}
+
+/* Axis Customization */
+void qt_chart_set_axis_title(QtChartHandle chart, int orientation, const char* title) {
+    if (!chart || !title) return;
+    Qt::Orientation orient = (orientation == 1) ? Qt::Vertical : Qt::Horizontal;
+    QList<QAbstractAxis*> axesList = ((QChart*)chart)->axes(orient);
+    for (QAbstractAxis* axis : axesList) {
+        axis->setTitleText(QString::fromUtf8(title));
+    }
+}
+void qt_chart_set_axis_range(QtChartHandle chart, int orientation, double min, double max) {
+    if (!chart) return;
+    Qt::Orientation orient = (orientation == 1) ? Qt::Vertical : Qt::Horizontal;
+    QList<QAbstractAxis*> axesList = ((QChart*)chart)->axes(orient);
+    for (QAbstractAxis* axis : axesList) {
+        QValueAxis* valAxis = qobject_cast<QValueAxis*>(axis);
+        if (valAxis) {
+            valAxis->setRange(min, max);
+        }
+    }
+}
+#else
+// Fallback if no charts available
+QtChartViewHandle qt_chartview_create(QtWidgetHandle parent) { return nullptr; }
+void qt_chartview_set_chart(QtChartViewHandle view, QtChartHandle chart) {}
+QtChartHandle qt_chart_create(void) { return nullptr; }
+void qt_chart_set_title(QtChartHandle chart, const char* title) {}
+void qt_chart_add_series(QtChartHandle chart, QtSeriesHandle series) {}
+void qt_chart_create_default_axes(QtChartHandle chart) {}
+QtSeriesHandle qt_lineseries_create(void) { return nullptr; }
+void qt_lineseries_append(QtSeriesHandle series, double x, double y) {}
+QtSeriesHandle qt_pieseries_create(void) { return nullptr; }
+void qt_pieseries_append(QtSeriesHandle series, const char* label, double value) {}
+QtSeriesHandle qt_barseries_create(void) { return nullptr; }
+QtSeriesHandle qt_barset_create(const char* label) { return nullptr; }
+void qt_barset_append(QtSeriesHandle barset, double value) {}
+void qt_barseries_append(QtSeriesHandle series, QtSeriesHandle barset) {}
+QtSeriesHandle qt_scatterseries_create(void) { return nullptr; }
+void qt_scatterseries_append(QtSeriesHandle series, double x, double y) {}
+void qt_chart_set_axis_title(QtChartHandle chart, int orientation, const char* title) {}
+void qt_chart_set_axis_range(QtChartHandle chart, int orientation, double min, double max) {}
+#endif
+
+/* ============================================================
+ * Pixmap Save & Load
+ * ============================================================ */
+bool qt_pixmap_save(QtPixmapHandle pixmap, const char* path) {
+    if (!pixmap || !path) return false;
+    return ((QPixmap*)pixmap)->save(QString::fromUtf8(path));
+}
+
+QtPixmapHandle qt_pixmap_load(const char* path) {
+    if (!path) return nullptr;
+    QPixmap* p = new QPixmap(QString::fromUtf8(path));
+    if (p->isNull()) {
+        delete p;
+        return nullptr;
+    }
+    return (QtPixmapHandle)p;
+}
+
+/* ============================================================
+ * Painter — Extended Drawing Primitives
+ * ============================================================ */
+void qt_painter_draw_rounded_rect(QtPainterHandle painter, int x, int y, int w, int h, int radius) {
+    if (painter) ((QPainter*)painter)->drawRoundedRect(x, y, w, h, radius, radius);
+}
+
+void qt_painter_draw_arc(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle) {
+    if (painter) ((QPainter*)painter)->drawArc(x, y, w, h, startAngle * 16, spanAngle * 16);
+}
+
+void qt_painter_draw_chord(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle) {
+    if (painter) ((QPainter*)painter)->drawChord(x, y, w, h, startAngle * 16, spanAngle * 16);
+}
+
+void qt_painter_draw_pie(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle) {
+    if (painter) ((QPainter*)painter)->drawPie(x, y, w, h, startAngle * 16, spanAngle * 16);
+}
+
+void qt_painter_draw_polygon(QtPainterHandle painter, const int* points, int count) {
+    if (!painter || !points || count < 3) return;
+    QPolygon poly;
+    for (int i = 0; i < count; ++i) {
+        poly << QPoint(points[i * 2], points[i * 2 + 1]);
+    }
+    ((QPainter*)painter)->drawPolygon(poly);
+}
+
+void qt_painter_draw_pixmap(QtPainterHandle painter, QtPixmapHandle pixmap, int x, int y) {
+    if (painter && pixmap) ((QPainter*)painter)->drawPixmap(x, y, *(QPixmap*)pixmap);
+}
+
+/* Pen style: 0=Solid, 1=Dash, 2=Dot, 3=DashDot, 4=DashDotDot */
+void qt_painter_set_pen_style(QtPainterHandle painter, int style, int width, const char* color_hex) {
+    if (!painter) return;
+    Qt::PenStyle ps = Qt::SolidLine;
+    switch (style) {
+        case 1: ps = Qt::DashLine; break;
+        case 2: ps = Qt::DotLine; break;
+        case 3: ps = Qt::DashDotLine; break;
+        case 4: ps = Qt::DashDotDotLine; break;
+        default: ps = Qt::SolidLine; break;
+    }
+    QPen pen(QColor(QString::fromUtf8(color_hex ? color_hex : "#000000")), width, ps);
+    ((QPainter*)painter)->setPen(pen);
+}
+
+/* Font family, size, bold, italic */
+void qt_painter_set_font(QtPainterHandle painter, const char* family, int size, bool bold, bool italic) {
+    if (!painter) return;
+    QFont font(QString::fromUtf8(family ? family : "Sans"), size);
+    font.setBold(bold);
+    font.setItalic(italic);
+    ((QPainter*)painter)->setFont(font);
+}
+
+/* ============================================================
+ * Canvas Widget — Double-buffered QPixmap-backed drawing area
+ * ============================================================ */
+QtWidgetHandle qt_canvas_create(QtWidgetHandle parent) {
+    CanvasWidget* cw = new CanvasWidget((QWidget*)parent);
+    return (QtWidgetHandle)cw;
+}
+
+QtPainterHandle qt_canvas_begin(QtWidgetHandle canvas) {
+    if (!canvas) return nullptr;
+    CanvasWidget* cw = (CanvasWidget*)canvas;
+    if (cw->activePainter) {
+        delete cw->activePainter;
+    }
+    cw->activePainter = new QPainter(cw->backing);
+    return (QtPainterHandle)cw->activePainter;
+}
+
+void qt_canvas_end(QtWidgetHandle canvas) {
+    if (!canvas) return;
+    CanvasWidget* cw = (CanvasWidget*)canvas;
+    if (cw->activePainter) {
+        cw->activePainter->end();
+        delete cw->activePainter;
+        cw->activePainter = nullptr;
+    }
+    cw->update();
+}
+
+void qt_canvas_clear(QtWidgetHandle canvas, const char* color_hex) {
+    if (!canvas) return;
+    CanvasWidget* cw = (CanvasWidget*)canvas;
+    cw->backing->fill(QColor(QString::fromUtf8(color_hex ? color_hex : "#ffffff")));
+    cw->update();
+}
+
+void qt_canvas_set_size(QtWidgetHandle canvas, int w, int h) {
+    if (!canvas) return;
+    CanvasWidget* cw = (CanvasWidget*)canvas;
+    cw->resizeBacking(w, h);
+    cw->resize(w, h);
+}
+
+/* ============================================================
+ * QDialog (Modal Dialog)
+ * ============================================================ */
+QtWidgetHandle qt_dialog_create(QtWidgetHandle parent) {
+    QDialog* dlg = new QDialog((QWidget*)parent);
+    dlg->setModal(true);
+    dlg->setWindowTitle("Dialog");
+    return (QtWidgetHandle)dlg;
+}
+
+int qt_dialog_exec(QtWidgetHandle dialog) {
+    if (!dialog) return 0;
+    return ((QDialog*)dialog)->exec();
+}
+
+/* ============================================================
+ * QDoubleSpinBox (Decimal Spin Control)
+ * ============================================================ */
+QtWidgetHandle qt_doublespinbox_create(QtWidgetHandle parent) {
+    QDoubleSpinBox* spin = new QDoubleSpinBox((QWidget*)parent);
+    spin->setRange(0.0, 100.0);
+    spin->setDecimals(2);
+    spin->setSingleStep(0.1);
+    return (QtWidgetHandle)spin;
+}
+
+void qt_doublespinbox_set_range(QtWidgetHandle spin, double min, double max) {
+    if (spin) ((QDoubleSpinBox*)spin)->setRange(min, max);
+}
+
+void qt_doublespinbox_set_value(QtWidgetHandle spin, double value) {
+    if (spin) ((QDoubleSpinBox*)spin)->setValue(value);
+}
+
+double qt_doublespinbox_get_value(QtWidgetHandle spin) {
+    return spin ? ((QDoubleSpinBox*)spin)->value() : 0.0;
+}
+
+void qt_doublespinbox_set_decimals(QtWidgetHandle spin, int prec) {
+    if (spin) ((QDoubleSpinBox*)spin)->setDecimals(prec);
+}
+
+/* ============================================================
+ * QPlainTextEdit (Plain Text Editor)
+ * ============================================================ */
+QtWidgetHandle qt_plaintextedit_create(const char* text, QtWidgetHandle parent) {
+    return (QtWidgetHandle)new QPlainTextEdit(QString::fromUtf8(text ? text : ""), (QWidget*)parent);
+}
+
+void qt_plaintextedit_append(QtWidgetHandle edit, const char* text) {
+    if (edit && text) ((QPlainTextEdit*)edit)->appendPlainText(QString::fromUtf8(text));
+}
+
+void qt_plaintextedit_clear(QtWidgetHandle edit) {
+    if (edit) ((QPlainTextEdit*)edit)->clear();
+}
+
+const char* qt_plaintextedit_get_text(QtWidgetHandle edit) {
+    if (!edit) return "";
+    return copy_qstring_to_temp(((QPlainTextEdit*)edit)->toPlainText());
+}
+
+void qt_plaintextedit_set_read_only(QtWidgetHandle edit, bool ro) {
+    if (edit) ((QPlainTextEdit*)edit)->setReadOnly(ro);
 }
 
 } // extern "C"

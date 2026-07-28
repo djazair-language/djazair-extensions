@@ -31,12 +31,22 @@ typedef void* QtPixmapHandle;
 typedef void* QtColorHandle;
 typedef void* QtFontHandle;
 typedef void* QtIconHandle;
+typedef void* QtMediaPlayerHandle;
+typedef void* QtPixmapHandle;
+typedef void* QtPainterHandle;
+typedef void* QtChartHandle;
+typedef void* QtChartViewHandle;
+typedef void* QtSeriesHandle;
+
 
 /* Callback function pointer types for Qt Signal / Event bridging */
 typedef void (*QtVoidCallback)(void* user_data);
 typedef void (*QtIntCallback)(int value, void* user_data);
 typedef void (*QtStringCallback)(const char* text, void* user_data);
 typedef void (*QtDoubleCallback)(double value, void* user_data);
+
+/* Resource Cleanup Helpers */
+void qt_object_delete(void* handle);
 
 /* ============================================================
  * Application Life Cycle & Global Theme
@@ -49,7 +59,7 @@ void        qt_app_set_style(const char* style_name);
 void        qt_app_destroy(QtAppHandle app);
 
 /* ============================================================
- * Base QWidget Operations & Events
+ * Base QWidget Operations & Attributes
  * ============================================================ */
 QtWidgetHandle qt_widget_create(QtWidgetHandle parent);
 void           qt_widget_show(QtWidgetHandle widget);
@@ -65,8 +75,12 @@ void           qt_widget_set_tooltip(QtWidgetHandle widget, const char* text);
 void           qt_widget_update(QtWidgetHandle widget);
 void           qt_widget_destroy(QtWidgetHandle widget);
 
+/* Drag & Drop */
+void           qt_widget_set_accept_drops(QtWidgetHandle widget, bool accept);
+void           qt_widget_on_drop(QtWidgetHandle widget, QtStringCallback callback, void* user_data);
+
 /* ============================================================
- * QMainWindow, MenuBar, ToolBar, StatusBar
+ * QMainWindow, MenuBar, Menu, Action, ToolBar, StatusBar
  * ============================================================ */
 QtMainWindowHandle qt_mainwindow_create(void);
 void               qt_mainwindow_set_central_widget(QtMainWindowHandle main_win, QtWidgetHandle widget);
@@ -74,11 +88,29 @@ void               qt_mainwindow_set_title(QtMainWindowHandle main_win, const ch
 void               qt_mainwindow_resize(QtMainWindowHandle main_win, int w, int h);
 void               qt_mainwindow_show(QtMainWindowHandle main_win);
 QtMenuHandle       qt_mainwindow_add_menu(QtMainWindowHandle main_win, const char* title);
+QtMenuHandle       qt_menu_add_submenu(QtMenuHandle menu, const char* title);
 QtActionHandle     qt_menu_add_action(QtMenuHandle menu, const char* text, QtVoidCallback callback, void* user_data);
 void               qt_menu_add_separator(QtMenuHandle menu);
 QtWidgetHandle     qt_mainwindow_add_toolbar(QtMainWindowHandle main_win, const char* title);
 void               qt_toolbar_add_action(QtWidgetHandle toolbar, const char* text, QtVoidCallback callback, void* user_data);
 void               qt_mainwindow_set_status_message(QtMainWindowHandle main_win, const char* message, int timeout_ms);
+
+/* ============================================================
+ * Dynamic UI Designer Loader (QtUiTools & QUiLoader)
+ * ============================================================ */
+QtWidgetHandle qt_uiloader_load_file(const char* filepath, QtWidgetHandle parent);
+
+/* ============================================================
+ * Multimedia Engine (QtMultimedia & QMediaPlayer)
+ * ============================================================ */
+QtMediaPlayerHandle qt_mediaplayer_create(void);
+void                qt_mediaplayer_set_media(QtMediaPlayerHandle player, const char* file_or_url);
+void                qt_mediaplayer_play(QtMediaPlayerHandle player);
+void                qt_mediaplayer_pause(QtMediaPlayerHandle player);
+void                qt_mediaplayer_stop(QtMediaPlayerHandle player);
+void                qt_mediaplayer_set_volume(QtMediaPlayerHandle player, int volume);
+QtWidgetHandle      qt_videowidget_create(QtWidgetHandle parent);
+void                qt_mediaplayer_set_video_output(QtMediaPlayerHandle player, QtWidgetHandle video_widget);
 
 /* ============================================================
  * Basic Controls (Button, Label, LineEdit, TextEdit, CheckBox, Radio, Sliders)
@@ -93,11 +125,48 @@ const char*    qt_label_get_text(QtWidgetHandle label);
 void           qt_label_set_alignment(QtWidgetHandle label, int align_flag);
 void           qt_label_set_pixmap(QtWidgetHandle label, QtPixmapHandle pixmap);
 
+/* ============================================================
+ * Canvas & Drawing (QPainter & QPixmap)
+ * ============================================================ */
+QtPixmapHandle qt_pixmap_create(int w, int h);
+void           qt_pixmap_fill(QtPixmapHandle pixmap, const char* color_hex);
+void           qt_pixmap_destroy(QtPixmapHandle pixmap);
+
+QtPainterHandle qt_painter_create(QtPixmapHandle pixmap);
+void            qt_painter_set_pen(QtPainterHandle painter, const char* color_hex, int width);
+void            qt_painter_set_brush(QtPainterHandle painter, const char* color_hex);
+void            qt_painter_draw_line(QtPainterHandle painter, int x1, int y1, int x2, int y2);
+void            qt_painter_draw_rect(QtPainterHandle painter, int x, int y, int w, int h);
+void            qt_painter_draw_ellipse(QtPainterHandle painter, int x, int y, int w, int h);
+void            qt_painter_draw_text(QtPainterHandle painter, int x, int y, const char* text);
+void            qt_painter_end(QtPainterHandle painter);
+
+/* Extended drawing primitives */
+void            qt_painter_draw_rounded_rect(QtPainterHandle painter, int x, int y, int w, int h, int radius);
+void            qt_painter_draw_arc(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle);
+void            qt_painter_draw_chord(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle);
+void            qt_painter_draw_pie(QtPainterHandle painter, int x, int y, int w, int h, int startAngle, int spanAngle);
+void            qt_painter_draw_polygon(QtPainterHandle painter, const int* points, int count);
+void            qt_painter_draw_pixmap(QtPainterHandle painter, QtPixmapHandle pixmap, int x, int y);
+void            qt_painter_set_pen_style(QtPainterHandle painter, int style, int width, const char* color_hex);
+void            qt_painter_set_font(QtPainterHandle painter, const char* family, int size, bool bold, bool italic);
+
+/* Pixmap save/load */
+bool            qt_pixmap_save(QtPixmapHandle pixmap, const char* path);
+QtPixmapHandle  qt_pixmap_load(const char* path);
+
+/* Canvas widget (double-buffered drawing area) */
+QtWidgetHandle  qt_canvas_create(QtWidgetHandle parent);
+QtPainterHandle qt_canvas_begin(QtWidgetHandle canvas);
+void            qt_canvas_end(QtWidgetHandle canvas);
+void            qt_canvas_clear(QtWidgetHandle canvas, const char* color_hex);
+void            qt_canvas_set_size(QtWidgetHandle canvas, int w, int h);
+
 QtWidgetHandle qt_lineedit_create(const char* text, QtWidgetHandle parent);
 void           qt_lineedit_set_text(QtWidgetHandle line_edit, const char* text);
 const char*    qt_lineedit_get_text(QtWidgetHandle line_edit);
 void           qt_lineedit_set_placeholder(QtWidgetHandle line_edit, const char* text);
-void           qt_lineedit_set_echo_mode(QtWidgetHandle line_edit, int mode); // 0: Normal, 2: Password
+void           qt_lineedit_set_echo_mode(QtWidgetHandle line_edit, int mode);
 void           qt_lineedit_on_change(QtWidgetHandle line_edit, QtStringCallback callback, void* user_data);
 
 QtWidgetHandle qt_textedit_create(const char* text, QtWidgetHandle parent);
@@ -199,11 +268,36 @@ const char*    qt_tablewidget_get_item(QtWidgetHandle table, int row, int col);
 QtTrayHandle   qt_tray_create(const char* tooltip);
 void           qt_tray_show(QtTrayHandle tray);
 void           qt_tray_hide(QtTrayHandle tray);
+void           qt_tray_set_icon(QtTrayHandle tray, const char* icon_path);
 void           qt_tray_set_menu(QtTrayHandle tray, QtMenuHandle menu);
 void           qt_tray_show_message(QtTrayHandle tray, const char* title, const char* message, int icon_type, int timeout_ms);
 
 /* ============================================================
- * Dialogs & Modals
+ * QDialog (Modal Dialog)
+ * ============================================================ */
+QtWidgetHandle qt_dialog_create(QtWidgetHandle parent);
+int           qt_dialog_exec(QtWidgetHandle dialog);
+
+/* ============================================================
+ * QDoubleSpinBox (Decimal Spin Control)
+ * ============================================================ */
+QtWidgetHandle qt_doublespinbox_create(QtWidgetHandle parent);
+void           qt_doublespinbox_set_range(QtWidgetHandle spin, double min, double max);
+void           qt_doublespinbox_set_value(QtWidgetHandle spin, double value);
+double         qt_doublespinbox_get_value(QtWidgetHandle spin);
+void           qt_doublespinbox_set_decimals(QtWidgetHandle spin, int prec);
+
+/* ============================================================
+ * QPlainTextEdit (Plain Text Editor)
+ * ============================================================ */
+QtWidgetHandle qt_plaintextedit_create(const char* text, QtWidgetHandle parent);
+void           qt_plaintextedit_append(QtWidgetHandle edit, const char* text);
+void           qt_plaintextedit_clear(QtWidgetHandle edit);
+const char*    qt_plaintextedit_get_text(QtWidgetHandle edit);
+void           qt_plaintextedit_set_read_only(QtWidgetHandle edit, bool ro);
+
+/* ============================================================
+ * Dialogs & Modals (MessageBox, FileDialog, InputDialog)
  * ============================================================ */
 void        qt_messagebox_info(QtWidgetHandle parent, const char* title, const char* message);
 void        qt_messagebox_warning(QtWidgetHandle parent, const char* title, const char* message);
@@ -223,6 +317,34 @@ void          qt_timer_start(QtTimerHandle timer, int msec);
 void          qt_timer_stop(QtTimerHandle timer);
 void          qt_timer_on_timeout(QtTimerHandle timer, QtVoidCallback callback, void* user_data);
 void          qt_timer_destroy(QtTimerHandle timer);
+
+/* ============================================================
+ * Qt Charts
+ * ============================================================ */
+QtChartViewHandle qt_chartview_create(QtWidgetHandle parent);
+void              qt_chartview_set_chart(QtChartViewHandle view, QtChartHandle chart);
+
+QtChartHandle     qt_chart_create(void);
+void              qt_chart_set_title(QtChartHandle chart, const char* title);
+void              qt_chart_add_series(QtChartHandle chart, QtSeriesHandle series);
+void              qt_chart_create_default_axes(QtChartHandle chart);
+
+QtSeriesHandle    qt_lineseries_create(void);
+void              qt_lineseries_append(QtSeriesHandle series, double x, double y);
+
+QtSeriesHandle    qt_pieseries_create(void);
+void              qt_pieseries_append(QtSeriesHandle series, const char* label, double value);
+
+QtSeriesHandle    qt_barseries_create(void);
+QtSeriesHandle    qt_barset_create(const char* label);
+void              qt_barset_append(QtSeriesHandle barset, double value);
+void              qt_barseries_append(QtSeriesHandle series, QtSeriesHandle barset);
+
+QtSeriesHandle    qt_scatterseries_create(void);
+void              qt_scatterseries_append(QtSeriesHandle series, double x, double y);
+
+void              qt_chart_set_axis_title(QtChartHandle chart, int orientation, const char* title);
+void              qt_chart_set_axis_range(QtChartHandle chart, int orientation, double min, double max);
 
 #ifdef __cplusplus
 }

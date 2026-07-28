@@ -1,0 +1,20 @@
+# core/timer.dz — Native Qt QTimer Wrapper
+let _qt = __dynamic("qt")
+
+class Timer
+    init()
+        self.handle = _qt.timerCreate()
+    end
+
+    start(msec)
+        _qt.timerStart(self.handle, msec)
+    end
+
+    stop()
+        _qt.timerStop(self.handle)
+    end
+
+    onTimeout(callback)
+        _qt.timerOnTimeout(self.handle, callback)
+    end
+end

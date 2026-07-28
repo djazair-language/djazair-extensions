@@ -1,9 +1,21 @@
-# window/dialogs.dz — Dialogs & Modals
+# window/dialogs.dz — MessageBox, FileDialog, and InputDialog Modals
 let _qt = __dynamic("qt")
 
 class MessageBox
     info(title, message)
         _qt.messageboxInfo(title, message)
+    end
+
+    warning(title, message)
+        _qt.messageboxWarning(title, message)
+    end
+
+    error(title, message)
+        _qt.messageboxError(title, message)
+    end
+
+    question(title, message)
+        return _qt.messageboxQuestion(title, message)
     end
 end
 

@@ -1,0 +1,24 @@
+# 05_load_ui_file.dz — Dynamic Qt Designer UI Loader Example
+use qt
+
+let app = new qt.Application()
+
+# Try loading sample_form.ui from current folder or relative extension paths
+let uiPath = "sample_form.ui"
+let window = qt.loadUi(uiPath)
+
+if window == Null
+    uiPath = "sample_form.ui"
+    window = qt.loadUi(uiPath)
+end
+
+
+
+if window != Null
+    let theme = new qt.Theme()
+    theme.applyDark(window)
+    window.show()
+    app.exec()
+else
+    print("[ERROR] Could not locate sample_form.ui file! Please ensure the file exists.")
+end

@@ -1,0 +1,26 @@
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Qt - Drag & Drop")
+window.resize(400, 300)
+
+let label = new qt.Label(window)
+label.setText("Drag and drop files here!")
+label.setAlignment(132) # AlignCenter
+
+# Enable drag and drop
+label.setAcceptDrops(True)
+
+# This would normally receive the file paths, but callbacks are currently 
+# a work-in-progress in the Djazair VM native API! The C++ backend will 
+# print the dropped URLs to the console.
+label.onDrop(fn(urls)
+    print(urls)
+end)
+
+window.setCentralWidget(label)
+window.show()
+
+app.exec()

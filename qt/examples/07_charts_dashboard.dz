@@ -1,0 +1,49 @@
+use qt
+
+let app = new qt.Application()
+
+let window = new qt.MainWindow()
+window.setTitle("Djazair Qt - Charts Dashboard")
+window.resize(800, 600)
+
+let central = new qt.Widget()
+let layout = new qt.GridLayout(central)
+
+# --- Line Chart ---
+let lineChart = new qt.Chart()
+lineChart.setTitle("Monthly Sales Performance")
+
+let lineSeries = new qt.LineSeries()
+lineSeries.append(0, 5)
+lineSeries.append(1, 15)
+lineSeries.append(2, 8)
+lineSeries.append(3, 22)
+lineSeries.append(4, 12)
+lineSeries.append(5, 30)
+
+lineChart.addSeries(lineSeries)
+lineChart.createDefaultAxes()
+
+let lineView = new qt.ChartView(central)
+lineView.setChart(lineChart)
+layout.addWidget(lineView, 0, 0, 1, 1)
+
+# --- Pie Chart ---
+let pieChart = new qt.Chart()
+pieChart.setTitle("Market Share 2026")
+
+let pieSeries = new qt.PieSeries()
+pieSeries.append("Djazair", 60.0)
+pieSeries.append("Python", 25.0)
+pieSeries.append("C++", 15.0)
+
+pieChart.addSeries(pieSeries)
+
+let pieView = new qt.ChartView(central)
+pieView.setChart(pieChart)
+layout.addWidget(pieView, 0, 1, 1, 1)
+
+
+window.setCentralWidget(central)
+window.show()
+app.exec()

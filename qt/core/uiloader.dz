@@ -1,0 +1,18 @@
+# core/uiloader.dz — Dynamic Qt Designer (.ui XML) File Loader
+let _qt = __dynamic("qt")
+
+import "../widgets/base.dz" as baseMod
+
+fn loadUi(filepath, parent = Null)
+    let parentHandle = Null
+    if parent != Null
+        parentHandle = parent.handle
+    end
+    let handle = _qt.loadUi(filepath, parentHandle)
+    if handle == Null
+        return Null
+    end
+    let widget = new baseMod.Widget()
+    widget.handle = handle
+    return widget
+end

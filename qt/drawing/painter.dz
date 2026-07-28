@@ -1,0 +1,98 @@
+# drawing/painter.dz
+let _qt = __dynamic("qt")
+
+class Pixmap
+    init(width, height)
+        self.handle = _qt.pixmapCreate(width, height)
+    end
+
+    fill(color_hex)
+        _qt.pixmapFill(self.handle, color_hex)
+    end
+
+    save(path)
+        return _qt.pixmapSave(self.handle, path)
+    end
+
+    destroy()
+        _qt.pixmapDestroy(self.handle)
+    end
+end
+
+fn pixmapLoad(path)
+    let h = _qt.pixmapLoad(path)
+    if h != Null
+        let p = Pixmap(1, 1)
+        p.handle = h
+        return p
+    end
+    return Null
+end
+
+class Painter
+    init(pixmap = Null)
+        if pixmap != Null
+            self.handle = _qt.painterCreate(pixmap.handle)
+        end
+    end
+
+    setPen(color_hex, width = 1)
+        _qt.painterSetPen(self.handle, color_hex, width)
+    end
+
+    setPenStyle(style, width, color_hex)
+        _qt.painterSetPenStyle(self.handle, style, width, color_hex)
+    end
+
+    setFont(family, size, bold = False, italic = False)
+        _qt.painterSetFont(self.handle, family, size, bold, italic)
+    end
+
+    setBrush(color_hex)
+        _qt.painterSetBrush(self.handle, color_hex)
+    end
+
+    drawLine(x1, y1, x2, y2)
+        _qt.painterDrawLine(self.handle, x1, y1, x2, y2)
+    end
+
+    drawRect(x, y, w, h)
+        _qt.painterDrawRect(self.handle, x, y, w, h)
+    end
+
+    drawRoundedRect(x, y, w, h, radius)
+        _qt.painterDrawRoundedRect(self.handle, x, y, w, h, radius)
+    end
+
+    drawEllipse(x, y, w, h)
+        _qt.painterDrawEllipse(self.handle, x, y, w, h)
+    end
+
+    drawArc(x, y, w, h, startAngle, spanAngle)
+        _qt.painterDrawArc(self.handle, x, y, w, h, startAngle, spanAngle)
+    end
+
+    drawChord(x, y, w, h, startAngle, spanAngle)
+        _qt.painterDrawChord(self.handle, x, y, w, h, startAngle, spanAngle)
+    end
+
+    drawPie(x, y, w, h, startAngle, spanAngle)
+        _qt.painterDrawPie(self.handle, x, y, w, h, startAngle, spanAngle)
+    end
+
+    drawPolygon(points)
+        _qt.painterDrawPolygon(self.handle, points)
+    end
+
+    drawPixmap(x, y, pixmap)
+        _qt.painterDrawPixmap(self.handle, pixmap.handle, x, y)
+    end
+
+    drawText(x, y, text)
+        _qt.painterDrawText(self.handle, x, y, text)
+    end
+
+    endPaint()
+        _qt.painterEnd(self.handle)
+    end
+end

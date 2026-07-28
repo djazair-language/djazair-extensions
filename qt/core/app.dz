@@ -21,4 +21,8 @@ class Application
     quit()
         _qt.appQuit(self.handle)
     end
+
+    destroy()
+        _qt.appDestroy(self.handle)
+    end
 end
