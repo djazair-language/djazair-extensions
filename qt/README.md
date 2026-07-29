@@ -1,50 +1,63 @@
 # Djazair Qt Framework Extension (`qt`)
 
-Enterprise GUI, Multimedia, Dynamic UI Designer (.ui) Loader, and System Integration extension for the **Djazair Programming Language**.
+Enterprise-grade GUI, Multimedia, 2D Drawing, Charts, and System Integration extension for the **Djazair Programming Language**. 
+
+Built on top of C++ Qt, this extension provides a native, highly optimized, and modern API to build cross-platform desktop applications in Djazair. It strictly adheres to the standard Qt `camelCase` naming conventions and `Q`-prefixed class names (e.g., `QMainWindow`, `QPushButton`) to provide a familiar experience for both beginners and seasoned Qt professionals.
 
 ---
 
 ## 🌟 Key Features
 
-- **Modern Desktop Widgets**: Buttons, Labels, LineEdits, TextEdits, CheckBoxes, RadioButtons, ComboBoxes, ProgressBars, Sliders, SpinBoxes.
-- **Dynamic Qt Designer Loader (`qt.loadUi`)**: Dynamically parse `.ui` XML layout files created with Qt Designer at runtime.
-- **Multimedia Engine (`qt.MediaPlayer` & `qt.VideoWidget`)**: Native video and audio playback directly inside Djazair applications.
-- **Complex Data Views**: Multi-column `TreeWidget` (with `TreeItem` wrappers), `TableWidget`, and `ListWidget`.
-- **Flexible Layout Managers**: `VBoxLayout`, `HBoxLayout`, `GridLayout`, and `FormLayout` with `setMargins()` & `setSpacing()`.
-- **System Integration**: Modals (`MessageBox` with info/warning/error/question), `FileDialog`, `InputDialog`, `QTimer`, and `SystemTrayIcon`.
+- **Modern Desktop Widgets**: `QPushButton`, `QLabel`, `QLineEdit`, `QTextEdit`, `QPlainTextEdit`, `QCheckBox`, `QRadioButton`, `QComboBox`, `QProgressBar`, `QSlider`, `QSpinBox`, `QDoubleSpinBox`.
+- **Flexible Layout Managers**: `QVBoxLayout`, `QHBoxLayout`, `QGridLayout`, and `QFormLayout` with full margins and spacing control.
+- **Complex Data Views**: Multi-column `QTreeWidget` (with `QTreeWidgetItem`), `QTableWidget`, and `QListWidget`.
+- **Advanced 2D Drawing (Canvas)**: Double-buffered `QCanvas` with hardware-accelerated `QPainter` (lines, rects, ellipses, polygons) and `QPixmap` (image loading/saving).
+- **Interactive Data Visualization (Charts)**: `QChart`, `QChartView`, `QLineSeries`, `QPieSeries`, `QBarSeries`, `QBarSet`, and `QScatterSeries` with customizable axes.
+- **Drag & Drop**: Native drag-and-drop support across all widgets (`setAcceptDrops`, `onDrop`).
+- **Dynamic UI Loader (`qt.loadUi`)**: Dynamically parse `.ui` XML layout files created with Qt Designer at runtime.
+- **Multimedia Engine (`QMediaPlayer` & `QVideoWidget`)**: Native video and audio playback directly inside Djazair applications.
+- **System Integration**: Modals (`QMessageBox`, `QFileDialog`, `QInputDialog`), background timers (`QTimer`), and system tray (`QSystemTrayIcon`).
 - **Preset Themes**: Instant modern styling via `Theme.applyDark()` and `Theme.applyLight()`.
 
 ---
 
 ## 🚀 Quick Start Example
 
+A minimal example to create a window with a button and a layout:
+
 ```djazair
 use qt
 
-let app = new qt.Application()
+# 1. Initialize the application
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
-window.setWindowTitle("Djazair Qt Quick Start")
-window.resize(600, 400)
+# 2. Create the main window
+let mainWindow = new qt.QMainWindow()
+mainWindow.setWindowTitle("Djazair Qt Quick Start")
+mainWindow.resize(600, 400)
 
-let label = new qt.Label("Hello from Djazair Qt!")
-let button = new qt.Button("Click Me")
+# 3. Create widgets
+let label = new qt.QLabel("Hello from Djazair Qt!")
+let button = new qt.QPushButton("Click Me")
 
-let vbox = new qt.VBoxLayout()
+# 4. Arrange widgets in a Vertical Box Layout
+let vbox = new qt.QVBoxLayout()
 vbox.setMargins(15, 15, 15, 15)
 vbox.setSpacing(10)
 vbox.addWidget(label)
 vbox.addWidget(button)
 
-let central = new qt.Widget()
+# 5. Set the central widget
+let central = new qt.QWidget()
 central.setLayout(vbox)
+mainWindow.setCentralWidget(central)
 
+# 6. Apply a professional dark theme and show
 let theme = new qt.Theme()
-theme.applyDark(window)
+theme.applyDark(mainWindow)
+mainWindow.show()
 
-window.setCentralWidget(central)
-window.show()
-
+# 7. Start the event loop
 app.exec()
 ```
 
@@ -52,51 +65,127 @@ app.exec()
 
 ## 📚 API Reference Overview
 
-### Core & Application
-- `new qt.Application()`
-- `app.exec()`
-- `new qt.Timer()`: `.start(msec)`, `.stop()`
-- `qt.loadUi(filepath)`: Load `.ui` XML file dynamically.
+### 1. Core & Application
+- `new qt.QApplication()`: Initializes the Qt GUI subsystem.
+- `app.exec()`: Starts the main event loop.
+- `new qt.QTimer()`: `.start(msec)`, `.stop()`.
+- `qt.loadUi(filepath)`: Loads a `.ui` XML file dynamically and returns the widget handle.
 
-### Widgets & Controls
-- `new qt.Widget(parent)`: `.show()`, `.hide()`, `.setVisible(bool)`, `.setWindowTitle(title)`, `.resize(w, h)`, `.setLayout(layout)`, `.setStyleSheet(css)`, `.setToolTip(text)`
-- `new qt.Button(text, parent)`: `.setText(text)`
-- `new qt.Label(text, parent)`: `.setText(text)`, `.getText()`
-- `new qt.LineEdit(text, parent)`: `.setText(text)`, `.getText()`, `.setPlaceholder(text)`, `.setEchoMode(mode)`
-- `new qt.TextEdit(text, parent)`: `.setText(text)`, `.getText()`, `.clear()`, `.append(text)`
-- `new qt.CheckBox(text, parent)`: `.isChecked()`
-- `new qt.ComboBox(parent)`: `.addItem(text)`, `.getCurrentText()`
-- `new qt.ProgressBar(parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
-- `new qt.Slider(orient, parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
-- `new qt.SpinBox(parent)`: `.setRange(min, max)`, `.getValue()`
+### 2. Base Widget Methods
+All GUI elements inherit from `QWidget` and share these methods:
+- `.show()`, `.hide()`, `.setVisible(bool)`
+- `.setWindowTitle(title)`, `.resize(w, h)`, `.setGeometry(x, y, w, h)`
+- `.setLayout(layout)`, `.setStyleSheet(css)`, `.setToolTip(text)`, `.setEnabled(bool)`
+- **Drag & Drop**: `.setAcceptDrops(bool)`, `.onDrop(fn(text) { ... })`
 
-### Containers & Views
-- `new qt.TabWidget(parent)`: `.addTab(widget, title)`
-- `new qt.StackedWidget(parent)`: `.addWidget(widget)`
-- `new qt.GroupBox(title, parent)`
-- `new qt.ScrollArea(parent)`: `.setWidget(widget)`
-- `new qt.Splitter(orient, parent)`: `.addWidget(widget)`
-- `new qt.ListWidget(parent)`: `.addItem(text)`
-- `new qt.TreeWidget(parent)`: `.setHeaders(headersArray)`, `.addItem(colsArray, parentItem)` -> returns `TreeItem`
-- `new qt.TableWidget(rows, cols, parent)`: `.setItem(row, col, text)`
+### 3. Controls & Inputs
+- `new qt.QPushButton(text, parent)`: `.setText(text)`
+- `new qt.QLabel(text, parent)`: `.setText(text)`, `.getText()`, `.setAlignment(alignInt)`
+- `new qt.QLineEdit(text, parent)`: `.setText(text)`, `.getText()`, `.setPlaceholder(text)`, `.setEchoMode(mode)`
+- `new qt.QTextEdit(text, parent)` / `QPlainTextEdit(text, parent)`: `.setText(text)`, `.getText()`, `.clear()`, `.append(text)`
+- `new qt.QCheckBox(text, parent)`: `.isChecked()`
+- `new qt.QRadioButton(text, parent)`: `.isChecked()`
+- `new qt.QComboBox(parent)`: `.addItem(text)`, `.getCurrentText()`
+- `new qt.QProgressBar(parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
+- `new qt.QSlider(orient, parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
+- `new qt.QSpinBox(parent)` / `QDoubleSpinBox(parent)`: `.setRange(min, max)`, `.setValue(val)`, `.getValue()`
 
-### Layout Managers
-- `new qt.VBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
-- `new qt.HBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
-- `new qt.GridLayout(parent)`: `.addWidget(widget, row, col, rowSpan, colSpan)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
-- `new qt.FormLayout(parent)`: `.addRow(label, fieldWidget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+### 4. Containers & Views
+- `new qt.QTabWidget(parent)`: `.addTab(widget, title)`
+- `new qt.QStackedWidget(parent)`: `.addWidget(widget)`
+- `new qt.QGroupBox(title, parent)`
+- `new qt.QScrollArea(parent)`: `.setWidget(widget)`
+- `new qt.QSplitter(orient, parent)`: `.addWidget(widget)`
+- `new qt.QListWidget(parent)`: `.addItem(text)`
+- `new qt.QTreeWidget(parent)`: `.setHeaders(headersArray)`, `.addItem(colsArray, parentItem)` -> returns `QTreeWidgetItem`
+- `new qt.QTableWidget(rows, cols, parent)`: `.setItem(row, col, text)`
 
-### Windows & Dialogs
-- `new qt.MainWindow()`: `.setCentralWidget(widget)`, `.setWindowTitle(title)`, `.addMenu(title)` -> returns `Menu`, `.addToolBar(title)`, `.setStatusMessage(msg, timeout)`
-- `Menu`: `.addMenu(title)`, `.addAction(title)` -> returns `Action`, `.addSeparator()`
-- `qt.MessageBox`: `.info(title, msg)`, `.warning(title, msg)`, `.error(title, msg)`, `.question(title, msg)` (returns `bool`)
-- `qt.FileDialog`: `.getOpenFileName()`, `.getSaveFileName()`, `.getExistingDirectory()`
-- `qt.InputDialog`: `.getText(title, label)`
-- `new qt.SystemTrayIcon(tooltip)`: `.show()`, `.setContextMenu(menu)`, `.showMessage(title, msg, iconType, timeout)`
+### 5. Layout Managers
+- `new qt.QVBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.QHBoxLayout(parent)`: `.addWidget(widget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.QGridLayout(parent)`: `.addWidget(widget, row, col, rowSpan, colSpan)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
+- `new qt.QFormLayout(parent)`: `.addRow(label, fieldWidget)`, `.setMargins(l, t, r, b)`, `.setSpacing(s)`
 
-### Multimedia Engine
-- `new qt.MediaPlayer()`: `.setMedia(pathOrUrl)`, `.play()`, `.pause()`, `.stop()`, `.setVideoOutput(videoWidget)`
-- `new qt.VideoWidget(parent)`
+### 6. Windows, Menus & Dialogs
+- `new qt.QMainWindow()`: `.setCentralWidget(widget)`, `.setWindowTitle(title)`, `.addMenu(title)` -> returns `QMenu`, `.addToolBar(title)` -> returns `QToolBar`, `.setStatusMessage(msg, timeout)`
+- `QMenu`: `.addMenu(title)`, `.addAction(title)` -> returns `QAction`, `.addSeparator()`
+- `new qt.QDialog(parent)`: `.exec()`
+- `qt.QMessageBox`: `.info(title, msg)`, `.warning(title, msg)`, `.error(title, msg)`, `.question(title, msg)` (returns boolean)
+- `qt.QFileDialog`: `.getOpenFileName()`, `.getSaveFileName()`, `.getExistingDirectory()`
+- `qt.QInputDialog`: `.getText(title, label)`
+- `new qt.QSystemTrayIcon(tooltip)`: `.show()`, `.setContextMenu(menu)`, `.showMessage(title, msg, iconType, timeout)`
 
-### Themes
-- `new qt.Theme()`: `.applyDark(widget)`, `.applyLight(widget)`
+### 7. 2D Drawing & Canvas (`QCanvas`, `QPainter`, `QPixmap`)
+- `new qt.QPixmap(width, height)`: `.fill(hex_color)`, `.save(path)`. Load via `qt.pixmapLoad(path)`
+- `new qt.QCanvas(parent)`: A double-buffered drawing widget.
+  - `.begin()`: Starts drawing, returns a `QPainter` instance.
+  - `.endPaint()`: Finishes drawing and updates the screen.
+  - `.clear(hex_color)`: Clears the canvas.
+- `QPainter` methods: 
+  - `.setPen(hex_color, width)`, `.setPenStyle(style, width, color)`, `.setBrush(hex_color)`, `.setFont(family, size, bold, italic)`
+  - `.drawLine(x1, y1, x2, y2)`, `.drawRect(x, y, w, h)`, `.drawRoundedRect(x, y, w, h, radius)`, `.drawEllipse(x, y, w, h)`
+  - `.drawText(x, y, text)`, `.drawPixmap(x, y, pixmap)`
+
+### 8. Data Visualization (`QChart`)
+- `new qt.QChart()`: `.setTitle(title)`, `.addSeries(series)`, `.createDefaultAxes()`, `.setAxisTitle(orient, title)`, `.setAxisRange(orient, min, max)`
+- `new qt.QChartView(parent)`: `.setChart(chart)`
+- **Series Types**:
+  - `new qt.QLineSeries()`: `.append(x, y)`
+  - `new qt.QScatterSeries()`: `.append(x, y)`
+  - `new qt.QPieSeries()`: `.append(label, value)`
+  - `new qt.QBarSeries()`: `.append(barSet)`. (`new qt.QBarSet(label)` -> `.append(value)`)
+
+### 9. Multimedia Engine
+- `new qt.QMediaPlayer()`: `.setMedia(pathOrUrl)`, `.play()`, `.pause()`, `.stop()`, `.setVideoOutput(videoWidget)`
+- `new qt.QVideoWidget(parent)`: A widget to render the video frames.
+
+### 10. Themes
+- `new qt.Theme()`: Built-in professional themes.
+  - `.applyDark(widget)`
+  - `.applyLight(widget)`
+
+---
+
+## 🛠 Advanced Features
+
+### Handling Drag & Drop
+Enable drag & drop on any widget and bind a callback using `onDrop`:
+```djazair
+let dropZone = new qt.QLabel("Drop files here")
+dropZone.setAcceptDrops(True)
+dropZone.onDrop(fn(data) {
+    qt.QMessageBox.info("File Dropped", "You dropped: " ~ data)
+})
+```
+
+### Drawing with QCanvas
+```djazair
+let canvas = new qt.QCanvas()
+let painter = canvas.begin()
+if painter != Null
+    painter.setPen("#ff0000", 2)
+    painter.drawRect(50, 50, 200, 150)
+    painter.endPaint()
+end
+canvas.endPaint()
+```
+
+### Creating Charts
+```djazair
+let chart = new qt.QChart()
+chart.setTitle("Sales Growth")
+
+let series = new qt.QLineSeries()
+series.append(0, 10)
+series.append(1, 45)
+series.append(2, 25)
+
+chart.addSeries(series)
+chart.createDefaultAxes()
+
+let view = new qt.QChartView()
+view.setChart(chart)
+```
+
+---
+*Developed for the Djazair Programming Language.*
