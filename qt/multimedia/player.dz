@@ -1,7 +1,7 @@
 # multimedia/player.dz — Native Qt QMediaPlayer Wrapper
 let _qt = __dynamic("qt")
 
-class MediaPlayer
+class QMediaPlayer
     init()
         self.handle = _qt.mediaplayerCreate()
     end
@@ -26,3 +26,5 @@ class MediaPlayer
         _qt.mediaplayerSetVideoOutput(self.handle, videoWidget.handle)
     end
 end
+
+

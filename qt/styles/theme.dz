@@ -24,3 +24,5 @@ class Theme
         _qt.widgetSetStyleSheet(widget.handle, lightStyle)
     end
 end
+
+

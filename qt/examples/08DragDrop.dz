@@ -1,12 +1,12 @@
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
+let window = new qt.QMainWindow()
 window.setTitle("Djazair Qt - Drag & Drop")
 window.resize(400, 300)
 
-let label = new qt.Label(window)
+let label = new qt.QLabel(window)
 label.setText("Drag and drop files here!")
 label.setAlignment(132) # AlignCenter
 
@@ -24,3 +24,4 @@ window.setCentralWidget(label)
 window.show()
 
 app.exec()
+

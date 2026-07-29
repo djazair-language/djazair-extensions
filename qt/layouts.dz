@@ -4,7 +4,10 @@ import "layouts/hbox.dz" as hboxMod
 import "layouts/grid.dz" as gridMod
 import "layouts/form.dz" as formMod
 
-let VBoxLayout = vboxMod.VBoxLayout
-let HBoxLayout = hboxMod.HBoxLayout
-let GridLayout = gridMod.GridLayout
-let FormLayout = formMod.FormLayout
+let QVBoxLayout = vboxMod.QVBoxLayout
+let QHBoxLayout = hboxMod.QHBoxLayout
+let QGridLayout = gridMod.QGridLayout
+let QFormLayout = formMod.QFormLayout
+
+
+

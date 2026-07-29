@@ -1,7 +1,7 @@
 # layouts/hbox.dz — Horizontal Layout Manager
 let _qt = __dynamic("qt")
 
-class HBoxLayout
+class QHBoxLayout
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -26,3 +26,6 @@ class HBoxLayout
         _qt.layoutSetSpacing(self.handle, spacing)
     end
 end
+
+
+

@@ -1,22 +1,22 @@
 # 03_list_and_table.dz — List and Table Data Views in Djazair Qt
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
+let window = new qt.QMainWindow()
 window.setTitle("Data View Controls")
 window.resize(700, 450)
 
-let mainLayout = new qt.HBoxLayout()
+let mainLayout = new qt.QHBoxLayout()
 
-# Left side: ListWidget
-let list = new qt.ListWidget()
+# Left side: QListWidget
+let list = new qt.QListWidget()
 list.addItem("Item 1: Djazair Compiler Engine")
 list.addItem("Item 2: Djazair Virtual Machine")
 list.addItem("Item 3: Qt Native Binding Package")
 
-# Right side: TableWidget
-let table = new qt.TableWidget(3, 2)
+# Right side: QTableWidget
+let table = new qt.QTableWidget(3, 2)
 table.setItem(0, 0, "Djazair Core")
 table.setItem(0, 1, "v1.0.0")
 table.setItem(1, 0, "SQLite Module")
@@ -27,10 +27,12 @@ table.setItem(2, 1, "v0.1.0")
 mainLayout.addWidget(list)
 mainLayout.addWidget(table)
 
-let container = new qt.Widget()
+let container = new qt.QWidget()
 container.setLayout(mainLayout)
 
 window.setCentralWidget(container)
 window.show()
 
 app.exec()
+
+

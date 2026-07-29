@@ -1,18 +1,20 @@
 # 04_notepad_app.dz — Full Desktop Notepad App in Djazair Qt
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
+let window = new qt.QMainWindow()
 window.setTitle("Djazair Qt Notepad")
 window.resize(800, 600)
 
-let editor = new qt.TextEdit()
+let editor = new qt.QTextEdit()
 editor.setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; background-color: #1e1e1e; color: #d4d4d4;")
 
 window.setCentralWidget(editor)
 window.show()
 
-qt.MessageBox.info("Notepad Started", "Welcome to Djazair Qt Notepad Application!")
+qt.QMessageBox.info("Notepad Started", "Welcome to Djazair Qt Notepad QApplication!")
 
 app.exec()
+
+

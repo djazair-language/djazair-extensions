@@ -1,7 +1,7 @@
 # layouts/vbox.dz — Vertical Layout Manager
 let _qt = __dynamic("qt")
 
-class VBoxLayout
+class QVBoxLayout
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -26,3 +26,6 @@ class VBoxLayout
         _qt.layoutSetSpacing(self.handle, spacing)
     end
 end
+
+
+

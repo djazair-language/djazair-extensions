@@ -1,7 +1,7 @@
-# layouts/form.dz — Two-Column Label-Field Form Layout Manager
+# layouts/form.dz — Two-Column QLabel-Field QFormLayout Layout Manager
 let _qt = __dynamic("qt")
 
-class FormLayout
+class QFormLayout
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -26,3 +26,6 @@ class FormLayout
         _qt.layoutSetSpacing(self.handle, spacing)
     end
 end
+
+
+

@@ -1,19 +1,19 @@
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
+let window = new qt.QMainWindow()
 window.setTitle("Djazair Qt - Charts Dashboard")
 window.resize(800, 600)
 
-let central = new qt.Widget()
-let layout = new qt.GridLayout(central)
+let central = new qt.QWidget()
+let layout = new qt.QGridLayout(central)
 
-# --- Line Chart ---
-let lineChart = new qt.Chart()
+# --- Line QChart ---
+let lineChart = new qt.QChart()
 lineChart.setTitle("Monthly Sales Performance")
 
-let lineSeries = new qt.LineSeries()
+let lineSeries = new qt.QLineSeries()
 lineSeries.append(0, 5)
 lineSeries.append(1, 15)
 lineSeries.append(2, 8)
@@ -24,22 +24,22 @@ lineSeries.append(5, 30)
 lineChart.addSeries(lineSeries)
 lineChart.createDefaultAxes()
 
-let lineView = new qt.ChartView(central)
+let lineView = new qt.QChartView(central)
 lineView.setChart(lineChart)
 layout.addWidget(lineView, 0, 0, 1, 1)
 
-# --- Pie Chart ---
-let pieChart = new qt.Chart()
+# --- Pie QChart ---
+let pieChart = new qt.QChart()
 pieChart.setTitle("Market Share 2026")
 
-let pieSeries = new qt.PieSeries()
+let pieSeries = new qt.QPieSeries()
 pieSeries.append("Djazair", 60.0)
 pieSeries.append("Python", 25.0)
 pieSeries.append("C++", 15.0)
 
 pieChart.addSeries(pieSeries)
 
-let pieView = new qt.ChartView(central)
+let pieView = new qt.QChartView(central)
 pieView.setChart(pieChart)
 layout.addWidget(pieView, 0, 1, 1, 1)
 
@@ -47,3 +47,5 @@ layout.addWidget(pieView, 0, 1, 1, 1)
 window.setCentralWidget(central)
 window.show()
 app.exec()
+
+

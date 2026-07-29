@@ -1,7 +1,7 @@
-# core/app.dz — Qt Application Lifecycle Manager for Djazair
+# core/app.dz — Qt QApplication Lifecycle Manager for Djazair
 let _qt = __dynamic("qt")
 
-class Application
+class QApplication
     init()
         self.handle = _qt.appCreate()
     end
@@ -26,3 +26,4 @@ class Application
         _qt.appDestroy(self.handle)
     end
 end
+

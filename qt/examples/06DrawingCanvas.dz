@@ -1,23 +1,23 @@
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
-window.setTitle("Djazair Qt - Canvas Drawing")
+let window = new qt.QMainWindow()
+window.setTitle("Djazair Qt - QCanvas Drawing")
 window.resize(600, 400)
 
-# Create a central label to hold the Pixmap
-let canvasLabel = new qt.Label(window)
+# Create a central label to hold the QPixmap
+let canvasLabel = new qt.QLabel(window)
 window.setCentralWidget(canvasLabel)
 
-# Create a 600x400 Pixmap (Canvas)
-let pixmap = new qt.Pixmap(600, 400)
+# Create a 600x400 QPixmap (QCanvas)
+let pixmap = new qt.QPixmap(600, 400)
 
 # Fill it with a dark background
 pixmap.fill("#1e1e1e")
 
-# Create a Painter to draw on the Pixmap
-let painter = new qt.Painter(pixmap)
+# Create a QPainter to draw on the QPixmap
+let painter = new qt.QPainter(pixmap)
 
 # Draw a red rectangle
 painter.setPen("#ff0000", 3)
@@ -40,8 +40,9 @@ painter.drawText(200, 300, "Drawing natively with Djazair & Qt!")
 # Finish painting
 painter.endPaint()
 
-# Assign the painted Pixmap to the Label
+# Assign the painted QPixmap to the QLabel
 canvasLabel.setPixmap(pixmap)
 
 window.show()
 app.exec()
+

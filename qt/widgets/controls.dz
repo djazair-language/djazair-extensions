@@ -1,11 +1,11 @@
-# widgets/controls.dz — Enterprise GUI Controls (Button, Label, CheckBox, Radio, ProgressBar, Slider, SpinBox)
+# widgets/controls.dz — Enterprise GUI Controls (QPushButton, QLabel, QCheckBox, Radio, QProgressBar, QSlider, QSpinBox)
 let _qt = __dynamic("qt")
 
 import "base.dz" as baseMod
 
-let Widget = baseMod.Widget
+let QWidget = baseMod.QWidget
 
-class Button is Widget
+class QPushButton is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -23,7 +23,7 @@ class Button is Widget
     end
 end
 
-class Label is Widget
+class QLabel is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -49,7 +49,7 @@ class Label is Widget
     end
 end
 
-class CheckBox is Widget
+class QCheckBox is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -71,7 +71,7 @@ class CheckBox is Widget
     end
 end
 
-class RadioButton is Widget
+class QRadioButton is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -89,7 +89,7 @@ class RadioButton is Widget
     end
 end
 
-class ProgressBar is Widget
+class QProgressBar is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -111,7 +111,7 @@ class ProgressBar is Widget
     end
 end
 
-class Slider is Widget
+class QSlider is QWidget
     init(orient = 0, parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -137,7 +137,7 @@ class Slider is Widget
     end
 end
 
-class DoubleSpinBox is Widget
+class QDoubleSpinBox is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -163,7 +163,7 @@ class DoubleSpinBox is Widget
     end
 end
 
-class SpinBox is Widget
+class QSpinBox is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -188,3 +188,5 @@ class SpinBox is Widget
         _qt.spinboxOnChange(self.handle, callback)
     end
 end
+
+

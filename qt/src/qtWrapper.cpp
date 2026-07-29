@@ -7,7 +7,7 @@
  * Wraps Qt5 / Qt6 C++ classes into C-callable functions.
  */
 
-#include "qt_wrapper.h"
+#include "qtWrapper.h"
 
 #include <QApplication>
 #include <QWidget>

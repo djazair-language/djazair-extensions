@@ -1,7 +1,7 @@
 # widgets/base.dz — Base QWidget OOP Wrapper
 let _qt = __dynamic("qt")
 
-class Widget
+class QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -74,3 +74,4 @@ class Widget
         _qt.widgetOnDrop(self.handle, callback)
     end
 end
+

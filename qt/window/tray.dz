@@ -1,8 +1,8 @@
 # window/tray.dz — Native QSystemTrayIcon Wrapper
 let _qt = __dynamic("qt")
 
-class SystemTrayIcon
-    init(tooltip = "Djazair Application")
+class QSystemTrayIcon
+    init(tooltip = "Djazair QApplication")
         self.handle = _qt.trayCreate(tooltip)
     end
 
@@ -26,3 +26,6 @@ class SystemTrayIcon
         _qt.trayShowMessage(self.handle, title, message, iconType, timeout)
     end
 end
+
+
+

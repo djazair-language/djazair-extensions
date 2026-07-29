@@ -1,7 +1,7 @@
-# window/dialog.dz — Modal Dialog Window
+# window/dialog.dz — Modal QDialog Window
 let _qt = __dynamic("qt")
 
-class Dialog
+class QDialog
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -30,3 +30,5 @@ class Dialog
         return _qt.dialogExec(self.handle)
     end
 end
+
+

@@ -7,7 +7,7 @@
  * Exposes native C++ Qt operations to Djazair scripts via djazair_api.h.
  */
 
-#include "qt_wrapper.h"
+#include "qtWrapper.h"
 
 extern "C" {
 #include "djazair_api.h"

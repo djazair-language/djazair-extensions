@@ -1,13 +1,13 @@
-# window/main_window.dz — Enterprise MainWindow, MenuBar, Menu, and Action
+# window/main_window.dz — Enterprise QMainWindow, MenuBar, QMenu, and QAction
 let _qt = __dynamic("qt")
 
-class Action
+class QAction
     init(handle)
         self.handle = handle
     end
 end
 
-class ToolBar
+class QToolBar
     init(handle)
         self.handle = handle
     end
@@ -17,7 +17,7 @@ class ToolBar
     end
 end
 
-class Menu
+class QMenu
     init(handle)
         self.handle = handle
     end
@@ -27,7 +27,7 @@ class Menu
         if handle == Null
             return Null
         end
-        return new Menu(handle)
+        return new QMenu(handle)
     end
 
     addAction(title)
@@ -35,7 +35,7 @@ class Menu
         if handle == Null
             return Null
         end
-        return new Action(handle)
+        return new QAction(handle)
     end
 
     addSeparator()
@@ -43,7 +43,7 @@ class Menu
     end
 end
 
-class MainWindow
+class QMainWindow
     init()
         self.handle = _qt.mainwindowCreate()
     end
@@ -73,15 +73,18 @@ class MainWindow
         if handle == Null
             return Null
         end
-        return new Menu(handle)
+        return new QMenu(handle)
     end
 
     addToolBar(title)
         let handle = _qt.mainwindowAddToolBar(self.handle, title)
-        return new ToolBar(handle)
+        return new QToolBar(handle)
     end
 
     setStatusMessage(message, timeout = 3000)
         _qt.mainwindowSetStatus(self.handle, message, timeout)
     end
 end
+
+
+

@@ -1,11 +1,11 @@
-# widgets/inputs.dz — User Input Widgets (LineEdit, TextEdit, ComboBox)
+# widgets/inputs.dz — User Input Widgets (QLineEdit, QTextEdit, QComboBox)
 let _qt = __dynamic("qt")
 
 import "base.dz" as baseMod
 
-let Widget = baseMod.Widget
+let QWidget = baseMod.QWidget
 
-class LineEdit is Widget
+class QLineEdit is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -35,7 +35,7 @@ class LineEdit is Widget
     end
 end
 
-class TextEdit is Widget
+class QTextEdit is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -65,7 +65,7 @@ class TextEdit is Widget
     end
 end
 
-class PlainTextEdit is Widget
+class QPlainTextEdit is QWidget
     init(text = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -91,7 +91,7 @@ class PlainTextEdit is Widget
     end
 end
 
-class ComboBox is Widget
+class QComboBox is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -120,3 +120,4 @@ class ComboBox is Widget
         _qt.comboboxOnChange(self.handle, callback)
     end
 end
+

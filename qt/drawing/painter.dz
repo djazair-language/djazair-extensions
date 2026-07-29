@@ -1,7 +1,7 @@
 # drawing/painter.dz
 let _qt = __dynamic("qt")
 
-class Pixmap
+class QPixmap
     init(width, height)
         self.handle = _qt.pixmapCreate(width, height)
     end
@@ -22,14 +22,14 @@ end
 fn pixmapLoad(path)
     let h = _qt.pixmapLoad(path)
     if h != Null
-        let p = Pixmap(1, 1)
+        let p = QPixmap(1, 1)
         p.handle = h
         return p
     end
     return Null
 end
 
-class Painter
+class QPainter
     init(pixmap = Null)
         if pixmap != Null
             self.handle = _qt.painterCreate(pixmap.handle)
@@ -96,3 +96,5 @@ class Painter
         _qt.painterEnd(self.handle)
     end
 end
+
+

@@ -3,9 +3,9 @@ let _qt = __dynamic("qt")
 
 import "../widgets/base.dz" as baseMod
 
-let Widget = baseMod.Widget
+let QWidget = baseMod.QWidget
 
-class VideoWidget is Widget
+class QVideoWidget is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -14,3 +14,4 @@ class VideoWidget is Widget
         self.handle = _qt.videowidgetCreate(parentHandle)
     end
 end
+

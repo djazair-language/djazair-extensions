@@ -3,10 +3,13 @@ import "window/main_window.dz" as winMod
 import "window/dialogs.dz" as dialogMod
 import "window/tray.dz" as trayMod
 
-let MainWindow     = winMod.MainWindow
-let Menu           = winMod.Menu
-let Action         = winMod.Action
-let MessageBox     = dialogMod.MessageBox
-let FileDialog     = dialogMod.FileDialog
-let InputDialog    = dialogMod.InputDialog
-let SystemTrayIcon = trayMod.SystemTrayIcon
+let QMainWindow     = winMod.QMainWindow
+let QMenu           = winMod.QMenu
+let QAction         = winMod.QAction
+let QMessageBox     = dialogMod.QMessageBox
+let QFileDialog     = dialogMod.QFileDialog
+let QInputDialog    = dialogMod.QInputDialog
+let QSystemTrayIcon = trayMod.QSystemTrayIcon
+
+
+

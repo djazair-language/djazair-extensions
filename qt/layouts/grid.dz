@@ -1,7 +1,7 @@
-# layouts/grid.dz — 2D Grid Layout Manager
+# layouts/grid.dz — 2D QGridLayout Layout Manager
 let _qt = __dynamic("qt")
 
-class GridLayout
+class QGridLayout
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -26,3 +26,6 @@ class GridLayout
         _qt.layoutSetSpacing(self.handle, spacing)
     end
 end
+
+
+

@@ -1,32 +1,32 @@
 # 01_modern_dashboard.dz — Modern Dark Dashboard in Djazair Qt
 use qt
 
-let app = new qt.Application()
+let app = new qt.QApplication()
 
-let window = new qt.MainWindow()
+let window = new qt.QMainWindow()
 window.setTitle("Djazair Enterprise Qt Dashboard")
 window.resize(900, 600)
 
 let theme = new qt.Theme()
 theme.applyDark(window)
 
-let tabs = new qt.TabWidget()
+let tabs = new qt.QTabWidget()
 
 # Tab 1: Overview
-let overviewWidget = new qt.Widget()
-let vbox = new qt.VBoxLayout()
+let overviewWidget = new qt.QWidget()
+let vbox = new qt.QVBoxLayout()
 
-let groupMetrics = new qt.GroupBox("System Metrics")
-let grid = new qt.GridLayout()
+let groupMetrics = new qt.QGroupBox("System Metrics")
+let grid = new qt.QGridLayout()
 
-grid.addWidget(new qt.Label("CPU Usage:"), 0, 0)
-let cpuBar = new qt.ProgressBar()
+grid.addWidget(new qt.QLabel("CPU Usage:"), 0, 0)
+let cpuBar = new qt.QProgressBar()
 cpuBar.setRange(0, 100)
 cpuBar.setValue(42)
 grid.addWidget(cpuBar, 0, 1)
 
-grid.addWidget(new qt.Label("Memory Usage:"), 1, 0)
-let memBar = new qt.ProgressBar()
+grid.addWidget(new qt.QLabel("Memory Usage:"), 1, 0)
+let memBar = new qt.QProgressBar()
 memBar.setRange(0, 100)
 memBar.setValue(68)
 grid.addWidget(memBar, 1, 1)
@@ -34,18 +34,18 @@ grid.addWidget(memBar, 1, 1)
 groupMetrics.setLayout(grid)
 vbox.addWidget(groupMetrics)
 
-let btnRefresh = new qt.Button("Refresh Metrics")
+let btnRefresh = new qt.QPushButton("Refresh Metrics")
 vbox.addWidget(btnRefresh)
 
 overviewWidget.setLayout(vbox)
 tabs.addTab(overviewWidget, "System Overview")
 
 # Tab 2: Settings
-let settingsWidget = new qt.Widget()
-let form = new qt.FormLayout()
-form.addRow("Username:", new qt.LineEdit("Riyadh"))
-form.addRow("API Server:", new qt.LineEdit("https://api.djazair.org"))
-form.addRow("Auto-save:", new qt.CheckBox())
+let settingsWidget = new qt.QWidget()
+let form = new qt.QFormLayout()
+form.addRow("Username:", new qt.QLineEdit("Riyadh"))
+form.addRow("API Server:", new qt.QLineEdit("https://api.djazair.org"))
+form.addRow("Auto-save:", new qt.QCheckBox())
 
 settingsWidget.setLayout(form)
 tabs.addTab(settingsWidget, "Configuration")
@@ -55,3 +55,5 @@ window.setStatusMessage("Dashboard loaded successfully.", 5000)
 window.show()
 
 app.exec()
+
+

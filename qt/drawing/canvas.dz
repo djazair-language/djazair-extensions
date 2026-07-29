@@ -4,10 +4,10 @@ let _qt = __dynamic("qt")
 import "../widgets/base.dz" as baseMod
 import "painter.dz" as painterMod
 
-let Widget = baseMod.Widget
-let Painter = painterMod.Painter
+let QWidget = baseMod.QWidget
+let QPainter = painterMod.QPainter
 
-class Canvas is Widget
+class QCanvas is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -21,7 +21,7 @@ class Canvas is Widget
         if h == Null
             return Null
         end
-        let p = Painter()
+        let p = QPainter()
         p.handle = h
         return p
     end
@@ -38,3 +38,4 @@ class Canvas is Widget
         _qt.canvasSetSize(self.handle, w, h)
     end
 end
+

@@ -1,3 +1,4 @@
 # app.dz — Root Module Alias
 import "core/app.dz" as appMod
-let Application = appMod.Application
+let QApplication = appMod.QApplication
+

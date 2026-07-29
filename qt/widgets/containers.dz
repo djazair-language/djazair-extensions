@@ -3,9 +3,9 @@ let _qt = __dynamic("qt")
 
 import "base.dz" as baseMod
 
-let Widget = baseMod.Widget
+let QWidget = baseMod.QWidget
 
-class TabWidget is Widget
+class QTabWidget is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -23,7 +23,7 @@ class TabWidget is Widget
     end
 end
 
-class StackedWidget is Widget
+class QStackedWidget is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -41,7 +41,7 @@ class StackedWidget is Widget
     end
 end
 
-class GroupBox is Widget
+class QGroupBox is QWidget
     init(title = "", parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -55,7 +55,7 @@ class GroupBox is Widget
     end
 end
 
-class ScrollArea is Widget
+class QScrollArea is QWidget
     init(parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -69,7 +69,7 @@ class ScrollArea is Widget
     end
 end
 
-class Splitter is Widget
+class QSplitter is QWidget
     init(orientation = 0, parent = Null)
         let parentHandle = Null
         if parent != Null
@@ -82,3 +82,5 @@ class Splitter is Widget
         _qt.splitterAddWidget(self.handle, widget.handle)
     end
 end
+
+

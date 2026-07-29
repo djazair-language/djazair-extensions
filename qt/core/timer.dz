@@ -1,7 +1,7 @@
 # core/timer.dz — Native Qt QTimer Wrapper
 let _qt = __dynamic("qt")
 
-class Timer
+class QTimer
     init()
         self.handle = _qt.timerCreate()
     end
@@ -18,3 +18,5 @@ class Timer
         _qt.timerOnTimeout(self.handle, callback)
     end
 end
+
+

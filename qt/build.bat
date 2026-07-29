@@ -41,7 +41,7 @@ echo [INFO] Compiling Qt dynamic extension (qt.dll)...
     "-I%ROOT%\src\core" ^
     "-I%ROOT%\src\libs" ^
     %QT_INC% -DQT_CHARTS_LIB ^
-    src\qt_wrapper.cpp src\qt_djazair.cpp ^
+    src\qtWrapper.cpp src\qtDjazair.cpp ^
     -o qt.dll ^
     "-L%ROOT%\build\bin" %QT_LIB% ^
     -ldjazair -lQt5UiTools -lQt5MultimediaWidgets -lQt5Multimedia -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Xml -lQt5Core
@@ -53,7 +53,7 @@ if errorlevel 1 (
         "-I%ROOT%\src\core" ^
         "-I%ROOT%\src\libs" ^
         %QT_INC% -DQT_CHARTS_LIB ^
-        src\qt_wrapper.cpp src\qt_djazair.cpp ^
+        src\qtWrapper.cpp src\qtDjazair.cpp ^
         -o qt.dll ^
         "-L%ROOT%\build\bin" %QT_LIB% ^
         -ldjazair -lQt6UiTools -lQt6MultimediaWidgets -lQt6Multimedia -lQt6Charts -lQt6Widgets -lQt6Gui -lQt6Xml -lQt6Core
