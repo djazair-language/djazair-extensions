@@ -1596,6 +1596,7 @@ static NativeMethod webview_methods[] = {
     {"windowSetMinSize",     nativeWindowSetMinSize,     3},
     {"windowSetMaxSize",     nativeWindowSetMaxSize,     3},
     {"windowSetBackgroundColor", nativeWindowSetBackgroundColor, 5},
+    {"windowSetDarkMode",      nativeWindowSetDarkMode,      2},
     {"windowSetVirtualHostMapping", nativeWindowSetVirtualHostMapping, 3},
 
     // WebView
