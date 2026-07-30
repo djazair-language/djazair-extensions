@@ -114,7 +114,10 @@ class kasbahApp
             "session":       False,
             "sessionSecret": "kasbah",
             "static":        "",
-            "views":         ""
+            "views":         "",
+            "keepAlive":     False,
+            "keepAliveTTL":  30,
+            "maxRequests":   100
         }
         self.appConfig = merge(defaults, config)
 
@@ -473,8 +476,9 @@ class kasbahApp
 
         self.serverInstance = http.createServer(self.buildHandler(), {
             "maxBody":      self.appConfig["maxBodySize"] * 1024 * 1024,
-            "keepAliveTTL": 2,
-            "maxRequests":  200
+            "keepAlive":    self.appConfig["keepAlive"],
+            "keepAliveTTL": self.appConfig["keepAliveTTL"],
+            "maxRequests":  self.appConfig["maxRequests"]
         })
         try
             self.serverInstance.listen(self.appConfig["port"])

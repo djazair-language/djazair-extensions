@@ -68,6 +68,9 @@ When creating the application, you can pass a configuration map to `new kasbah.k
 | `sessionSecret` | `"kasbah"` | Secret used to sign session cookies. |
 | `static` | `""` | Absolute or relative path to a directory for serving static files. |
 | `views` | `"views"` | Directory path containing your HTML templates. |
+| `keepAlive` | `False` | Enable HTTP/1.1 keep-alive persistent connections. |
+| `keepAliveTTL` | `30` | Seconds to wait for next request before closing idle connection. |
+| `maxRequests` | `100` | Maximum requests per keep-alive connection before forcing close. |
 
 ---
 
