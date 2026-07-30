@@ -21,10 +21,12 @@ extern "C" {
 #elif defined(__linux__)
     #include <gtk/gtk.h>
 #elif defined(_WIN32)
+    #include <dwmapi.h>
     #include <windows.h>
     #include <shlobj.h>
     #include <shellapi.h>
     #include <commdlg.h>
+    #include <dwmapi.h>
 #endif
 
 #define WEBVIEW_IMPLEMENTATION
@@ -795,6 +797,20 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetMinSize) {
 #endif
     if (djazair_is_number(args[1]) && djazair_is_number(args[2]))
         wc->wv->set_size((int)AS_NUMBER(args[1]), (int)AS_NUMBER(args[2]), WEBVIEW_HINT_MIN);
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetDarkMode) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_bool(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        BOOL is_dark = AS_BOOL(args[1]) ? TRUE : FALSE;
+        DwmSetWindowAttribute(hwnd, 20, &is_dark, sizeof(is_dark));
+        DwmSetWindowAttribute(hwnd, 19, &is_dark, sizeof(is_dark));
+#endif
+    }
     return djazair_null();
 }
 

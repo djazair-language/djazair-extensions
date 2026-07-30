@@ -102,6 +102,10 @@ fn createWindow(app, options)
     obj.setBackgroundColor = fn(r, g, b, a = 255)
         _native.windowSetBackgroundColor(h, r, g, b, a)
     end
+    
+    obj.setDarkTitleBar = fn(isDark)
+        _native.windowSetDarkMode(h, isDark)
+    end
 
     let isLocalPath = fn(p)
         if "://" in p return False end

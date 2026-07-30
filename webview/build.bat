@@ -36,7 +36,7 @@ g++ -shared -O2 -std=c++14 -DUNICODE -D_UNICODE ^
     src\webview_native.cc ^
     -o webview.dll ^
     -L"%ROOT%\build\bin" -ldjazair ^
-    -lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32 ^
+    -lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32 -ldwmapi ^
     -Wl,--disable-dynamicbase
 
 if errorlevel 1 (
