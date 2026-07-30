@@ -809,6 +809,9 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetDarkMode) {
         BOOL is_dark = AS_BOOL(args[1]) ? TRUE : FALSE;
         DwmSetWindowAttribute(hwnd, 20, &is_dark, sizeof(is_dark));
         DwmSetWindowAttribute(hwnd, 19, &is_dark, sizeof(is_dark));
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        RedrawWindow(hwnd, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
 #endif
     }
     return djazair_null();
