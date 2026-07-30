@@ -354,12 +354,13 @@ extern "C" DJAZAIR_FUNC(nativeAppQuit) {
 // ====================================================================
 
 extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
-    djazair_check_args(11, argCount);
+    djazair_check_args(12, argCount);
     djazair_check_str(0); djazair_check_num(1); djazair_check_num(2);
     djazair_check_num(3); djazair_check_num(4);
     djazair_check_bool(5); djazair_check_bool(6);
     djazair_check_num(7); djazair_check_num(8);
     djazair_check_num(9); djazair_check_num(10);
+    djazair_check_bool(11);
 
     const char *title = AS_CSTRING(args[0]);
     int width = (int)AS_NUMBER(args[1]);
@@ -370,6 +371,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     int min_h = (int)AS_NUMBER(args[8]);
     int max_w = (int)AS_NUMBER(args[9]);
     int max_h = (int)AS_NUMBER(args[10]);
+    bool debug = AS_BOOL(args[11]);
 
     g_last_vm = vm;
     auto c = new WindowContext();
@@ -377,7 +379,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     c->vm = vm;
 
     try {
-        c->wv = new webview::webview(true, nullptr);
+        c->wv = new webview::webview(debug, nullptr);
     } catch (...) {
         delete c;
         return djazair_null();
@@ -1578,7 +1580,7 @@ static NativeMethod webview_methods[] = {
     {"appQuit",              nativeAppQuit,              0},
 
     // Window management
-    {"windowCreate",         nativeWindowCreate,         11},
+    {"windowCreate",         nativeWindowCreate,         12},
     {"windowDestroy",        nativeWindowDestroy,        1},
     {"windowSetTitle",       nativeWindowSetTitle,       2},
     {"windowGetTitle",       nativeWindowGetTitle,       1},

@@ -9,7 +9,8 @@ fn createWindow(app, options)
         options["title"], options["width"], options["height"],
         options["x"], options["y"], options["frameless"], options["resizable"],
         options["minWidth"], options["minHeight"],
-        options["maxWidth"], options["maxHeight"]
+        options["maxWidth"], options["maxHeight"],
+        options["debug"] or False
     )
     if isNull(h)
         throw "Failed to create window"
@@ -29,6 +30,7 @@ fn createWindow(app, options)
     obj._onTitleChange = Null
     obj._onLoad = Null
     obj._loaded = False
+    obj._debug = options["debug"] or False
 
     let hostName = "djazair.local"
     let scriptDir = process.scriptDir()
@@ -161,7 +163,11 @@ fn createWindow(app, options)
     obj.canGoForward = fn()    return _native.windowCanGoForward(h) end
     obj.setZoomLevel = fn(l)   _native.windowSetZoomLevel(h, l) end
     obj.zoomLevel = fn()       return _native.windowGetZoomLevel(h) end
-    obj.openDevTools = fn()    _native.windowOpenDevTools(h) end
+    obj.openDevTools = fn()
+        if obj._debug
+            _native.windowOpenDevTools(h)
+        end
+    end
     obj.getUrl = fn()          return _native.windowGetUrl(h) end
     obj.setContextMenuEnabled = fn(e) _native.windowSetContextMenu(h, e) end
     obj.isLoaded = fn()        return obj._loaded end
