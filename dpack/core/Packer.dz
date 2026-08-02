@@ -113,7 +113,7 @@ class Packer
         dir.createAll(tmpStage)
 
         try
-            self.buildStage(tmpStage, absScript, extensions, assets)
+            self.buildStage(tmpStage, absScript, extensions, assets, outputPath)
             let zipPath = path.join(process.cwd(), ".dpack_bundle.zip")
             if file.exists(zipPath)
                 file.delete(zipPath)
@@ -168,7 +168,7 @@ class Packer
     # ── Private helpers ────────────────────────────────────────────────────
 
     # Builds the staging directory with all files to be bundled.
-    buildStage(stageDir, scriptPath, extensions, assets)
+    buildStage(stageDir, scriptPath, extensions, assets, outputPath)
         # Copy entry script as __main__.dz
         let mainDest = path.join(stageDir, "__main__.dz")
         file.copy(scriptPath, mainDest)
@@ -215,20 +215,26 @@ class Packer
             end
         end
 
-        # Copy user-defined assets
-        for asset in assets
-            let assetSrc = path.join(path.dirname(scriptPath), asset)
-            let assetDest = path.join(stageDir, asset)
+        # Auto-bundle all files and folders in the script's directory
+        let scriptDir = path.dirname(scriptPath)
+        let outputBase = path.basename(outputPath)
+        let mainBase = path.basename(scriptPath)
+        let items = dir.list(scriptDir)
+        
+        for item in items
+            # Skip output executable, main script, staging folder, and standard ignored files
+            if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip"
+                continue
+            end
             
-            if file.exists(assetSrc)
-                self.log("  Bundling asset: " + asset)
-                if file.isDir(assetSrc)
-                    self.copyDirTo(assetSrc, assetDest)
-                else
-                    self.copyFileTo(assetSrc, assetDest)
-                end
+            let itemSrc = path.join(scriptDir, item)
+            let itemDest = path.join(stageDir, item)
+            
+            self.log("  Bundling asset: " + item)
+            if file.isDir(itemSrc)
+                self.copyDirTo(itemSrc, itemDest)
             else
-                print("  Warning: Asset '" + asset + "' not found — skipping.")
+                self.copyFileTo(itemSrc, itemDest)
             end
         end
     end
