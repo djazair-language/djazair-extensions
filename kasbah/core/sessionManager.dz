@@ -3,13 +3,17 @@
 # Automatically attached to req.session and res.session by the session middleware.
 
 import "../helpers/utils.dz" as *
+use crypto
 
 class sessionManager
-    init(data, sid, isNew)
+    init(data, sid, isNew, store = Null, response = Null, cookieOptions = {})
         self.sessionData    = data
         self.sessionId      = sid
         self.isNewSession   = isNew
         self.needsNewCookie = False
+        self.storeRef       = store
+        self.responseRef    = response
+        self.cookieOptions  = cookieOptions
     end
 
     # Returns the value for a session key, or fallback if absent.
@@ -67,11 +71,22 @@ class sessionManager
         return self.sessionId
     end
 
-    # Generates a new session ID (session rotation) and flags the session cookie for update.
+    # Generates a new session ID and immediately queues a replacement cookie.
+    # Doing this here matters because a handler may send its response before the
+    # post-request session save occurs.
     regenerate()
+        let previousId = self.sessionId
         self.sessionId      = generateId(32)
         self.isNewSession   = True
         self.needsNewCookie = True
+        if !isNull(self.storeRef)
+            self.storeRef.destroy(previousId)
+        end
+        if !isNull(self.responseRef)
+            let secret = self.cookieOptions["secret"]
+            let token = "${self.sessionId}.${crypto.sha256("${secret}:${self.sessionId}")}"
+            self.responseRef.cookie(self.cookieOptions["name"], token, self.cookieOptions["attributes"])
+        end
         return self.sessionId
     end
 

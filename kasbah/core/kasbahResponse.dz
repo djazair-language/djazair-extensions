@@ -31,10 +31,14 @@ class kasbahResponse
 
     # Sets an HTTP response header (case-insensitive key).
     setHeader(name, value)
-        if isString(value) && (value.contains("\r") || value.contains("\n"))
+        if !isValidHeaderName(name)
             return self
         end
-        self.headersMap[name.lower()] = value
+        let headerValue = str(value)
+        if headerValue.contains("\r") || headerValue.contains("\n")
+            return self
+        end
+        self.headersMap[name.lower()] = headerValue
         return self
     end
 
@@ -81,7 +85,10 @@ class kasbahResponse
         if self.cookieList.length() > 0
             let cookieLines = ""
             for c in self.cookieList
-                cookieLines += "set-cookie: ${serializeCookie(c["name"], c["value"], c["options"])}\r\n"
+                let serialized = serializeCookie(c["name"], c["value"], c["options"])
+                if serialized != ""
+                    cookieLines += "set-cookie: ${serialized}\r\n"
+                end
             end
             let sepIdx = raw.index("\r\n\r\n")
             if sepIdx != -1
@@ -147,7 +154,10 @@ class kasbahResponse
         if self.cookieList.length() > 0
             let cookieLines = ""
             for c in self.cookieList
-                cookieLines += "set-cookie: ${serializeCookie(c["name"], c["value"], c["options"])}\r\n"
+                let serialized = serializeCookie(c["name"], c["value"], c["options"])
+                if serialized != ""
+                    cookieLines += "set-cookie: ${serialized}\r\n"
+                end
             end
             let sepIdx = headerStr.index("\r\n\r\n")
             if sepIdx != -1
@@ -168,9 +178,9 @@ class kasbahResponse
             return self.html(content)
         catch err
             if str(err).startsWith("View not found")
-                self.status(404).send(str(err))
+                self.status(404).send("View not found")
             else
-                self.status(500).send(str(err))
+                self.status(500).send("Internal Server Error")
             end
             return self
         end
@@ -180,6 +190,10 @@ class kasbahResponse
     download(filePath, filename = Null)
         if isNull(filename)
             filename = path.basename(filePath)
+        end
+        filename = sanitizeFilename(filename)
+        if filename == ""
+            filename = "download"
         end
         self.setHeader("Content-Disposition", "attachment; filename=\"${filename}\"")
         return self.file(filePath)

@@ -16,7 +16,7 @@ fn parseJson(req, res)
     try
         req.body = decode(req.body)
     catch err
-        res.status(400).json({"error": "Invalid JSON body", "detail": str(err)})
+        res.status(400).json({"error": "Invalid JSON body"})
         return
     end
 end
@@ -40,16 +40,40 @@ end
 
 # Parses multipart/form-data payload, extracting text fields and saving file uploads to temp storage.
 fn parseMultipart(req, res, boundary, maxBodySize = 10)
-    if boundary == ""
+    if boundary == "" || boundary.length() > 70 || boundary.contains("\r") || boundary.contains("\n")
         res.status(400).json({"error": "Missing boundary in multipart/form-data"})
         return
+    end
+
+    let boundaryChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'()+_,-./:=? "
+    for c in boundary
+        if !boundaryChars.contains(c)
+            res.status(400).json({"error": "Invalid multipart boundary"})
+            return
+        end
     end
 
     let rawBody = req.body
     req.body = {}
 
     let boundaryPrefix = "--${boundary}"
-    let parts = rawBody.split(boundaryPrefix)
+    # RFC 7578 delimiters begin at the body start or after CRLF.  Splitting on
+    # the bare boundary used to corrupt files that merely contained its text.
+    if !rawBody.startsWith(boundaryPrefix)
+        res.status(400).json({"error": "Malformed multipart body"})
+        return
+    end
+    let bodyWithoutFirstBoundary = rawBody.slice(boundaryPrefix.length())
+    if bodyWithoutFirstBoundary.startsWith("--")
+        return
+    end
+    if bodyWithoutFirstBoundary.startsWith("\r\n")
+        bodyWithoutFirstBoundary = bodyWithoutFirstBoundary.slice(2)
+    else
+        res.status(400).json({"error": "Malformed multipart body"})
+        return
+    end
+    let parts = bodyWithoutFirstBoundary.split("\r\n${boundaryPrefix}")
 
     for part in parts
         let pLen = part.length()
@@ -110,7 +134,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         let name = disp["name"]
         let filename = sanitizeFilename(disp["filename"])
 
-        if name == ""
+        if name == "" || name.length() > 128 || name.contains("\r") || name.contains("\n")
             continue
         end
 
@@ -140,13 +164,22 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
                 tracked.append(tempPath)
             end
 
-            req.files[name] = {
+            let fileInfo = {
                 "name":     name,
                 "filename": filename,
                 "type":     ctHeader,
                 "tempPath": tempPath,
                 "size":     byteArr.length()
             }
+            if req.files.has(name)
+                if isArray(req.files[name])
+                    req.files[name].append(fileInfo)
+                else
+                    req.files[name] = [req.files[name], fileInfo]
+                end
+            else
+                req.files[name] = fileInfo
+            end
         else
             req.body[name] = contentSection
         end
@@ -160,7 +193,7 @@ fn bodyParser(maxBodySize = 10)
             return
         end
 
-        if req.body.length() > maxBodySize * 1024 * 1024
+        if bytes.fromString(req.body).length() > maxBodySize * 1024 * 1024
             res.status(413).text("Request body too large")
             return
         end

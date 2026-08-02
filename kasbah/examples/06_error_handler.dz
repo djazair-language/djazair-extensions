@@ -27,11 +27,10 @@ app.onError(fn(err, req, res)
     print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
 
     # Guard: do not send a response twice
-    if res._sent return end
+    if res.sentFlag return end
 
     res.status(500).json({
         "error":   "Internal Server Error",
-        "message": str(err),
         "path":    req.path,
         "method":  req.method,
         "time":    str(datetime.now())

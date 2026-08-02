@@ -123,6 +123,10 @@ class uploadedFile
             end
         end
 
+        if targetName == ""
+            throw "uploadedFile.saveTo(): Invalid destination filename"
+        end
+
         let finalPath = path.normalize("${normDestDir}/${targetName}")
 
         let data = file.readBytes(self.tempPath)
@@ -241,6 +245,9 @@ class fileManager
         end
 
         let savedName = self.buildName(origName)
+        if savedName == ""
+            return { "ok": False, "file": Null, "error": "invalid destination filename" }
+        end
         let savedPath = path.normalize("${normDestDir}/${savedName}")
 
         try
@@ -275,7 +282,14 @@ class fileManager
         if !self.reqRef.files.has(fieldName)
             return { "ok": False, "file": Null, "error": "no file for field '${fieldName}'" }
         end
-        return self.processOneFile(self.reqRef.files[fieldName])
+        let raw = self.reqRef.files[fieldName]
+        if isArray(raw)
+            if raw.length() == 0
+                return { "ok": False, "file": Null, "error": "no file for field '${fieldName}'" }
+            end
+            raw = raw[0]
+        end
+        return self.processOneFile(raw)
     end
 
     multiple(fieldName, maxCount = 10)
@@ -324,11 +338,14 @@ class fileManager
         let errList = []
 
         for fieldName, rawInfo in self.reqRef.files
-            let res = self.processOneFile(rawInfo)
-            if res["ok"]
-                results.append(res["file"])
-            else
-                errList.append(res["error"])
+            let rawFiles = if isArray(rawInfo) ? rawInfo else [rawInfo]
+            for raw in rawFiles
+                let res = self.processOneFile(raw)
+                if res["ok"]
+                    results.append(res["file"])
+                else
+                    errList.append(res["error"])
+                end
             end
         end
 

@@ -17,6 +17,5 @@
 Thumbs.db
 
 # dweb (managed separately)
-dweb/
 tests/
 AGENTS.md

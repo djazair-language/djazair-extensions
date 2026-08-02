@@ -6,6 +6,7 @@ use file
 use dir
 use json
 use regex
+use crypto
 import "../helpers/utils.dz" as *
 import "../helpers/cookie.dz" as *
 import "../core/sessionManager.dz" as sm
@@ -76,17 +77,46 @@ fn session(options = {})
         maxAge = options["maxAge"]
     end
 
+    let secret = if options.has("secret") ? options["secret"] else ""
+    if !isString(secret) || secret.length() < 32
+        throw "kasbah.session(): 'secret' must contain at least 32 characters"
+    end
+
+    let secure = if options.has("secure") ? options["secure"] else False
+    let sameSite = if options.has("sameSite") ? options["sameSite"] else "Lax"
+    let cookieAttributes = {
+        "httpOnly": True,
+        "path": "/",
+        "maxAge": maxAge,
+        "sameSite": sameSite,
+        "secure": secure
+    }
+
+    fn validSessionToken(token)
+        if !isString(token)
+            return ""
+        end
+        let pieces = token.split(".")
+        if pieces.length() != 2
+            return ""
+        end
+        let sid = pieces[0]
+        let signature = pieces[1]
+        if isNull(regex.fullMatch("[0-9a-f]{32}", sid))
+            return ""
+        end
+        let expected = crypto.sha256("${secret}:${sid}")
+        if signature != expected
+            return ""
+        end
+        return sid
+    end
+
     return fn(req, res)
         let sid = Null
 
         let rawSid = req.cookies.get(cookieName)
-
-        if !isNull(rawSid)
-            let validSid = regex.fullMatch("[0-9a-f]+", rawSid)
-            if !isNull(validSid)
-                sid = rawSid
-            end
-        end
+        sid = validSessionToken(rawSid)
 
         let sessData = {}
         let isNew    = False
@@ -94,17 +124,17 @@ fn session(options = {})
         if isNull(sid) || sid == ""
             sid   = generateId(32)
             isNew = True
-            res.cookie(cookieName, sid, {
-                "httpOnly": True,
-                "path":     "/",
-                "maxAge":   maxAge,
-                "sameSite": "Lax"
-            })
+            let token = "${sid}.${crypto.sha256("${secret}:${sid}")}"
+            res.cookie(cookieName, token, cookieAttributes)
         else
             sessData = store.read(sid)
         end
 
-        let mgr = new sm.sessionManager(sessData, sid, isNew)
+        let mgr = new sm.sessionManager(sessData, sid, isNew, store, res, {
+            "secret": secret,
+            "name": cookieName,
+            "attributes": cookieAttributes
+        })
         req.session = mgr
         res.session = mgr
 

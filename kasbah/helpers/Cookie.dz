@@ -51,13 +51,36 @@ fn urlEncodeValue(s)
     return result
 end
 
+# Cookie names and attributes are inserted into an HTTP header.  Keep their
+# grammar deliberately narrow: rejecting a malformed cookie is safer than
+# trying to repair attacker-controlled header data.
+fn isValidCookieName(name)
+    if !isString(name) || name == ""
+        return False
+    end
+    let allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&'*+-.^_`|~"
+    for c in name
+        if !allowed.contains(c)
+            return False
+        end
+    end
+    return True
+end
+
+fn isSafeCookieAttribute(value)
+    if !isString(value) || value == "" || value.contains("\r") || value.contains("\n")
+        return False
+    end
+    return !value.contains(";")
+end
+
 # Serialize a cookie into a Set-Cookie header string
 # Options: domain, path, expires, maxAge, httpOnly, secure, sameSite
 fn serializeCookie(name, value, options = {})
     if isNull(options)
         options = {}
     end
-    if isString(name) && (name.contains("\r") || name.contains("\n"))
+    if !isValidCookieName(name)
         return ""
     end
     if isString(value) && (value.contains("\r") || value.contains("\n"))
@@ -67,14 +90,23 @@ fn serializeCookie(name, value, options = {})
     let parts = ["${name}=${encodedValue}"]
 
     if options.has("domain") && options["domain"] != ""
+        if !isSafeCookieAttribute(options["domain"])
+            return ""
+        end
         parts.append("Domain=${options["domain"]}")
     end
 
     if options.has("path") && options["path"] != ""
+        if !isSafeCookieAttribute(options["path"])
+            return ""
+        end
         parts.append("Path=${options["path"]}")
     end
 
     if options.has("expires") && options["expires"] != ""
+        if !isSafeCookieAttribute(options["expires"])
+            return ""
+        end
         parts.append("Expires=${options["expires"]}")
     end
 
@@ -91,7 +123,19 @@ fn serializeCookie(name, value, options = {})
     end
 
     if options.has("sameSite") && options["sameSite"] != ""
-        parts.append("SameSite=${options["sameSite"]}")
+        let sameSite = str(options["sameSite"]).lower()
+        if sameSite == "lax"
+            parts.append("SameSite=Lax")
+        elif sameSite == "strict"
+            parts.append("SameSite=Strict")
+        elif sameSite == "none"
+            if !(options.has("secure") && options["secure"])
+                return ""
+            end
+            parts.append("SameSite=None")
+        else
+            return ""
+        end
     end
 
     return parts.join("; ")

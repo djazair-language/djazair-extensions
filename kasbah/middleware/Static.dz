@@ -15,7 +15,8 @@ fn serveStatic(root)
     let normRootLower = normRoot.lower()
 
     return fn(req, res)
-        # Only serve GET requests; ignore POST, PUT, etc.
+        # A correct HEAD implementation needs the file size without a body;
+        # do not send a non-compliant response until that is available.
         if req.method != "GET"
             return
         end
@@ -80,6 +81,7 @@ fn serveStatic(root)
         end
 
         res.setHeader("Vary", "Accept-Encoding")
+        res.setHeader("X-Content-Type-Options", "nosniff")
 
         # Delegate to res.file which handles binary safe reading and MIME types
         res.file(filePath)

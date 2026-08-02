@@ -120,7 +120,14 @@ class kasbahApp
             "maxBodySize":   10,    # MB
             "logger":        True,
             "session":       False,
-            "sessionSecret": "kasbah",
+            "sessionSecret": "",
+            "sessionCookieName": "kasbah.sid",
+            "sessionMaxAge": 86400,
+            "sessionSecure": False,
+            "sessionSameSite": "Lax",
+            "sessionDir": "",
+            "trustProxy":    False,
+            "exposeErrors":  False,
             "static":        "",
             "views":         "",
             "keepAlive":     False,
@@ -300,9 +307,15 @@ class kasbahApp
 
     # Prepares incoming request and response objects (resolves IP, URL decoding, cookie jar setup).
     prepareRequest(req, res, httpReq)
-        req.ip = httpReq.header("x-forwarded-for")
-        if req.ip == ""
-            req.ip = httpReq.header("x-real-ip")
+        req.ip = ""
+        if self.appConfig["trustProxy"]
+            req.ip = httpReq.header("x-forwarded-for")
+            if req.ip.contains(",")
+                req.ip = req.ip.split(",")[0].strip()
+            end
+            if req.ip == ""
+                req.ip = httpReq.header("x-real-ip")
+            end
         end
         if req.ip == ""
             req.ip = httpReq.remoteAddr
@@ -311,7 +324,7 @@ class kasbahApp
             req.ip = "unknown"
         end
 
-        req.path = urlDecode(req.path)
+        req.path = urlDecodePath(req.path)
         while req.path.contains("//")
             req.path = req.path.replace("//", "/")
         end
@@ -337,10 +350,11 @@ class kasbahApp
                 self.errorHandler(err, req, res)
             else
                 if !res.sentFlag
-                    res.status(500).json({
-                        "error":   "Internal Server Error",
-                        "message": str(err)
-                    })
+                    let errorBody = {"error": "Internal Server Error"}
+                    if self.appConfig["exposeErrors"]
+                        errorBody["message"] = str(err)
+                    end
+                    res.status(500).json(errorBody)
                 end
             end
         catch handlerErr
@@ -420,21 +434,6 @@ class kasbahApp
                 if isMap(req.session)
                     sessData = req.session
                 else
-                    if req.session.needsNewCookie
-                        let newSid = req.session.id()
-                        let cookieName = "kasbah.sid"
-                        let maxAge = self.appConfig["sessionMaxAge"]
-                        if isNull(maxAge)
-                            maxAge = 86400
-                        end
-                        req.cookies.set(cookieName, newSid, {
-                            "httpOnly": True,
-                            "path":     "/",
-                            "maxAge":   maxAge,
-                            "sameSite": "Lax"
-                        })
-                        req.set("sid", newSid)
-                    end
                     sid = req.session.id()
                     sessData = req.session.all()
                 end
@@ -457,7 +456,17 @@ class kasbahApp
             self.pipelineList.append(bodyParser(self.appConfig["maxBodySize"]))
         end
         if self.appConfig["session"]
-            self.pipelineList.append(session({"secret": self.appConfig["sessionSecret"]}))
+            let sessionOptions = {
+                "secret": self.appConfig["sessionSecret"],
+                "name": self.appConfig["sessionCookieName"],
+                "maxAge": self.appConfig["sessionMaxAge"],
+                "secure": self.appConfig["sessionSecure"],
+                "sameSite": self.appConfig["sessionSameSite"]
+            }
+            if self.appConfig["sessionDir"] != ""
+                sessionOptions["dir"] = self.appConfig["sessionDir"]
+            end
+            self.pipelineList.append(session(sessionOptions))
         end
         if self.appConfig["static"] != ""
             self.pipelineList.append(serveStatic(self.appConfig["static"]))

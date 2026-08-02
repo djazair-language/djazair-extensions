@@ -29,7 +29,14 @@ class kasbahRequest
     # Returns an uploaded file wrapper by form field name.
     file(name)
         if self.files.has(name) && !isNull(self.files[name])
-            return new uploadedFile(self.files[name])
+            let info = self.files[name]
+            if isArray(info)
+                if info.length() == 0
+                    return Null
+                end
+                info = info[0]
+            end
+            return new uploadedFile(info)
         end
         return Null
     end
