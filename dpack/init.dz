@@ -1,0 +1,89 @@
+# dpack — Djazair Self-Contained Executable Packer
+#
+# Usage:
+#   djazair dpack/init.dz pack <script.dz> [options]
+#   dpm pack <script.dz> [options]
+#
+# Options:
+#   -o, --output <name>        Output file name (default: script name without .dz)
+#   --include <ext>            Force-include an extension by name (repeatable)
+#   --quiet                    Suppress verbose output
+#   -h, --help                 Show help
+#   -v, --version              Show version
+#
+# Developer: Harizi Riyadh (hariziriyadh@gmail.com)
+
+use process
+use file
+use path
+use os
+
+import "core/Packer.dz" as PackerMod
+
+let DPACK_VERSION = "1.0.0"
+
+fn printHelp()
+    print("")
+    print("\033[1;32mdpack\033[0m v" + DPACK_VERSION + " — Djazair Self-Contained Executable Packer")
+    print("")
+    print("  Bundles a .dz script, the Djazair interpreter, standard libraries,")
+    print("  and any detected extensions into a single standalone executable.")
+    print("")
+    print("Usage:")
+    print("  djazair dpack/init.dz pack <script.dz> [options]")
+    print("")
+    print("Options:")
+    print("  -o, --output <name>    Output file name  [default: script name]")
+    print("  --include <ext>        Force-include an extension (can repeat)")
+    print("  --quiet                Suppress build output")
+    print("  -h, --help             Show this help")
+    print("  -v, --version          Show version")
+    print("")
+    print("Examples:")
+    print("  djazair dpack/init.dz pack server.dz")
+    print("  djazair dpack/init.dz pack server.dz -o myserver.exe")
+    print("  djazair dpack/init.dz pack app.dz --include kasbah --include qt")
+    print("")
+end
+
+fn printVersion()
+    print("dpack v" + DPACK_VERSION)
+end
+
+fn defaultOutputName(scriptPath)
+    let base = path.basename(scriptPath)
+    # Remove .dz extension
+    if base.endsWith(".dz")
+        base = base.slice(0, base.length() - 3)
+    end
+    if os.isWindows()
+        if !base.endsWith(".exe")
+            base = base + ".exe"
+        end
+    end
+    return path.join(path.dirname(scriptPath), base)
+end
+
+let Packer = PackerMod.Packer
+
+# Convenience function for packing a script programmatically.
+fn pack(scriptPath, outputPath = Null, extraExtensions = [], assets = [], quiet = False)
+    let absScript = path.resolve(scriptPath)
+    if !file.exists(absScript)
+        let altScript = path.join(process.scriptDir(), scriptPath)
+        if file.exists(altScript)
+            absScript = path.resolve(altScript)
+        end
+    end
+
+    if isNull(outputPath)
+        outputPath = defaultOutputName(absScript)
+    else
+        if !path.isAbsolute(outputPath)
+            outputPath = path.resolve(path.join(process.scriptDir(), outputPath))
+        end
+    end
+    
+    let p = new Packer({"quiet": quiet})
+    p.pack(absScript, outputPath, extraExtensions, assets)
+end

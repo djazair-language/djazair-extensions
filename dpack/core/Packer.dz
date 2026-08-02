@@ -1,0 +1,323 @@
+# dpack/core/Packer.dz
+# Core packing logic: collects all files, creates a ZIP bundle,
+# appends it to the stub binary, and writes the final executable.
+#
+# Bundle ZIP structure:
+#   __main__.dz          ← the user's entry script
+#   djazair[.exe]        ← the interpreter
+#   std/<module>/        ← standard library files
+#   prelude/             ← prelude files
+#   extensions/<name>/   ← detected external extensions
+#
+# Developer: Harizi Riyadh (hariziriyadh@gmail.com)
+
+use file
+use dir
+use path
+use process
+use os
+
+import "Scanner.dz" as Scanner
+
+class Packer
+    init(opts = {})
+        self.quiet = if opts.has("quiet") ? opts["quiet"] else False
+
+        # Locate interpreter binary
+        let djazairExe = os.which("djazair")
+        if isNull(djazairExe)
+            throw "dpack: 'djazair' interpreter not found in PATH."
+        end
+
+        self.interpBin = path.resolve(djazairExe)
+        self.interpName = path.basename(self.interpBin)
+        
+        # Deduce repoRoot (djazair is typically at <repoRoot>/build/bin/djazair)
+        self.repoRoot = path.resolve(path.join(path.dirname(self.interpBin), "..", ".."))
+
+        # Locate dpack root
+        let dpackRoot = path.join(self.repoRoot, "extensions", "dpack")
+        if !file.exists(dpackRoot)
+            dpackRoot = path.resolve(path.join(self.repoRoot, "..", "djazair-extensions", "dpack"))
+        end
+
+        if os.isWindows()
+            self.stubBin = path.join(dpackRoot, "stub", "stub_win.exe")
+        else
+            self.stubBin = path.join(dpackRoot, "stub", "stub_linux")
+        end
+
+        # Standard library and prelude paths
+        self.stdDir     = path.join(self.repoRoot, "src", "libs", "std")
+        self.preludeDir = path.join(self.repoRoot, "src", "libs", "prelude")
+        
+        # Extensions can be local (current dir) or global (in djazair-language/extensions)
+        self.extDir     = path.join(self.repoRoot, "extensions")
+    end
+
+    log(msg)
+        if !self.quiet
+            print(msg)
+        end
+    end
+
+    # ── Public API ─────────────────────────────────────────────────────────
+
+    # Pack a script file into a self-contained executable.
+    # scriptPath: path to the .dz entry script
+    # outputPath: where to write the final executable
+    # extraExtensions: list of extra extension names to force-include
+    # assets: list of additional files/directories to bundle (relative to script directory)
+    pack(scriptPath, outputPath, extraExtensions = [], assets = [])
+        let absScript = path.resolve(scriptPath)
+        if !file.exists(absScript)
+            throw "dpack: Script not found: ${absScript}"
+        end
+
+        if !file.exists(self.interpBin)
+            throw "dpack: Interpreter not found: ${self.interpBin}\n       Please build Djazair first."
+        end
+
+        if !file.exists(self.stubBin)
+            throw "dpack: Stub binary not found: ${self.stubBin}\n       Please rebuild dpack stub."
+        end
+
+        # ── Step 1: Scan for used extensions ──────────────────────────────
+        self.log("  Scanning imports...")
+        let scanResult = Scanner.scanAll(absScript)
+        let extensions = scanResult["extensions"]
+        for ext in extraExtensions
+            let found = False
+            for e in extensions
+                if e == ext
+                    found = True
+                    break
+                end
+            end
+            if !found
+                extensions.append(ext)
+            end
+        end
+
+        if extensions.length() > 0
+            self.log("  Extensions detected: " + extensions.join(", "))
+        else
+            self.log("  No external extensions detected.")
+        end
+
+        # ── Step 2: Build staging directory ───────────────────────────────
+        let tmpStage = path.join(process.cwd(), ".dpack_stage_tmp")
+        if file.exists(tmpStage)
+            dir.deleteAll(tmpStage)
+        end
+        dir.createAll(tmpStage)
+
+        try
+            self.buildStage(tmpStage, absScript, extensions, assets)
+            let zipPath = path.join(process.cwd(), ".dpack_bundle.zip")
+            if file.exists(zipPath)
+                file.delete(zipPath)
+            end
+
+            # ── Step 3: ZIP the stage ─────────────────────────────────────
+            self.log("  Creating bundle...")
+            self.createZip(tmpStage, zipPath)
+
+            # ── Step 4: Append ZIP to stub ────────────────────────────────
+            self.log("  Assembling executable...")
+            self.appendBundles(zipPath, outputPath)
+
+            if file.exists(zipPath)
+                file.delete(zipPath)
+            end
+
+            # ── Step 5: Set executable bit on Linux ───────────────────────
+            if !os.isWindows()
+                file.chmod(outputPath, 493) # 0755 in decimal
+            end
+
+            self.log("  Done!")
+        catch err
+            self.forceDelete(tmpStage)
+            throw err
+        end
+
+        self.forceDelete(tmpStage)
+    end
+
+    # Force-delete a directory natively (handles read-only files on Windows)
+    forceDelete(dirPath)
+        if !file.exists(dirPath)
+            return
+        end
+        let items = dir.list(dirPath)
+        for itemName in items
+            let itemPath = path.join(dirPath, itemName)
+            if os.isWindows()
+                file.chmod(itemPath, 511) # 0777 in decimal
+            end
+            if file.isDir(itemPath)
+                self.forceDelete(itemPath)
+            else
+                file.delete(itemPath)
+            end
+        end
+        dir.deleteAll(dirPath)
+    end
+
+    # ── Private helpers ────────────────────────────────────────────────────
+
+    # Builds the staging directory with all files to be bundled.
+    buildStage(stageDir, scriptPath, extensions, assets)
+        # Copy entry script as __main__.dz
+        let mainDest = path.join(stageDir, "__main__.dz")
+        file.copy(scriptPath, mainDest)
+        self.log("  Bundling: " + path.basename(scriptPath) + " → __main__.dz")
+
+        # Copy interpreter into a bin/ directory
+        let interpDest = path.join(stageDir, "bin", self.interpName)
+        self.log("  Bundling: interpreter (" + self.interpName + ")")
+        self.copyFileTo(self.interpBin, interpDest)
+
+        # Copy std/ library
+        self.log("  Bundling: std/ library...")
+        let stdDest = path.join(stageDir, "src", "libs", "std")
+        dir.createAll(path.dirname(stdDest))
+        self.copyDirTo(self.stdDir, stdDest)
+
+        # Copy prelude/
+        if file.exists(self.preludeDir)
+            self.log("  Bundling: prelude/")
+            let preludeDest = path.join(stageDir, "src", "libs", "prelude")
+            dir.createAll(path.dirname(preludeDest))
+            self.copyDirTo(self.preludeDir, preludeDest)
+        end
+
+        # Copy detected extensions
+        for extName in extensions
+            let localExtSrc = path.join(process.cwd(), "extensions", extName)
+            let globalExtSrc = path.join(self.extDir, extName)
+            let extSrc = Null
+
+            if file.exists(localExtSrc)
+                extSrc = localExtSrc
+            elif file.exists(globalExtSrc)
+                extSrc = globalExtSrc
+            end
+
+            if !isNull(extSrc)
+                self.log("  Bundling: extension/" + extName)
+                let extDest = path.join(stageDir, "extensions", extName)
+                dir.createAll(path.dirname(extDest))
+                self.copyDirTo(extSrc, extDest)
+            else
+                print("  Warning: Extension '" + extName + "' not found locally or globally, skipping.")
+            end
+        end
+
+        # Copy user-defined assets
+        for asset in assets
+            let assetSrc = path.join(path.dirname(scriptPath), asset)
+            let assetDest = path.join(stageDir, asset)
+            
+            if file.exists(assetSrc)
+                self.log("  Bundling asset: " + asset)
+                if file.isDir(assetSrc)
+                    self.copyDirTo(assetSrc, assetDest)
+                else
+                    self.copyFileTo(assetSrc, assetDest)
+                end
+            else
+                print("  Warning: Asset '" + asset + "' not found — skipping.")
+            end
+        end
+    end
+
+    # Copies a single file to dest path (creates parent dirs as needed).
+    copyFileTo(src, dest)
+        let destDir = path.dirname(dest)
+        if !file.exists(destDir)
+            dir.createAll(destDir)
+        end
+        file.copy(src, dest)
+    end
+
+    # Recursively copies a directory to dest natively.
+    copyDirTo(src, dest)
+        if !file.exists(dest)
+            dir.createAll(dest)
+        end
+        let items = dir.list(src)
+        for itemName in items
+            let srcPath = path.join(src, itemName)
+            let destPath = path.join(dest, itemName)
+            if file.isDir(srcPath)
+                self.copyDirTo(srcPath, destPath)
+            else
+                file.copy(srcPath, destPath)
+            end
+        end
+    end
+
+    # Creates a ZIP archive natively on Linux, but uses PowerShell on Windows
+    # to avoid binary corruption caused by file.read() text conversion.
+    createZip(stageDir, zipPath)
+        if os.isWindows()
+            let winStage = stageDir.replace("/", "\\")
+            let winZip   = zipPath.replace("/", "\\")
+            let r = process.exec("powershell -NoProfile -Command \"Compress-Archive -Path '" + winStage + "\\*' -DestinationPath '" + winZip + "' -Force\"")
+            if r["exit_code"] != 0
+                throw "dpack: Failed to create ZIP bundle.\n" + r["stderr"]
+            end
+        else
+            use zip
+            let z = new zip.ZipFile(zipPath, "w")
+            self.addDirToZip(z, stageDir, "")
+            z.close()
+        end
+    end
+
+    addDirToZip(z, currentDir, basePath)
+        let items = dir.list(currentDir)
+        for itemName in items
+            let fullPath = path.join(currentDir, itemName)
+            let arcName = ""
+            if basePath == ""
+                arcName = itemName
+            else
+                arcName = basePath + "/" + itemName
+            end
+            if file.isDir(fullPath)
+                self.addDirToZip(z, fullPath, arcName)
+            else
+                let content = file.read(fullPath)
+                z.writestr(arcName, content)
+            end
+        end
+    end
+
+    # Appends the ZIP to the stub binary and writes the 8-byte offset natively.
+    # Final layout: [stub bytes][ZIP bytes][uint64 LE: zip start offset]
+    appendBundles(zipPath, outputPath)
+        # Step 1: Get stub size (= zip offset)
+        let stubSize = file.size(self.stubBin)
+
+        # Step 2: Concatenate stub + ZIP natively using bytes
+        let stubBytes = file.readBytes(self.stubBin)
+        let zipBytes = file.readBytes(zipPath)
+
+        let outHandle = file.open(outputPath, "wb")
+        if isNull(outHandle) or !outHandle.isOpen()
+            throw "dpack: Failed to open output file for writing: " + outputPath
+        end
+
+        outHandle.writeBytes(stubBytes)
+        outHandle.writeBytes(zipBytes)
+
+        # Step 3: Append 8-byte little-endian offset (zip start = stub size)
+        use bytes
+        let offsetBytes = bytes.fromInteger(stubSize, 8, False)
+        outHandle.writeBytes(offsetBytes)
+        outHandle.close()
+    end
+end
