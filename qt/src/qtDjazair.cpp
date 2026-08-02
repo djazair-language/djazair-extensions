@@ -1278,6 +1278,7 @@ DJAZAIR_FUNC(qtChartViewSetChartNative) {
     QtChartHandle chart = (QtChartHandle)get_qt_handle(vm, args, 1);
     if (!view || !chart) return NULL_VAL;
     qt_chartview_set_chart(view, chart);
+    AS_RESOURCE(args[1])->finalizer = NULL;
     return djazair_null();
 }
 
@@ -1301,6 +1302,7 @@ DJAZAIR_FUNC(qtChartAddSeriesNative) {
     QtSeriesHandle series = (QtSeriesHandle)get_qt_handle(vm, args, 1);
     if (!chart || !series) return NULL_VAL;
     qt_chart_add_series(chart, series);
+    AS_RESOURCE(args[1])->finalizer = NULL;
     return djazair_null();
 }
 
@@ -1807,6 +1809,7 @@ DJAZAIR_FUNC(qtBarSeriesAppendNative) {
     QtSeriesHandle barset = (QtSeriesHandle)get_qt_handle(vm, args, 1);
     if (!series || !barset) return NULL_VAL;
     qt_barseries_append(series, barset);
+    AS_RESOURCE(args[1])->finalizer = NULL;
     return djazair_null();
 }
 

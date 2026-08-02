@@ -6,10 +6,9 @@ import "window/tray.dz" as trayMod
 let QMainWindow     = winMod.QMainWindow
 let QMenu           = winMod.QMenu
 let QAction         = winMod.QAction
-let QMessageBox     = dialogMod.QMessageBox
-let QFileDialog     = dialogMod.QFileDialog
-let QInputDialog    = dialogMod.QInputDialog
+let QMessageBox     = new dialogMod.QMessageBox()
+let QFileDialog     = new dialogMod.QFileDialog()
+let QInputDialog    = new dialogMod.QInputDialog()
 let QSystemTrayIcon = trayMod.QSystemTrayIcon
-
 
 

@@ -67,9 +67,11 @@ let QMenu        = winMod.QMenu
 let QAction      = winMod.QAction
 let QToolBar     = winMod.QToolBar
 let QDialog      = dlgMod.QDialog
-let QMessageBox  = dialogMod.QMessageBox
-let QFileDialog  = dialogMod.QFileDialog
-let QInputDialog = dialogMod.QInputDialog
+# Dialog helpers are stateless facade instances so documented calls such as
+# qt.QMessageBox.info("title", "message") work without `new`.
+let QMessageBox  = new dialogMod.QMessageBox()
+let QFileDialog  = new dialogMod.QFileDialog()
+let QInputDialog = new dialogMod.QInputDialog()
 let QSystemTrayIcon = trayMod.QSystemTrayIcon
 
 let Theme       = themeMod.Theme
@@ -86,6 +88,5 @@ let QPieSeries   = chartMod.QPieSeries
 let QBarSet      = chartMod.QBarSet
 let QBarSeries   = chartMod.QBarSeries
 let QScatterSeries = chartMod.QScatterSeries
-
 
 
