@@ -7,7 +7,7 @@ window.setTitle("Djazair Qt - QCanvas Drawing")
 window.resize(600, 400)
 
 # Create a central label to hold the QPixmap
-let canvasLabel = new qt.QLabel(window)
+let canvasLabel = new qt.QLabel("", window)
 window.setCentralWidget(canvasLabel)
 
 # Create a 600x400 QPixmap (QCanvas)
@@ -45,4 +45,3 @@ canvasLabel.setPixmap(pixmap)
 
 window.show()
 app.exec()
-

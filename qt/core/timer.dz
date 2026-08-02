@@ -14,9 +14,13 @@ class QTimer
         _qt.timerStop(self.handle)
     end
 
+    destroy()
+        _qt.timerDestroy(self.handle)
+        self.handle = Null
+    end
+
     onTimeout(callback)
         _qt.timerOnTimeout(self.handle, callback)
     end
 end
-
 

@@ -8,6 +8,7 @@ if "%~1"=="" (
 )
 
 set "ROOT=%~f1"
+set "SCRIPT_DIR=%~dp0"
 
 if not exist "%ROOT%\src\include" (
     echo [ERROR] "%ROOT%\src\include" not found. Is ROOT correct?
@@ -41,8 +42,8 @@ echo [INFO] Compiling Qt dynamic extension (qt.dll)...
     "-I%ROOT%\src\core" ^
     "-I%ROOT%\src\libs" ^
     %QT_INC% -DQT_CHARTS_LIB ^
-    src\qtWrapper.cpp src\qtDjazair.cpp ^
-    -o qt.dll ^
+    "%SCRIPT_DIR%src\qtWrapper.cpp" "%SCRIPT_DIR%src\qtDjazair.cpp" ^
+    -o "%SCRIPT_DIR%qt.dll" ^
     "-L%ROOT%\build\bin" %QT_LIB% ^
     -ldjazair -lQt5UiTools -lQt5MultimediaWidgets -lQt5Multimedia -lQt5Charts -lQt5Widgets -lQt5Gui -lQt5Xml -lQt5Core
 
@@ -53,8 +54,8 @@ if errorlevel 1 (
         "-I%ROOT%\src\core" ^
         "-I%ROOT%\src\libs" ^
         %QT_INC% -DQT_CHARTS_LIB ^
-        src\qtWrapper.cpp src\qtDjazair.cpp ^
-        -o qt.dll ^
+        "%SCRIPT_DIR%src\qtWrapper.cpp" "%SCRIPT_DIR%src\qtDjazair.cpp" ^
+        -o "%SCRIPT_DIR%qt.dll" ^
         "-L%ROOT%\build\bin" %QT_LIB% ^
         -ldjazair -lQt6UiTools -lQt6MultimediaWidgets -lQt6Multimedia -lQt6Charts -lQt6Widgets -lQt6Gui -lQt6Xml -lQt6Core
 )

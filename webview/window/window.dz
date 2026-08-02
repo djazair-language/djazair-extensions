@@ -109,6 +109,30 @@ fn createWindow(app, options)
         _native.windowSetDarkMode(h, isDark)
     end
 
+    obj.setFullscreen = fn(fs)
+        _native.windowSetFullscreen(h, fs)
+    end
+
+    obj.isFullscreen = fn()
+        return _native.windowIsFullscreen(h)
+    end
+
+    obj.setAlwaysOnTop = fn(top)
+        _native.windowSetAlwaysOnTop(h, top)
+    end
+
+    obj.center = fn()
+        _native.windowCenter(h)
+    end
+
+    obj.setIcon = fn(path)
+        _native.windowSetIcon(h, path)
+    end
+
+    obj.setOpacity = fn(opacity)
+        _native.windowSetOpacity(h, opacity)
+    end
+
     let isLocalPath = fn(p)
         if "://" in p return False end
         if p.slice(0, 6) == "about:" return False end
@@ -171,6 +195,12 @@ fn createWindow(app, options)
     obj.getUrl = fn()          return _native.windowGetUrl(h) end
     obj.setContextMenuEnabled = fn(e) _native.windowSetContextMenu(h, e) end
     obj.isLoaded = fn()        return obj._loaded end
+    obj.getScreenSize = fn()   return _native.windowGetScreenSize() end
+    obj.getAvailableSize = fn() return _native.windowGetAvailableSize() end
+    obj.setUserAgent = fn(ua)  _native.windowSetUserAgent(h, ua) end
+    obj.clearCache = fn()      _native.windowClearCache(h) end
+    obj.clearCookies = fn()    _native.windowClearCookies(h) end
+    obj.print = fn()           _native.windowPrint(h) end
 
     obj.onClose = fn(cb)
         obj._onClose = cb

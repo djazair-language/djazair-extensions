@@ -32,8 +32,6 @@ typedef void* QtColorHandle;
 typedef void* QtFontHandle;
 typedef void* QtIconHandle;
 typedef void* QtMediaPlayerHandle;
-typedef void* QtPixmapHandle;
-typedef void* QtPainterHandle;
 typedef void* QtChartHandle;
 typedef void* QtChartViewHandle;
 typedef void* QtSeriesHandle;
@@ -46,7 +44,10 @@ typedef void (*QtStringCallback)(const char* text, void* user_data);
 typedef void (*QtDoubleCallback)(double value, void* user_data);
 
 /* Resource Cleanup Helpers */
+void qt_object_track(void* handle);
+bool qt_object_is_alive(void* handle);
 void qt_object_delete(void* handle);
+bool qt_painter_is_alive(void* handle);
 
 /* ============================================================
  * Application Life Cycle & Global Theme

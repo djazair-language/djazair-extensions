@@ -4,7 +4,7 @@
 #  Usage: ./build.sh <ROOT>
 # ─────────────────────────────────────────────
 
-set -e
+set -eu
 
 if [ -z "$1" ]; then
     echo "[ERROR] Missing argument: ROOT path to djazair-language."
@@ -12,7 +12,8 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-ROOT="$1"
+ROOT=$(cd "$1" && pwd)
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 if [ ! -d "$ROOT/src/include" ]; then
     echo "[ERROR] '$ROOT/src/include' not found. Is ROOT correct?"
@@ -22,16 +23,15 @@ fi
 QT_CFLAGS=""
 QT_LIBS=""
 
-if pkg-config --exists Qt5Widgets; then
-    QT_CFLAGS=$(pkg-config --cflags Qt5Widgets Qt5Core Qt5Gui)
-    QT_LIBS=$(pkg-config --libs Qt5Widgets Qt5Core Qt5Gui)
-elif pkg-config --exists Qt6Widgets; then
-    QT_CFLAGS=$(pkg-config --cflags Qt6Widgets Qt6Core Qt6Gui)
-    QT_LIBS=$(pkg-config --libs Qt6Widgets Qt6Core Qt6Gui)
+if pkg-config --exists Qt5Widgets Qt5UiTools Qt5Multimedia Qt5MultimediaWidgets Qt5Charts; then
+    QT_CFLAGS=$(pkg-config --cflags Qt5Widgets Qt5UiTools Qt5Multimedia Qt5MultimediaWidgets Qt5Charts)
+    QT_LIBS=$(pkg-config --libs Qt5Widgets Qt5UiTools Qt5Multimedia Qt5MultimediaWidgets Qt5Charts)
+elif pkg-config --exists Qt6Widgets Qt6UiTools Qt6Multimedia Qt6MultimediaWidgets Qt6Charts; then
+    QT_CFLAGS=$(pkg-config --cflags Qt6Widgets Qt6UiTools Qt6Multimedia Qt6MultimediaWidgets Qt6Charts)
+    QT_LIBS=$(pkg-config --libs Qt6Widgets Qt6UiTools Qt6Multimedia Qt6MultimediaWidgets Qt6Charts)
 else
-    echo "[WARNING] pkg-config for Qt5/Qt6 not found. Attempting default fallback flags."
-    QT_CFLAGS="-I/usr/include/qt -I/usr/include/qt/QtWidgets"
-    QT_LIBS="-lQt5Widgets -lQt5Core -lQt5Gui"
+    echo "[ERROR] Qt Widgets, UiTools, Multimedia, and Charts development packages are required."
+    exit 1
 fi
 
 OUTPUT_LIB="qt.so"
@@ -46,8 +46,8 @@ g++ -shared -fPIC -O2 -std=c++17 \
     -I"$ROOT/src/core" \
     -I"$ROOT/src/libs" \
     $QT_CFLAGS \
-    src/qt_wrapper.cpp src/qt_djazair.cpp \
-    -o "$OUTPUT_LIB" \
+    "$SCRIPT_DIR/src/qtWrapper.cpp" "$SCRIPT_DIR/src/qtDjazair.cpp" \
+    -o "$SCRIPT_DIR/$OUTPUT_LIB" \
     -L"$ROOT/build/bin" -ldjazair $QT_LIBS
 
 echo "[OK] $OUTPUT_LIB built successfully."

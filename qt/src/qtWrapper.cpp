@@ -87,14 +87,61 @@ QT_CHARTS_USE_NAMESPACE
 
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <string>
+#include <unordered_set>
 
 /* Thread-local string buffer to prevent concurrent/rapid getter buffer collisions */
 static thread_local std::string tls_temp_str_buffer;
 
+/*
+ * Resources in the Djazair VM can outlive a Qt parent object.  Track QObject
+ * destruction so a later resource finalizer never dereferences a stale Qt
+ * pointer.  Every QObject returned to the VM is registered by qtDjazair.cpp.
+ */
+static std::mutex live_objects_mutex;
+static std::unordered_set<QObject*> live_objects;
+
+static void forget_qobject(QObject* object) {
+    std::lock_guard<std::mutex> lock(live_objects_mutex);
+    live_objects.erase(object);
+}
+
 static const char* copy_qstring_to_temp(const QString& qstr) {
     tls_temp_str_buffer = qstr.toStdString();
     return tls_temp_str_buffer.c_str();
+}
+
+/* Canvas painters are borrowed handles. Their CanvasWidget owns deletion. */
+static std::mutex painters_mutex;
+static std::unordered_set<QPainter*> live_painters;
+static std::unordered_set<QPainter*> canvas_painters;
+
+static void register_painter(QPainter* painter) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    live_painters.insert(painter);
+}
+
+static void unregister_painter(QPainter* painter) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    live_painters.erase(painter);
+}
+
+static void register_canvas_painter(QPainter* painter) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    live_painters.insert(painter);
+    canvas_painters.insert(painter);
+}
+
+static void unregister_canvas_painter(QPainter* painter) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    live_painters.erase(painter);
+    canvas_painters.erase(painter);
+}
+
+static bool is_canvas_painter(QPainter* painter) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    return canvas_painters.find(painter) != canvas_painters.end();
 }
 
 /* ============================================================
@@ -114,6 +161,10 @@ public:
     }
 
     ~CanvasWidget() {
+        if (activePainter) {
+            activePainter->end();
+            unregister_canvas_painter(activePainter);
+        }
         delete activePainter;
         delete backing;
     }
@@ -121,6 +172,14 @@ public:
     void resizeBacking(int w, int h) {
         if (w < 1) w = 1;
         if (h < 1) h = 1;
+
+        if (activePainter) {
+            activePainter->end();
+            unregister_canvas_painter(activePainter);
+            delete activePainter;
+            activePainter = nullptr;
+        }
+
         QPixmap* nb = new QPixmap(w, h);
         nb->fill(Qt::white);
         QPainter p(nb);
@@ -144,12 +203,34 @@ protected:
 extern "C" {
 
 /* Generic Resource Cleanup Helper */
-void qt_object_delete(void* handle) {
-    if (!handle) return;
-    QObject* obj = (QObject*)handle;
-    if (!obj->parent()) {
-        delete obj;
+void qt_object_track(void* handle) {
+    QObject* object = static_cast<QObject*>(handle);
+    if (!object) return;
+
+    {
+        std::lock_guard<std::mutex> lock(live_objects_mutex);
+        if (!live_objects.insert(object).second) return;
     }
+
+    QObject::connect(object, &QObject::destroyed, [](QObject* destroyed) {
+        forget_qobject(destroyed);
+    });
+}
+
+bool qt_object_is_alive(void* handle) {
+    std::lock_guard<std::mutex> lock(live_objects_mutex);
+    return live_objects.find(static_cast<QObject*>(handle)) != live_objects.end();
+}
+
+bool qt_painter_is_alive(void* handle) {
+    std::lock_guard<std::mutex> lock(painters_mutex);
+    return live_painters.find(static_cast<QPainter*>(handle)) != live_painters.end();
+}
+
+void qt_object_delete(void* handle) {
+    QObject* object = static_cast<QObject*>(handle);
+    if (!object || !qt_object_is_alive(object)) return;
+    delete object;
 }
 
 class DropEventFilter : public QObject {
@@ -494,6 +575,7 @@ void qt_pixmap_destroy(QtPixmapHandle pixmap) {
 QtPainterHandle qt_painter_create(QtPixmapHandle pixmap) {
     if (!pixmap) return nullptr;
     QPainter* p = new QPainter((QPixmap*)pixmap);
+    register_painter(p);
     return (QtPainterHandle)p;
 }
 
@@ -528,9 +610,13 @@ void qt_painter_draw_text(QtPainterHandle painter, int x, int y, const char* tex
 }
 
 void qt_painter_end(QtPainterHandle painter) {
-    if (painter) {
-        ((QPainter*)painter)->end();
-        delete (QPainter*)painter;
+    QPainter* qt_painter = static_cast<QPainter*>(painter);
+    if (!qt_painter) return;
+
+    qt_painter->end();
+    if (!is_canvas_painter(qt_painter)) {
+        unregister_painter(qt_painter);
+        delete qt_painter;
     }
 }
 
@@ -1226,9 +1312,12 @@ QtPainterHandle qt_canvas_begin(QtWidgetHandle canvas) {
     if (!canvas) return nullptr;
     CanvasWidget* cw = (CanvasWidget*)canvas;
     if (cw->activePainter) {
+        cw->activePainter->end();
+        unregister_canvas_painter(cw->activePainter);
         delete cw->activePainter;
     }
     cw->activePainter = new QPainter(cw->backing);
+    register_canvas_painter(cw->activePainter);
     return (QtPainterHandle)cw->activePainter;
 }
 
@@ -1237,6 +1326,7 @@ void qt_canvas_end(QtWidgetHandle canvas) {
     CanvasWidget* cw = (CanvasWidget*)canvas;
     if (cw->activePainter) {
         cw->activePainter->end();
+        unregister_canvas_painter(cw->activePainter);
         delete cw->activePainter;
         cw->activePainter = nullptr;
     }
@@ -1253,8 +1343,7 @@ void qt_canvas_clear(QtWidgetHandle canvas, const char* color_hex) {
 void qt_canvas_set_size(QtWidgetHandle canvas, int w, int h) {
     if (!canvas) return;
     CanvasWidget* cw = (CanvasWidget*)canvas;
-    cw->resizeBacking(w, h);
-    cw->resize(w, h);
+    cw->resize(w < 1 ? 1 : w, h < 1 ? 1 : h);
 }
 
 /* ============================================================

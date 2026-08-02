@@ -43,7 +43,7 @@ class QTreeWidget is QWidget
     end
 
     setHeaders(headers)
-        _qt.treewidgetSetHeaders(self.handle, headers, headers.length())
+        _qt.treewidgetSetHeaders(self.handle, headers)
     end
 
     addItem(columnsArray, parentItem = Null)
@@ -84,5 +84,4 @@ class QTableWidget is QWidget
         return _qt.tablewidgetGetItem(self.handle, row, col)
     end
 end
-
 

@@ -56,8 +56,12 @@ struct WindowContext {
     double            zoom_level;
     bool              has_navigated;
     bool              can_go_forward;
+    bool              is_fullscreen;
 
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
+    WINDOWPLACEMENT   saved_placement;
+    LONG              saved_style;
+    LONG              saved_exstyle;
     WNDPROC original_wndproc;
     HWND    tray_hwnd;
     HICON   tray_icon;
@@ -76,8 +80,9 @@ struct WindowContext {
         , focus_callback(NULL_VAL), blur_callback(NULL_VAL)
         , maximize_callback(NULL_VAL), minimize_callback(NULL_VAL), restore_callback(NULL_VAL)
         , navigate_callback(NULL_VAL), title_callback(NULL_VAL), load_callback(NULL_VAL)
-        , id(0), zoom_level(1.0), has_navigated(false), can_go_forward(false)
+        , id(0), zoom_level(1.0), has_navigated(false), can_go_forward(false), is_fullscreen(false)
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
+        , saved_style(0), saved_exstyle(0)
         , original_wndproc(nullptr), tray_hwnd(nullptr), tray_icon(nullptr)
         , last_icon_small(nullptr), last_icon_big(nullptr)
         , hmenu(nullptr), menu_active(false), tray_active(false)
@@ -833,6 +838,222 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetMaxSize) {
 extern "C" DJAZAIR_FUNC(nativeWindowSetBackgroundColor) {
     djazair_check_args(5, argCount);
     GET_WINDOW(0);
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetFullscreen) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_bool(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        bool fs = AS_BOOL(args[1]);
+        if (fs && !wc->is_fullscreen) {
+            wc->saved_placement.length = sizeof(WINDOWPLACEMENT);
+            GetWindowPlacement(hwnd, &wc->saved_placement);
+            wc->saved_style = GetWindowLong(hwnd, GWL_STYLE);
+            wc->saved_exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            MONITORINFO mi = { sizeof(MONITORINFO) };
+            GetMonitorInfo(monitor, &mi);
+            SetWindowLong(hwnd, GWL_STYLE, wc->saved_style & ~(WS_CAPTION | WS_THICKFRAME));
+            SetWindowLong(hwnd, GWL_EXSTYLE, wc->saved_exstyle & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE));
+            SetWindowPos(hwnd, HWND_TOP,
+                mi.rcMonitor.left, mi.rcMonitor.top,
+                mi.rcMonitor.right - mi.rcMonitor.left,
+                mi.rcMonitor.bottom - mi.rcMonitor.top,
+                SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            wc->is_fullscreen = true;
+        } else if (!fs && wc->is_fullscreen) {
+            SetWindowLong(hwnd, GWL_STYLE, wc->saved_style);
+            SetWindowLong(hwnd, GWL_EXSTYLE, wc->saved_exstyle);
+            SetWindowPlacement(hwnd, &wc->saved_placement);
+            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            wc->is_fullscreen = false;
+        }
+#elif defined(WEBVIEW_PLATFORM_LINUX)
+        GtkWindow* gtk_win = GTK_WINDOW(webview_get_window((webview_t)wc->wv));
+        if (AS_BOOL(args[1])) gtk_window_fullscreen(gtk_win);
+        else gtk_window_unfullscreen(gtk_win);
+#endif
+    }
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowIsFullscreen) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+    return djazair_bool(wc->is_fullscreen);
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetAlwaysOnTop) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_bool(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        SetWindowPos(hwnd, AS_BOOL(args[1]) ? HWND_TOPMOST : HWND_NOTOPMOST,
+            0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+#endif
+    }
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowCenter) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    HWND hwnd = get_hwnd(wc->wv);
+    RECT r;
+    GetWindowRect(hwnd, &r);
+    int w = r.right - r.left;
+    int h = r.bottom - r.top;
+    int sw = GetSystemMetrics(SM_CXSCREEN);
+    int sh = GetSystemMetrics(SM_CYSCREEN);
+    SetWindowPos(hwnd, NULL, (sw - w) / 2, (sh - h) / 2, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+#elif defined(WEBVIEW_PLATFORM_LINUX)
+    gtk_window_set_position(GTK_WINDOW(webview_get_window((webview_t)wc->wv)), GTK_WIN_POS_CENTER);
+#endif
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetIcon) {
+    djazair_check_args(2, argCount);
+    djazair_check_str(1);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    HWND hwnd = get_hwnd(wc->wv);
+    HICON hIcon = (HICON)LoadImageA(NULL, AS_CSTRING(args[1]), IMAGE_ICON,
+        0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    if (hIcon) {
+        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        if (wc->last_icon_small) DestroyIcon(wc->last_icon_small);
+        if (wc->last_icon_big) DestroyIcon(wc->last_icon_big);
+        wc->last_icon_small = hIcon;
+        wc->last_icon_big = hIcon;
+    }
+#endif
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowGetScreenSize) {
+    djazair_check_args(0, argCount);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int w = GetSystemMetrics(SM_CXSCREEN);
+    int h = GetSystemMetrics(SM_CYSCREEN);
+#else
+    int w = 1024, h = 768;
+#endif
+    Value arr = djazair_new_array(vm);
+    djazair_array_push(vm, arr, djazair_num((double)w));
+    djazair_array_push(vm, arr, djazair_num((double)h));
+    return arr;
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowGetAvailableSize) {
+    djazair_check_args(0, argCount);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    RECT r;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0);
+    int w = r.right - r.left;
+    int h = r.bottom - r.top;
+#else
+    int w = 1024, h = 768;
+#endif
+    Value arr = djazair_new_array(vm);
+    djazair_array_push(vm, arr, djazair_num((double)w));
+    djazair_array_push(vm, arr, djazair_num((double)h));
+    return arr;
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetOpacity) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_number(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        BYTE alpha = (BYTE)(AS_NUMBER(args[1]) * 255.0);
+        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+#endif
+    }
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetUserAgent) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_string(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        auto* ctrl = (ICoreWebView2Controller*)webview_get_native_handle(
+            (webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+        if (ctrl) {
+            ICoreWebView2* wv2 = nullptr;
+            if (SUCCEEDED(ctrl->get_CoreWebView2(&wv2))) {
+                ICoreWebView2Settings* settings = nullptr;
+                if (SUCCEEDED(wv2->get_Settings(&settings))) {
+                    IID IID_ICoreWebView2Settings2 = {0xee9a0f68,0xf46c,0x4e32,{0xac,0x23,0xef,0x8c,0xac,0x22,0x4d,0x2a}};
+                    ICoreWebView2Settings2* settings2 = nullptr;
+                    HRESULT hr = settings->QueryInterface(IID_ICoreWebView2Settings2, (void**)&settings2);
+                    if (SUCCEEDED(hr) && settings2) {
+                        const char* ua = AS_CSTRING(args[1]);
+                        int ua_len = MultiByteToWideChar(CP_UTF8, 0, ua, -1, NULL, 0);
+                        wchar_t* w_ua = new wchar_t[ua_len];
+                        MultiByteToWideChar(CP_UTF8, 0, ua, -1, w_ua, ua_len);
+                        settings2->put_UserAgent(w_ua);
+                        delete[] w_ua;
+                        settings2->Release();
+                    }
+                    settings->Release();
+                }
+                wv2->Release();
+            }
+        }
+#endif
+    }
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowClearCache) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    auto* ctrl = (ICoreWebView2Controller*)webview_get_native_handle(
+        (webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+    if (ctrl) {
+        ICoreWebView2* wv2 = nullptr;
+        if (SUCCEEDED(ctrl->get_CoreWebView2(&wv2))) {
+            wv2->CallDevToolsProtocolMethod(L"Network.clearCache", L"{}", nullptr);
+            wv2->Release();
+        }
+    }
+#endif
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowClearCookies) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    auto* ctrl = (ICoreWebView2Controller*)webview_get_native_handle(
+        (webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+    if (ctrl) {
+        ICoreWebView2* wv2 = nullptr;
+        if (SUCCEEDED(ctrl->get_CoreWebView2(&wv2))) {
+            wv2->CallDevToolsProtocolMethod(L"Network.clearBrowserCookies", L"{}", nullptr);
+            wv2->Release();
+        }
+    }
+#endif
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowPrint) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+    wc->wv->eval("window.print()");
     return djazair_null();
 }
 
@@ -1603,6 +1824,18 @@ static NativeMethod webview_methods[] = {
     {"windowSetBackgroundColor", nativeWindowSetBackgroundColor, 5},
     {"windowSetDarkMode",      nativeWindowSetDarkMode,      2},
     {"windowSetVirtualHostMapping", nativeWindowSetVirtualHostMapping, 3},
+    {"windowSetFullscreen",    nativeWindowSetFullscreen,    2},
+    {"windowIsFullscreen",     nativeWindowIsFullscreen,     1},
+    {"windowSetAlwaysOnTop",   nativeWindowSetAlwaysOnTop,   2},
+    {"windowCenter",           nativeWindowCenter,           1},
+    {"windowSetIcon",          nativeWindowSetIcon,          2},
+    {"windowGetScreenSize",    nativeWindowGetScreenSize,    0},
+    {"windowGetAvailableSize", nativeWindowGetAvailableSize, 0},
+    {"windowSetOpacity",       nativeWindowSetOpacity,       2},
+    {"windowSetUserAgent",     nativeWindowSetUserAgent,     2},
+    {"windowClearCache",       nativeWindowClearCache,       1},
+    {"windowClearCookies",     nativeWindowClearCookies,     1},
+    {"windowPrint",            nativeWindowPrint,            1},
 
     // WebView
     {"windowNavigate",       nativeWindowNavigate,       2},

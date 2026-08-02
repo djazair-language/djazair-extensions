@@ -23,12 +23,71 @@ static void qtResourceFinalizer(void* ptr) {
     qt_object_delete(ptr);
 }
 
+static void qtPixmapFinalizer(void* ptr) {
+    qt_pixmap_destroy(ptr);
+}
+
+static void qtPainterFinalizer(void* ptr) {
+    qt_painter_end(ptr);
+}
+
+/*
+ * Qt parent ownership and VM garbage collection are independent.  Register
+ * every QObject before exposing it so its finalizer can safely detect whether
+ * a Qt parent has already destroyed it.  Value-type painting objects use
+ * their own finalizers instead of the QObject cleanup path.
+ */
+static djazair_value qtNewManagedResource(
+    djazairVM* vm,
+    void* ptr,
+    const char* name
+) {
+    if (!ptr) return djazair_null();
+
+    if (strcmp(name, "QPixmap") == 0) {
+        return djazair_new_resource_with_finalizer(vm, ptr, name, qtPixmapFinalizer);
+    }
+    if (strcmp(name, "QPainter") == 0) {
+        return djazair_new_resource_with_finalizer(vm, ptr, name, qtPainterFinalizer);
+    }
+
+    qt_object_track(ptr);
+    return djazair_new_resource_with_finalizer(vm, ptr, name, qtResourceFinalizer);
+}
+
+/* Keep all existing QObject resource factories on the managed path. */
+#define djazair_new_resource_with_finalizer(vm, ptr, name, finalizer) \
+    qtNewManagedResource((vm), (ptr), (name))
+
 static void* get_qt_handle(djazairVM* vm, djazair_args args, int index) {
     if (!IS_RESOURCE(args[index])) {
         runtimeError(vm, "TypeError: Argument %d must be a resource.", index + 1);
         return NULL;
     }
-    return djazair_get_resource(vm, args[index]);
+
+    ObjResource* resource = AS_RESOURCE(args[index]);
+    if (!resource->ptr) {
+        runtimeError(vm, "RuntimeError: Qt resource has already been destroyed.");
+        return NULL;
+    }
+
+    const char* name = resource->name->chars;
+    if (strcmp(name, "QPainter") == 0 && !qt_painter_is_alive(resource->ptr)) {
+        resource->ptr = NULL;
+        runtimeError(vm, "RuntimeError: QPainter is no longer active.");
+        return NULL;
+    }
+
+    bool is_value_type = strcmp(name, "QPixmap") == 0 ||
+                         strcmp(name, "QPainter") == 0 ||
+                         strcmp(name, "QTreeWidgetItem") == 0;
+    if (!is_value_type && !qt_object_is_alive(resource->ptr)) {
+        resource->ptr = NULL;
+        runtimeError(vm, "RuntimeError: Qt object was destroyed by its parent.");
+        return NULL;
+    }
+
+    return resource->ptr;
 }
 
 /* ============================================================
@@ -75,6 +134,7 @@ DJAZAIR_FUNC(qtAppDestroyNative) {
     QtAppHandle app = (QtAppHandle)get_qt_handle(vm, args, 0);
     if (!app) return NULL_VAL;
     qt_app_destroy(app);
+    AS_RESOURCE(args[0])->ptr = NULL;
     return djazair_null();
 }
 
@@ -256,6 +316,7 @@ DJAZAIR_FUNC(qtWidgetDestroyNative) {
     QtWidgetHandle w = (QtWidgetHandle)get_qt_handle(vm, args, 0);
     if (!w) return NULL_VAL;
     qt_widget_destroy(w);
+    AS_RESOURCE(args[0])->ptr = NULL;
     return djazair_null();
 }
 
@@ -914,7 +975,7 @@ DJAZAIR_FUNC(qtTreeWidgetCreateNative) {
 }
 
 DJAZAIR_FUNC(qtTreeWidgetSetHeadersNative) {
-    djazair_check_args(3, argCount);
+    djazair_check_args(2, argCount);
     QtWidgetHandle tree = (QtWidgetHandle)get_qt_handle(vm, args, 0);
     djazair_value arrVal = args[1];
     if (!IS_ARRAY(arrVal)) return NULL_VAL;
@@ -1113,7 +1174,7 @@ DJAZAIR_FUNC(qtPixmapCreateNative) {
     int w = (int)djazair_get_num(args, 0);
     int h = (int)djazair_get_num(args, 1);
     QtPixmapHandle pix = qt_pixmap_create(w, h);
-    return djazair_new_resource(vm, pix, "QPixmap");
+    return qtNewManagedResource(vm, pix, "QPixmap");
 }
 
 DJAZAIR_FUNC(qtPixmapFillNative) {
@@ -1130,6 +1191,7 @@ DJAZAIR_FUNC(qtPixmapDestroyNative) {
     QtPixmapHandle pix = (QtPixmapHandle)get_qt_handle(vm, args, 0);
     if (!pix) return NULL_VAL;
     qt_pixmap_destroy(pix);
+    AS_RESOURCE(args[0])->ptr = NULL;
     return djazair_null();
 }
 
@@ -1138,7 +1200,7 @@ DJAZAIR_FUNC(qtPainterCreateNative) {
     QtPixmapHandle pix = (QtPixmapHandle)get_qt_handle(vm, args, 0);
     if (!pix) return NULL_VAL;
     QtPainterHandle painter = qt_painter_create(pix);
-    return djazair_new_resource(vm, painter, "QPainter");
+    return qtNewManagedResource(vm, painter, "QPainter");
 }
 
 DJAZAIR_FUNC(qtPainterSetPenNative) {
@@ -1197,6 +1259,7 @@ DJAZAIR_FUNC(qtPainterEndNative) {
     QtPainterHandle p = (QtPainterHandle)get_qt_handle(vm, args, 0);
     if (!p) return NULL_VAL;
     qt_painter_end(p);
+    AS_RESOURCE(args[0])->ptr = NULL;
     return djazair_null();
 }
 
@@ -1310,6 +1373,15 @@ DJAZAIR_FUNC(qtTimerStopNative) {
     return djazair_null();
 }
 
+DJAZAIR_FUNC(qtTimerDestroyNative) {
+    djazair_check_args(1, argCount);
+    QtTimerHandle timer = (QtTimerHandle)get_qt_handle(vm, args, 0);
+    if (!timer) return NULL_VAL;
+    qt_timer_destroy(timer);
+    AS_RESOURCE(args[0])->ptr = NULL;
+    return djazair_null();
+}
+
 /* ============================================================
  * Signal/Slot Callback System
  * ============================================================ */
@@ -1356,31 +1428,43 @@ static djazair_value getCallback(void* handle, const char* signal) {
     return djazair_null();
 }
 
-/* Invoke a stored callback with proper GC protection */
+/* Invoke a stored callback synchronously and restore the VM stack. */
 static void invokeVoidCallback(void* handle, const char* signal) {
     djazair_value closure = getCallback(handle, signal);
     if (IS_NULL(closure)) return;
+
+    int savedFrameCount = g_qt_vm->frameCount;
     djazair_push(g_qt_vm, closure);
-    callValue(g_qt_vm, closure, 0);
-    djazair_pop(g_qt_vm);  // remove return value
+    if (!callValue(g_qt_vm, closure, 0)) return;
+    if (g_qt_vm->frameCount > savedFrameCount &&
+        run(g_qt_vm, savedFrameCount) != DJAZAIR_OK) return;
+    if (g_qt_vm->frameCount == savedFrameCount) djazair_pop(g_qt_vm);
 }
 
 static void invokeIntCallback(void* handle, const char* signal, int value) {
     djazair_value closure = getCallback(handle, signal);
     if (IS_NULL(closure)) return;
+
+    int savedFrameCount = g_qt_vm->frameCount;
     djazair_push(g_qt_vm, closure);
     djazair_push(g_qt_vm, djazair_num(value));
-    callValue(g_qt_vm, closure, 1);
-    djazair_pop(g_qt_vm);
+    if (!callValue(g_qt_vm, closure, 1)) return;
+    if (g_qt_vm->frameCount > savedFrameCount &&
+        run(g_qt_vm, savedFrameCount) != DJAZAIR_OK) return;
+    if (g_qt_vm->frameCount == savedFrameCount) djazair_pop(g_qt_vm);
 }
 
 static void invokeStringCallback(void* handle, const char* signal, const char* text) {
     djazair_value closure = getCallback(handle, signal);
     if (IS_NULL(closure)) return;
+
+    int savedFrameCount = g_qt_vm->frameCount;
     djazair_push(g_qt_vm, closure);
     djazair_push(g_qt_vm, djazair_str(g_qt_vm, text));
-    callValue(g_qt_vm, closure, 1);
-    djazair_pop(g_qt_vm);
+    if (!callValue(g_qt_vm, closure, 1)) return;
+    if (g_qt_vm->frameCount > savedFrameCount &&
+        run(g_qt_vm, savedFrameCount) != DJAZAIR_OK) return;
+    if (g_qt_vm->frameCount == savedFrameCount) djazair_pop(g_qt_vm);
 }
 
 /* Qt signal trampoline callbacks */
@@ -1398,6 +1482,11 @@ static void qtIntTrampoline(int value, void* user_data) {
 static void qtStringTrampoline(const char* text, void* user_data) {
     void* handle = user_data;
     invokeStringCallback(handle, "changed", text);
+}
+
+static void qtDropTrampoline(const char* text, void* user_data) {
+    void* handle = user_data;
+    invokeStringCallback(handle, "drop", text);
 }
 
 static void qtTextEditTrampoline(void* user_data) {
@@ -1527,7 +1616,7 @@ DJAZAIR_FUNC(qtWidgetOnDropNative) {
         return NULL_VAL;
     }
     setCallback(w, "drop", args[1]);
-    qt_widget_on_drop(w, qtStringTrampoline, w);
+    qt_widget_on_drop(w, qtDropTrampoline, w);
     return djazair_null();
 }
 
@@ -1984,7 +2073,7 @@ static NativeMethod qt_module_funcs[] = {
     {"listwidgetClear",       qtListWidgetClearNative,       1},
 
     {"treewidgetCreate",      qtTreeWidgetCreateNative,      -1},
-    {"treewidgetSetHeaders",  qtTreeWidgetSetHeadersNative,  3},
+    {"treewidgetSetHeaders",  qtTreeWidgetSetHeadersNative,  2},
     {"treewidgetAddItem",     qtTreeWidgetAddItemNative,     -1},
 
     {"tablewidgetCreate",     qtTableWidgetCreateNative,     -1},
@@ -2012,6 +2101,7 @@ static NativeMethod qt_module_funcs[] = {
     {"timerCreate",           qtTimerCreateNative,           0},
     {"timerStart",            qtTimerStartNative,            2},
     {"timerStop",             qtTimerStopNative,             1},
+    {"timerDestroy",          qtTimerDestroyNative,          1},
     {"timerOnTimeout",        qtTimerOnTimeoutNative,        2},
 
     {"pixmapCreate",          qtPixmapCreateNative,          2},

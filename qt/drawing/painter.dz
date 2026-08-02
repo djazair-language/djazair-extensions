@@ -2,7 +2,12 @@
 let _qt = __dynamic("qt")
 
 class QPixmap
-    init(width, height)
+    init(width = 0, height = 0, nativeHandle = Null)
+        if nativeHandle != Null
+            self.handle = nativeHandle
+            return
+        end
+
         self.handle = _qt.pixmapCreate(width, height)
     end
 
@@ -16,15 +21,14 @@ class QPixmap
 
     destroy()
         _qt.pixmapDestroy(self.handle)
+        self.handle = Null
     end
 end
 
 fn pixmapLoad(path)
     let h = _qt.pixmapLoad(path)
     if h != Null
-        let p = QPixmap(1, 1)
-        p.handle = h
-        return p
+        return new QPixmap(0, 0, h)
     end
     return Null
 end
@@ -94,7 +98,6 @@ class QPainter
 
     endPaint()
         _qt.painterEnd(self.handle)
+        self.handle = Null
     end
 end
-
-

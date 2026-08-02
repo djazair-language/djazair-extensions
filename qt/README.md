@@ -63,6 +63,35 @@ app.exec()
 
 ---
 
+## Build and verification
+
+The native bridge requires the Qt Widgets, UiTools, Multimedia,
+MultimediaWidgets, and Charts development modules. The build scripts resolve
+their source files relative to the extension directory, so they may be run
+from any working directory.
+
+```bat
+extensions\qt\build.bat <path-to-djazair-language>
+set QT_QPA_PLATFORM=offscreen
+build\bin\djazair.exe extensions\qt\tests\smoke.dz
+```
+
+`tests/smoke.dz` is non-interactive and covers module loading, tree/table
+views, painting, canvas ownership, timers, and synchronous widget callbacks.
+Use `QT_QPA_PLATFORM=offscreen` only for headless testing; normal desktop
+applications should use their system Qt platform plugin.
+
+### Resource ownership
+
+Qt parents own their child objects. The bridge tracks QObject destruction, so
+a Djazair handle whose parent has already deleted it fails safely instead of
+dereferencing stale memory. After calling `destroy()` or `endPaint()` on a
+manual resource, do not reuse that object. For `QCanvas`, finish a drawing
+session with `canvas.endPaint()`; calling `painter.endPaint()` first is safe
+and only ends the active paint operation.
+
+---
+
 ## 📚 API Reference Overview
 
 ### 1. Core & Application

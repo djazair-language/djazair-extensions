@@ -21,7 +21,7 @@ class QCanvas is QWidget
         if h == Null
             return Null
         end
-        let p = QPainter()
+        let p = new QPainter()
         p.handle = h
         return p
     end
@@ -38,4 +38,3 @@ class QCanvas is QWidget
         _qt.canvasSetSize(self.handle, w, h)
     end
 end
-

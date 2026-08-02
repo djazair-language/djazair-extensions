@@ -2,7 +2,12 @@
 let _qt = __dynamic("qt")
 
 class QWidget
-    init(parent = Null)
+    init(parent = Null, nativeHandle = Null)
+        if nativeHandle != Null
+            self.handle = nativeHandle
+            return
+        end
+
         let parentHandle = Null
         if parent != Null
             parentHandle = parent.handle
@@ -64,6 +69,7 @@ class QWidget
 
     destroy()
         _qt.widgetDestroy(self.handle)
+        self.handle = Null
     end
 
     setAcceptDrops(accept)
@@ -74,4 +80,3 @@ class QWidget
         _qt.widgetOnDrop(self.handle, callback)
     end
 end
-

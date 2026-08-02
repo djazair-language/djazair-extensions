@@ -12,9 +12,6 @@ fn loadUi(filepath, parent = Null)
     if handle == Null
         return Null
     end
-    let widget = new baseMod.QWidget()
-    widget.handle = handle
-    return widget
+    return new baseMod.QWidget(Null, handle)
 end
-
 
