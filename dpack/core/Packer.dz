@@ -66,9 +66,8 @@ class Packer
     # Pack a script file into a self-contained executable.
     # scriptPath: path to the .dz entry script
     # outputPath: where to write the final executable
-    # extraExtensions: list of extra extension names to force-include
-    # assets: list of additional files/directories to bundle (relative to script directory)
-    pack(scriptPath, outputPath, extraExtensions = [], assets = [])
+    # options: dictionary with optional keys "extensions", "assets", "quiet"
+    pack(scriptPath, outputPath, options = {})
         let absScript = path.resolve(scriptPath)
         if !file.exists(absScript)
             throw "dpack: Script not found: ${absScript}"
@@ -81,6 +80,9 @@ class Packer
         if !file.exists(self.stubBin)
             throw "dpack: Stub binary not found: ${self.stubBin}\n       Please rebuild dpack stub."
         end
+
+        let extraExtensions = if options.has("extensions") ? options["extensions"] else []
+        let assetsOpt = if options.has("assets") ? options["assets"] else True
 
         # ── Step 1: Scan for used extensions ──────────────────────────────
         self.log("  Scanning imports...")
@@ -113,7 +115,7 @@ class Packer
         dir.createAll(tmpStage)
 
         try
-            self.buildStage(tmpStage, absScript, extensions, assets, outputPath)
+            self.buildStage(tmpStage, absScript, extensions, assetsOpt, outputPath)
             let zipPath = path.join(process.cwd(), ".dpack_bundle.zip")
             if file.exists(zipPath)
                 file.delete(zipPath)
@@ -168,7 +170,7 @@ class Packer
     # ── Private helpers ────────────────────────────────────────────────────
 
     # Builds the staging directory with all files to be bundled.
-    buildStage(stageDir, scriptPath, extensions, assets, outputPath)
+    buildStage(stageDir, scriptPath, extensions, assetsOpt, outputPath)
         # Copy entry script as __main__.dz
         let mainDest = path.join(stageDir, "__main__.dz")
         file.copy(scriptPath, mainDest)
@@ -215,26 +217,47 @@ class Packer
             end
         end
 
-        # Auto-bundle all files and folders in the script's directory
-        let scriptDir = path.dirname(scriptPath)
-        let outputBase = path.basename(outputPath)
-        let mainBase = path.basename(scriptPath)
-        let items = dir.list(scriptDir)
-        
-        for item in items
-            # Skip output executable, main script, staging folder, and standard ignored files
-            if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip"
-                continue
+        # Process assets
+        let typeStr = type(assetsOpt)
+        if typeStr == "Boolean" and assetsOpt == True
+            # Auto-bundle all files and folders in the script's directory
+            let scriptDir = path.dirname(scriptPath)
+            let outputBase = path.basename(outputPath)
+            let mainBase = path.basename(scriptPath)
+            let items = dir.list(scriptDir)
+            
+            for item in items
+                # Skip output executable, main script, staging folder, and standard ignored files
+                if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip"
+                    continue
+                end
+                
+                let itemSrc = path.join(scriptDir, item)
+                let itemDest = path.join(stageDir, item)
+                
+                self.log("  Bundling asset: " + item)
+                if file.isDir(itemSrc)
+                    self.copyDirTo(itemSrc, itemDest)
+                else
+                    self.copyFileTo(itemSrc, itemDest)
+                end
             end
-            
-            let itemSrc = path.join(scriptDir, item)
-            let itemDest = path.join(stageDir, item)
-            
-            self.log("  Bundling asset: " + item)
-            if file.isDir(itemSrc)
-                self.copyDirTo(itemSrc, itemDest)
-            else
-                self.copyFileTo(itemSrc, itemDest)
+        elif typeStr == "List" or typeStr == "Array"
+            # Explicit user-defined assets
+            for asset in assetsOpt
+                let assetSrc = path.join(path.dirname(scriptPath), asset)
+                let assetDest = path.join(stageDir, asset)
+                
+                if file.exists(assetSrc)
+                    self.log("  Bundling asset: " + asset)
+                    if file.isDir(assetSrc)
+                        self.copyDirTo(assetSrc, assetDest)
+                    else
+                        self.copyFileTo(assetSrc, assetDest)
+                    end
+                else
+                    print("  Warning: Asset '" + asset + "' not found — skipping.")
+                end
             end
         end
     end
@@ -269,8 +292,8 @@ class Packer
     # to avoid binary corruption caused by file.read() text conversion.
     createZip(stageDir, zipPath)
         if os.isWindows()
-            let winStage = stageDir.replace("/", "\\")
-            let winZip   = zipPath.replace("/", "\\")
+            let winStage = stageDir.replace("/", "\\").replace("'", "''")
+            let winZip   = zipPath.replace("/", "\\").replace("'", "''")
             let r = process.exec("powershell -NoProfile -Command \"Compress-Archive -Path '" + winStage + "\\*' -DestinationPath '" + winZip + "' -Force\"")
             if r["exit_code"] != 0
                 throw "dpack: Failed to create ZIP bundle.\n" + r["stderr"]

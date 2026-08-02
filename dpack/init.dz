@@ -67,7 +67,7 @@ end
 let Packer = PackerMod.Packer
 
 # Convenience function for packing a script programmatically.
-fn pack(scriptPath, outputPath = Null, extraExtensions = [], assets = [], quiet = False)
+fn pack(scriptPath, outputPath = Null, options = {})
     let absScript = path.resolve(scriptPath)
     if !file.exists(absScript)
         let altScript = path.join(process.scriptDir(), scriptPath)
@@ -84,6 +84,6 @@ fn pack(scriptPath, outputPath = Null, extraExtensions = [], assets = [], quiet 
         end
     end
     
-    let p = new Packer({"quiet": quiet})
-    p.pack(absScript, outputPath, extraExtensions, assets)
+    let p = new Packer(options)
+    p.pack(absScript, outputPath, options)
 end

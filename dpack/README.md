@@ -46,15 +46,19 @@ djazair pack.dz
 The `pack` function signature provides complete control over the bundling process:
 
 ```dz
-dpack.pack(scriptPath, outputPath = Null, extraExtensions = [], assets = [], quiet = False)
+dpack.pack(scriptPath, outputPath = Null, options = {})
 ```
 
 ### Parameters:
 - **`scriptPath`** *(String)*: The relative or absolute path to the `.dz` entry script you want to package.
 - **`outputPath`** *(String | Null)*: The path/name of the generated executable. If `Null`, `dpack` will automatically generate it in the same directory as the source script (e.g., `app.exe`).
-- **`extraExtensions`** *(Array)*: An array of strings representing any hidden or dynamically loaded extensions that the scanner might miss. Example: `["sqlite", "kasbah"]`.
-- **`assets`** *(Array)*: (Deprecated/Optional) An array of strings representing additional files or folders to include. Since version 1.0, `dpack` **automatically** bundles all files and directories located in the same directory as the entry script, so you rarely need to use this.
-- **`quiet`** *(Boolean)*: If `True`, disables the build logs in the console.
+- **`options`** *(Dictionary)*: An optional dictionary to configure the build:
+  - **`extensions`** *(Array)*: An array of strings representing extra extensions to force-include. Example: `["sqlite"]`.
+  - **`assets`** *(Boolean | Array)*: Controls asset bundling. 
+    - `True` (default): Automatically bundle all files in the script's directory.
+    - `False`: Disable asset bundling.
+    - `["file1", "dir/"]`: Only bundle specific assets.
+  - **`quiet`** *(Boolean)*: If `True`, disables the build logs in the console.
 
 ### Example: Bundling a Game with Assets
 
@@ -63,9 +67,17 @@ If you have a game that relies on external files (e.g., sound effects, `images/`
 ```dz
 use dpack
 
-# Packs 'snake.dz' into an executable, and automatically bundles 
-# any 'death.wav', 'eat.wav', or 'assets/' folder found next to 'snake.dz'
+# Packs 'snake.dz' and automatically bundles all assets next to it
 dpack.pack("snake.dz")
+
+# Example: Disable asset bundling
+dpack.pack("snake.dz", Null, {"assets": False})
+
+# Example: Specify specific assets and force an extension
+dpack.pack("snake.dz", "game.exe", {
+    "assets": ["death.wav", "images/"],
+    "extensions": ["kasbah"]
+})
 ```
 
 ---
