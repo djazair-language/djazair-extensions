@@ -218,8 +218,7 @@ class Packer
         end
 
         # Process assets
-        let typeStr = type(assetsOpt)
-        if typeStr == "Boolean" and assetsOpt == True
+        if isBool(assetsOpt) and assetsOpt == True
             # Auto-bundle all files and folders in the script's directory
             let scriptDir = path.dirname(scriptPath)
             let outputBase = path.basename(outputPath)
@@ -242,7 +241,7 @@ class Packer
                     self.copyFileTo(itemSrc, itemDest)
                 end
             end
-        elif typeStr == "List" or typeStr == "Array"
+        elif isArray(assetsOpt)
             # Explicit user-defined assets
             for asset in assetsOpt
                 let assetSrc = path.join(path.dirname(scriptPath), asset)
