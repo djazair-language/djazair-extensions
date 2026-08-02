@@ -86,7 +86,16 @@ fn scanFile(filePath)
         if trimmed.startsWith("import ")
             let rest = trimmed.slice(7).strip()
             if rest.startsWith("\"")
-                let endQuote = rest.index("\"", 1)
+                # Find the closing quote starting from position 1
+                let endQuote = -1
+                let qi = 1
+                while qi < rest.length()
+                    if rest[qi] == "\""
+                        endQuote = qi
+                        break
+                    end
+                    qi += 1
+                end
                 if endQuote != -1
                     let importPath = rest.slice(1, endQuote)
                     result["imports"].append(importPath)

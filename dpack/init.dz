@@ -17,8 +17,10 @@ use process
 use file
 use path
 use os
+use math
 
-import "core/Packer.dz" as PackerMod
+import "core/Packer.dz"   as PackerMod
+import "core/Inspector.dz" as Inspector
 
 let DPACK_VERSION = "1.0.0"
 
@@ -86,4 +88,43 @@ fn pack(scriptPath, outputPath = Null, options = {})
     
     let p = new Packer(options)
     p.pack(absScript, outputPath, options)
+end
+
+# Checks whether a file is a valid dpack bundle.
+# Returns: {"valid": Bool, "reason": String, "zipOffset": Number, "zipSize": Number}
+fn verify(exePath)
+    if !path.isAbsolute(exePath)
+        exePath = path.resolve(path.join(process.scriptDir(), exePath))
+    end
+    return Inspector.verify(exePath)
+end
+
+# Lists all files bundled inside a packed executable.
+# Returns: [{"path": String, "size": Number}, ...]
+fn inspect(exePath)
+    if !path.isAbsolute(exePath)
+        exePath = path.resolve(path.join(process.scriptDir(), exePath))
+    end
+    let fileList = Inspector.inspect(exePath)
+
+    # Pretty-print the results
+    print("")
+    print("  Contents of: " + path.basename(exePath))
+    print("  ------------------------------------")
+    for f in fileList
+        let sz = f["size"]
+        let szStr = ""
+        if sz < 1024
+            szStr = str(sz) + " B"
+        elif sz < 1048576
+            szStr = str(math.floor(sz / 1024)) + " KB"
+        else
+            szStr = str(math.floor(sz / 1048576)) + " MB"
+        end
+        print("  " + f["path"] + "  (" + szStr + ")")
+    end
+    print("  ------------------------------------")
+    print("  Total: " + str(fileList.length()) + " files")
+    print("")
+    return fileList
 end

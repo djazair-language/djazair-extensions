@@ -16,6 +16,8 @@ use dir
 use path
 use process
 use os
+use datetime
+use math
 
 import "Scanner.dz" as Scanner
 
@@ -61,6 +63,36 @@ class Packer
         end
     end
 
+    # ── Progress Bar ────────────────────────────────────────────────────────
+    # Prints a colored progress bar to the console.
+    # step: current step (0-based), total: total steps, label: description
+    progress(step, total, label)
+        if self.quiet
+            return
+        end
+        let filled  = 0
+        if total > 0
+            filled = (step * 20) / total
+        end
+        let empty   = 20 - filled
+        let bar     = ""
+        let i = 0
+        while i < filled
+            bar = bar + "█"
+            i += 1
+        end
+        i = 0
+        while i < empty
+            bar = bar + "░"
+            i += 1
+        end
+        let pct = 0
+        if total > 0
+            pct = (step * 100) / total
+        end
+        print("[" + bar + "] " + str(pct) + "% " + label)
+    end
+
     # ── Public API ─────────────────────────────────────────────────────────
 
     # Pack a script file into a self-contained executable.
@@ -84,8 +116,10 @@ class Packer
         let extraExtensions = if options.has("extensions") ? options["extensions"] else []
         let assetsOpt = if options.has("assets") ? options["assets"] else True
 
+        let startTime = datetime.now().timestamp()
+
         # ── Step 1: Scan for used extensions ──────────────────────────────
-        self.log("  Scanning imports...")
+        self.progress(1, 5, "Scanning imports...")
         let scanResult = Scanner.scanAll(absScript)
         let extensions = scanResult["extensions"]
         for ext in extraExtensions
@@ -101,32 +135,29 @@ class Packer
             end
         end
 
-        if extensions.length() > 0
-            self.log("  Extensions detected: " + extensions.join(", "))
-        else
-            self.log("  No external extensions detected.")
-        end
-
         # ── Step 2: Build staging directory ───────────────────────────────
+        self.progress(2, 5, "Staging files...")
         let tmpStage = path.join(process.cwd(), ".dpack_stage_tmp")
         if file.exists(tmpStage)
             dir.deleteAll(tmpStage)
         end
         dir.createAll(tmpStage)
 
+        let bundledAssetCount = 0
+
         try
-            self.buildStage(tmpStage, absScript, extensions, assetsOpt, outputPath)
+            bundledAssetCount = self.buildStage(tmpStage, absScript, extensions, assetsOpt, outputPath)
             let zipPath = path.join(process.cwd(), ".dpack_bundle.zip")
             if file.exists(zipPath)
                 file.delete(zipPath)
             end
 
             # ── Step 3: ZIP the stage ─────────────────────────────────────
-            self.log("  Creating bundle...")
+            self.progress(3, 5, "Compressing bundle...")
             self.createZip(tmpStage, zipPath)
 
             # ── Step 4: Append ZIP to stub ────────────────────────────────
-            self.log("  Assembling executable...")
+            self.progress(4, 5, "Assembling executable...")
             self.appendBundles(zipPath, outputPath)
 
             if file.exists(zipPath)
@@ -138,7 +169,34 @@ class Packer
                 file.chmod(outputPath, 493) # 0755 in decimal
             end
 
-            self.log("  Done!")
+            self.progress(5, 5, "Done!")
+            print("")  # newline after progress bar
+
+            # ── Build Summary ─────────────────────────────────────────────
+            if !self.quiet
+                let endTime = datetime.now().timestamp()
+                let elapsed = endTime - startTime
+                let exeSize = file.size(outputPath)
+                let sizeStr = ""
+                if exeSize < 1024
+                    sizeStr = str(exeSize) + " B"
+                elif exeSize < 1048576
+                    sizeStr = str(math.floor(exeSize / 1024)) + " KB"
+                else
+                    sizeStr = str(math.floor(exeSize / 1048576)) + " MB"
+                end
+                let timeStr = str(elapsed) + "s"
+                let extStr  = if extensions.length() > 0 ? extensions.join(", ") else "none"
+                let outName = path.basename(outputPath)
+                print("")
+                print("  ✓  " + outName + " built successfully")
+                print("  ─────────────────────────────────")
+                print("  Size:       " + sizeStr)
+                print("  Extensions: " + extStr)
+                print("  Assets:     " + str(bundledAssetCount) + " file(s)")
+                print("  Time:       " + timeStr)
+                print("")
+            end
         catch err
             self.forceDelete(tmpStage)
             throw err
@@ -218,6 +276,7 @@ class Packer
         end
 
         # Process assets
+        let assetCount = 0
         if isBool(assetsOpt) and assetsOpt == True
             # Auto-bundle all files and folders in the script's directory
             let scriptDir = path.dirname(scriptPath)
@@ -234,12 +293,12 @@ class Packer
                 let itemSrc = path.join(scriptDir, item)
                 let itemDest = path.join(stageDir, item)
                 
-                self.log("  Bundling asset: " + item)
                 if file.isDir(itemSrc)
                     self.copyDirTo(itemSrc, itemDest)
                 else
                     self.copyFileTo(itemSrc, itemDest)
                 end
+                assetCount += 1
             end
         elif isArray(assetsOpt)
             # Explicit user-defined assets
@@ -248,17 +307,18 @@ class Packer
                 let assetDest = path.join(stageDir, asset)
                 
                 if file.exists(assetSrc)
-                    self.log("  Bundling asset: " + asset)
                     if file.isDir(assetSrc)
                         self.copyDirTo(assetSrc, assetDest)
                     else
                         self.copyFileTo(assetSrc, assetDest)
                     end
+                    assetCount += 1
                 else
                     print("  Warning: Asset '" + asset + "' not found — skipping.")
                 end
             end
         end
+        return assetCount
     end
 
     # Copies a single file to dest path (creates parent dirs as needed).
