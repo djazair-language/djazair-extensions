@@ -1,49 +1,45 @@
 # dpack - Djazair Standalone Bundler
 
-`dpack` is the official bundler for the **Djazair Programming Language**. It allows you to package your Djazair scripts (`.dz`) into self-contained, standalone executables that can run on any machine—even if Djazair is not installed on the target system.
+`dpack` is the official bundler for the **Djazair Programming Language**. It allows you to package your Djazair scripts (`.dz`) and all their dependencies into a single, self-contained executable file (`.exe` on Windows, or a native binary on Linux). 
 
-## Features
-
-- **Zero-Dependency Executables**: Bundles the Djazair interpreter, standard library (`std`), and `prelude` natively.
-- **Smart Extension Detection**: Automatically scans your source code for `use` statements and bundles any required extensions (e.g., `raylib`, `qt`, `zip`, `kasbah`).
-- **Media & Asset Bundling**: Easily bundle external assets like images, sounds, fonts, and directories alongside your script.
-- **Automatic Path Resolution**: `dpack` intelligently resolves relative paths based on the directory of the script that invoked it, saving you from path-management headaches.
-- **Cross-Platform Support**: Generates `.exe` files on Windows and native binaries on Linux.
+With `dpack`, you can distribute your Djazair programs to anyone, and they can run them immediately—**even if they don't have Djazair installed!**
 
 ---
 
-## Installation
+## Features
 
-`dpack` comes pre-installed as a core extension with Djazair. If you are developing it, make sure you have built the C-stub by running:
-
-```bash
-cd extensions/dpack
-build.bat  # On Windows
-```
+- **Zero-Dependency Executables**: Automatically bundles the Djazair interpreter, standard library (`std`), and `prelude` into your app.
+- **Smart Extension Detection**: Scans your source code for `use <module>` and automatically bundles required external extensions (e.g., `raylib`, `qt`, `kasbah`).
+- **Flexible Asset Management**: Intelligently bundles your media files, images, sounds, and directories. You can let it auto-bundle everything, or manually specify exactly what to include.
+- **Cross-Platform**: Generates `.exe` files on Windows and native binaries on Linux.
 
 ---
 
 ## Basic Usage
 
-To package a script, simply create a build script (e.g., `pack.dz`) next to your main script:
+To package a script, you simply write a short build script (e.g., `build.dz`) and run it.
 
+### Example 1: The Simplest App
+If you have a script named `app.dz` and you want to compile it into `app.exe`:
+
+**`build.dz`**:
 ```dz
 use dpack
 
-# Packs 'app.dz' into an executable automatically named 'app.exe'
+# This will create 'app.exe' in the same directory.
+# By default, it automatically bundles any assets found next to 'app.dz'.
 dpack.pack("app.dz")
 ```
-
-Run your build script using Djazair:
+Run the build script from your terminal:
 ```bash
-djazair pack.dz
+djazair build.dz
 ```
 
 ---
 
-## Advanced Usage & API
+## Advanced Usage & The Options Dictionary
 
-The `pack` function signature provides complete control over the bundling process:
+The `pack` function gives you complete control over how your app is built via an `options` dictionary.
 
 ```dz
 dpack.pack(scriptPath, outputPath = Null, options = {})
@@ -51,42 +47,59 @@ dpack.pack(scriptPath, outputPath = Null, options = {})
 
 ### Parameters:
 - **`scriptPath`** *(String)*: The relative or absolute path to the `.dz` entry script you want to package.
-- **`outputPath`** *(String | Null)*: The path/name of the generated executable. If `Null`, `dpack` will automatically generate it in the same directory as the source script (e.g., `app.exe`).
-- **`options`** *(Dictionary)*: An optional dictionary to configure the build:
-  - **`extensions`** *(Array)*: An array of strings representing extra extensions to force-include. Example: `["sqlite"]`.
-  - **`assets`** *(Boolean | Array)*: Controls asset bundling. 
-    - `True` (default): Automatically bundle all files in the script's directory.
-    - `False`: Disable asset bundling.
-    - `["file1", "dir/"]`: Only bundle specific assets.
-  - **`quiet`** *(Boolean)*: If `True`, disables the build logs in the console.
+- **`outputPath`** *(String | Null)*: The path of the generated executable. If `Null`, `dpack` names it automatically based on your script (e.g., `app.exe`).
+- **`options`** *(Dictionary)*: An optional dictionary to configure the build behavior.
 
-### Example: Bundling a Game with Assets
+### The `options` Dictionary:
+The `options` dictionary accepts the following keys:
 
-If you have a game that relies on external files (e.g., sound effects, `images/` folder, etc.) located in the same folder as the script, you don't need to specify them. `dpack` automatically detects and bundles them:
+1. **`assets`** *(Bool | Array)*: Controls how external files (images, databases, sounds) are bundled.
+   - **`True`** *(Default)*: Auto-bundling. `dpack` will automatically bundle **all files and folders** located in the same directory as your script (except system files like `.git`).
+   - **`False`**: Disables asset bundling. Only your code and extensions are packed.
+   - **`["file.png", "audio/"]`**: Explicit mode. Only the exact files and folders you list in the array will be bundled.
+
+2. **`extensions`** *(Array)*: Sometimes you might load an extension dynamically, which hides it from the automatic scanner. You can force-include it here.
+   - Example: `["sqlite", "kasbah"]`
+
+3. **`quiet`** *(Bool)*: 
+   - **`False`** *(Default)*: Shows detailed progress logs in the console during the build.
+   - **`True`**: Hides all build logs.
+
+---
+
+## Comprehensive Examples
+
+### Example 2: Bundling a Game (Raylib)
+Imagine you have a game called `snake.dz` and it uses sounds. You want the output to be called `MySnakeGame.exe` and you only want to include specific audio files.
 
 ```dz
 use dpack
 
-# Packs 'snake.dz' and automatically bundles all assets next to it
-dpack.pack("snake.dz")
+dpack.pack("snake.dz", "MySnakeGame.exe", {
+    "assets": ["death.wav", "eat.wav", "images/"],
+    "quiet": False
+})
+```
 
-# Example: Disable asset bundling
-dpack.pack("snake.dz", Null, {"assets": False})
+### Example 3: Disabling Assets for a CLI Tool
+If you are building a command-line tool that doesn't need any external files, you can disable asset bundling to keep the executable size as small as possible.
 
-# Example: Specify specific assets and force an extension
-dpack.pack("snake.dz", "game.exe", {
-    "assets": ["death.wav", "images/"],
-    "extensions": ["kasbah"]
+```dz
+use dpack
+
+dpack.pack("cli_tool.dz", Null, {
+    "assets": False,
+    "extensions": ["zip"]  # Force-include the zip extension just in case
 })
 ```
 
 ---
 
-## How It Works
+## How It Works Under The Hood
 
-Under the hood, `dpack` works by:
-1. Creating a temporary staging directory (`.dpack_stage_tmp`).
-2. Copying your script (renaming it to `__main__.dz`), the interpreter, standard libraries, extensions, and user-defined assets into the staging directory.
-3. Compressing the staging directory into a Zip archive.
-4. Appending the Zip archive to a pre-compiled C-binary stub (`stub/stub_win.exe`).
-5. When the user launches the final executable, the stub transparently extracts the Zip archive into the system's temporary folder, runs the interpreter silently, and cleans up the files upon exit.
+When you run `dpack.pack()`, the following happens:
+1. **Staging**: A temporary directory (`.dpack_stage_tmp`) is created.
+2. **Copying**: Your script (renamed to `__main__.dz`), the Djazair interpreter, standard libraries, extensions, and your assets are securely copied into the staging folder.
+3. **Compression**: The staging directory is zipped into a highly compressed archive.
+4. **Assembly**: The archive is injected into a tiny, pre-compiled C-binary stub (`stub/stub_win.exe`).
+5. **Execution**: When a user double-clicks your final `.exe`, the stub transparently extracts everything to a system temporary folder, runs your app seamlessly, and safely cleans up all files from the user's computer once the app is closed.
