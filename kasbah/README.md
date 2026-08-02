@@ -72,6 +72,27 @@ When creating the application, you can pass a configuration map to `new kasbah.k
 | `keepAliveTTL` | `30` | Seconds to wait for next request before closing idle connection. |
 | `maxRequests` | `100` | Maximum requests per keep-alive connection before forcing close. |
 
+### Centralized Configuration
+
+You can configure global defaults for Kasbah and the underlying HTTP client using the centralized config API. These defaults apply to all `kasbahApp` instances created afterwards (unless explicitly overridden in the app's config).
+
+```djazair
+use kasbah
+
+# Set global server defaults
+kasbah.setServerConfig({
+    "port": 8080,
+    "maxBodySize": 50,
+    "logger": False
+})
+
+# Set global HTTP client defaults (wraps http.setClientConfig)
+kasbah.setClientConfig({
+    "connectTimeout": 10,
+    "defaultBuffer": 8192
+})
+```
+
 ---
 
 ## 4. Routing (`kasbahApp`)

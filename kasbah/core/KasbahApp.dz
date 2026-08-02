@@ -20,6 +20,14 @@ import "../helpers/utils.dz" as *
 import "../helpers/cookie.dz" as *
 import "cookieJar.dz" as *
 
+let KASBAH_SERVER_CONFIG = {}
+
+fn setServerConfig(options)
+    if isMap(options)
+        KASBAH_SERVER_CONFIG = merge(KASBAH_SERVER_CONFIG, options)
+    end
+end
+
 class routerGroup
     init(app, prefix, middlewares)
         self.app = app
@@ -119,7 +127,7 @@ class kasbahApp
             "keepAliveTTL":  30,
             "maxRequests":   100
         }
-        self.appConfig = merge(defaults, config)
+        self.appConfig = merge(merge(defaults, KASBAH_SERVER_CONFIG), config)
 
         if self.appConfig["static"] != ""
             self.appConfig["static"] = path.resolve(self.appConfig["static"])
