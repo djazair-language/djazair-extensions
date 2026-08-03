@@ -1,0 +1,30 @@
+use file
+use dir
+use path
+use json
+use process
+
+let exts = ["clipboard", "curl", "dpack", "kasbah", "mysql", "qt", "raylib", "sqlite", "webview", "zip"]
+let pure = ["dpack", "kasbah"]
+
+for extName in exts
+    let p = path.join(process.cwd(), extName, "dpm.json")
+    if file.exists(p)
+        let content = file.read(p)
+        let data = json.decode(content)
+        
+        if pure.contains(extName)
+            data["type"] = "pure"
+        else
+            data["type"] = "hybrid"
+        end
+        
+        if data.get("version", "") == ""
+            data["version"] = "0.1.0"
+        end
+        
+        let newContent = json.encode(data, True)
+        file.write(p, newContent)
+        print("Updated ${extName}")
+    end
+end

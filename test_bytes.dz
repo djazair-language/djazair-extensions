@@ -1,6 +1,0 @@
-use file
-let b = file.readBytes("dpack/README.md")
-print(b[0])
-print(type(b[0]))
-b[0] = b[0] ^ 91
-print(b[0])

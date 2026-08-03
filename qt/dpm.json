@@ -1,6 +1,7 @@
 {
   "source": "github:djazair-language/djazair-extensions/qt",
   "description": "Official Qt 5/6 GUI library extension for Djazair Programming Language",
+  "type": "hybrid",
   "developer": {
     "name": "Harizi Riyadh",
     "email": "hariziriyadh@gmail.com"

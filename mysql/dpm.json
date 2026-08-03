@@ -1,11 +1,11 @@
 {
-    "name": "mysql",
-    "version": "0.1.0",
-    "source": "github:djazair-language/djazair-extensions/mysql",
-    "description": "MySQL database connectivity extension for Djazair",
-    "developer": {
-        "name": "Harizi Riyadh",
-        "email": "hariziriyadh@gmail.com"
-    }
+  "name": "mysql",
+  "version": "0.1.0",
+  "source": "github:djazair-language/djazair-extensions/mysql",
+  "description": "MySQL database connectivity extension for Djazair",
+  "developer": {
+    "name": "Harizi Riyadh",
+    "email": "hariziriyadh@gmail.com"
+  },
+  "type": "hybrid"
 }
-
