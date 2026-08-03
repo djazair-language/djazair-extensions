@@ -16,35 +16,41 @@
 use process
 use file
 use path
+use dir
 use os
 use math
+use env
+use json
 
 import "core/Packer.dz"   as PackerMod
 import "core/Inspector.dz" as Inspector
 
-let DPACK_VERSION = "1.0.0"
+let DPACK_VERSION = "1.1.0"
 
 fn printHelp()
     print("")
-    print("\033[1;32mdpack\033[0m v" + DPACK_VERSION + " — Djazair Self-Contained Executable Packer")
-    print("")
-    print("  Bundles a .dz script, the Djazair interpreter, standard libraries,")
-    print("  and any detected extensions into a single standalone executable.")
+    print("\033[1;32mdpack\033[0m v" + DPACK_VERSION + " — Djazair Standalone Executable Packer")
     print("")
     print("Usage:")
-    print("  djazair dpack/init.dz pack <script.dz> [options]")
+    print("  dpack pack <script.dz> [options]    Pack a script into an executable")
+    print("  dpack clean                          Clean cached application build folders")
+    print("  dpack verify <app.exe>              Verify if an EXE is a valid dpack bundle")
+    print("  dpack inspect <app.exe>             List all files inside a packed EXE")
     print("")
     print("Options:")
-    print("  -o, --output <name>    Output file name  [default: script name]")
-    print("  --include <ext>        Force-include an extension (can repeat)")
-    print("  --quiet                Suppress build output")
-    print("  -h, --help             Show this help")
-    print("  -v, --version          Show version")
+    print("  -o, --output <name>     Output file name")
+    print("  --no-console            Build as GUI app (hide console window)")
+    print("  --portable              Portable mode (extract cache next to EXE)")
+    print("  --encrypt               Encrypt bundled source scripts")
+    print("  --include <ext>         Force-include an extension")
+    print("  --quiet                 Suppress build output")
+    print("  -h, --help              Show help")
+    print("  -v, --version           Show version")
     print("")
     print("Examples:")
-    print("  djazair dpack/init.dz pack server.dz")
-    print("  djazair dpack/init.dz pack server.dz -o myserver.exe")
-    print("  djazair dpack/init.dz pack app.dz --include kasbah --include qt")
+    print("  dpack pack main.dz")
+    print("  dpack pack main.dz -o app.exe --no-console --encrypt")
+    print("  dpack clean")
     print("")
 end
 
@@ -54,7 +60,6 @@ end
 
 fn defaultOutputName(scriptPath)
     let base = path.basename(scriptPath)
-    # Remove .dz extension
     if base.endsWith(".dz")
         base = base.slice(0, base.length() - 3)
     end
@@ -69,7 +74,44 @@ end
 let Packer = PackerMod.Packer
 
 # Convenience function for packing a script programmatically.
-fn pack(scriptPath, outputPath = Null, options = {})
+fn pack(scriptPath = Null, outputPath = Null, options = {})
+    # ── Load dpack.json if present ───────────────────────────────────────
+    let configPath = path.join(process.cwd(), "dpack.json")
+    if !file.exists(configPath) and !isNull(scriptPath)
+        let scriptDirConfig = path.join(path.dirname(path.resolve(scriptPath)), "dpack.json")
+        if file.exists(scriptDirConfig)
+            configPath = scriptDirConfig
+        end
+    end
+
+    if file.exists(configPath)
+        try
+            let cfgStr = file.read(configPath)
+            let cfg = json.decode(cfgStr)
+            if type(cfg) == "Map" or type(cfg) == "Object" or type(cfg) == "Dictionary"
+                if isNull(scriptPath) and cfg.has("main")
+                    scriptPath = cfg["main"]
+                end
+                if isNull(outputPath) and cfg.has("output")
+                    outputPath = cfg["output"]
+                end
+                # Merge config keys into options (options takes precedence)
+                let keys = cfg.keys()
+                for k in keys
+                    if !options.has(k)
+                        options[k] = cfg[k]
+                    end
+                end
+            end
+        catch err
+            print("  Warning: Failed to parse dpack.json: " + str(err))
+        end
+    end
+
+    if isNull(scriptPath)
+        throw "dpack: No entry script provided, and no 'main' found in dpack.json."
+    end
+
     let absScript = path.resolve(scriptPath)
     if !file.exists(absScript)
         let altScript = path.join(process.scriptDir(), scriptPath)
@@ -90,8 +132,67 @@ fn pack(scriptPath, outputPath = Null, options = {})
     p.pack(absScript, outputPath, options)
 end
 
+# Cleans up cached dpack build folders from system TEMP directory.
+fn cleanCache()
+    let tmpDir = ""
+    if os.isWindows()
+        tmpDir = env.getOr("TEMP", "C:\\Windows\\Temp")
+    else
+        tmpDir = env.getOr("TMPDIR", "/tmp")
+    end
+
+    if !file.exists(tmpDir)
+        print("Temp directory not found.")
+        return
+    end
+
+    let items = dir.list(tmpDir)
+    let cleanedCount = 0
+    let cleanedBytes = 0
+
+    for item in items
+        if item.startsWith("dpack_app_") or item.startsWith("dpack_inspect_") or item == ".dpack_stage_tmp"
+            let p = path.join(tmpDir, item)
+            if file.isDir(p)
+                try
+                    let sz = 0
+                    fn calcSize(d)
+                        let list = dir.list(d)
+                        let total = 0
+                        for it in list
+                            let child = path.join(d, it)
+                            if file.isDir(child)
+                                total += calcSize(child)
+                            else
+                                total += file.size(child)
+                            end
+                        end
+                        return total
+                    end
+                    sz = calcSize(p)
+                    dir.deleteAll(p)
+                    cleanedCount += 1
+                    cleanedBytes += sz
+                catch e
+                    # Skip if currently locked
+                end
+            end
+        end
+    end
+
+    let szStr = ""
+    if cleanedBytes < 1048576
+        szStr = str(math.floor(cleanedBytes / 1024)) + " KB"
+    else
+        szStr = str(math.floor(cleanedBytes / 1048576)) + " MB"
+    end
+
+    print("")
+    print("  ✓  Cleaned " + str(cleanedCount) + " cached dpack folder(s) (" + szStr + " freed)")
+    print("")
+end
+
 # Checks whether a file is a valid dpack bundle.
-# Returns: {"valid": Bool, "reason": String, "zipOffset": Number, "zipSize": Number}
 fn verify(exePath)
     if !path.isAbsolute(exePath)
         exePath = path.resolve(path.join(process.scriptDir(), exePath))
@@ -100,14 +201,12 @@ fn verify(exePath)
 end
 
 # Lists all files bundled inside a packed executable.
-# Returns: [{"path": String, "size": Number}, ...]
 fn inspect(exePath)
     if !path.isAbsolute(exePath)
         exePath = path.resolve(path.join(process.scriptDir(), exePath))
     end
     let fileList = Inspector.inspect(exePath)
 
-    # Pretty-print the results
     print("")
     print("  Contents of: " + path.basename(exePath))
     print("  ------------------------------------")
@@ -127,4 +226,46 @@ fn inspect(exePath)
     print("  Total: " + str(fileList.length()) + " files")
     print("")
     return fileList
+end
+
+# ── CLI Entry Point ──────────────────────────────────────────────────────────
+let args = process.args()
+if args.length() > 0
+    let cmd = args[0]
+    if cmd == "clean"
+        cleanCache()
+    elif cmd == "verify" and args.length() > 1
+        let v = verify(args[1])
+        print("Valid: " + str(v["valid"]) + " (" + v["reason"] + ")")
+    elif cmd == "inspect" and args.length() > 1
+        inspect(args[1])
+    elif cmd == "-v" or cmd == "--version"
+        printVersion()
+    elif cmd == "-h" or cmd == "--help"
+        printHelp()
+    elif cmd == "pack" or cmd.endsWith(".dz")
+        let script = if cmd == "pack" ? (if args.length() > 1 ? args[1] else Null) else cmd
+        let opts = {}
+        let outName = Null
+        
+        let i = 0
+        while i < args.length()
+            let a = args[i]
+            if (a == "-o" or a == "--output") and i + 1 < args.length()
+                outName = args[i + 1]
+                i += 1
+            elif a == "--no-console"
+                opts["console"] = False
+            elif a == "--portable"
+                opts["portable"] = True
+            elif a == "--encrypt" or a == "--protect"
+                opts["encrypt"] = True
+            elif a == "--quiet"
+                opts["quiet"] = True
+            end
+            i += 1
+        end
+
+        pack(script, outName, opts)
+    end
 end

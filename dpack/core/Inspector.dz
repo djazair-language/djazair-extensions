@@ -38,21 +38,20 @@ fn verify(exePath)
     end
 
     let size = file.size(exePath)
-    if size < 9
+    if size < 16
         result["reason"] = "File too small to be a valid dpack bundle."
         return result
     end
 
-    # Read last 8 bytes to get ZIP offset
+    # Read 16-byte footer: [flags: 4B][reserved: 4B][offset: 8B]
     let allBytes = file.readBytes(exePath)
     let totalBytes = allBytes.length()
 
-    if totalBytes < 8
+    if totalBytes < 16
         result["reason"] = "Could not read file bytes."
         return result
     end
 
-    # Extract last 8 bytes
     let offsetBuf = []
     let i = totalBytes - 8
     while i < totalBytes
@@ -60,8 +59,9 @@ fn verify(exePath)
         i += 1
     end
 
+    let flags = allBytes[totalBytes - 16] | (allBytes[totalBytes - 15] * 256) | (allBytes[totalBytes - 14] * 65536)
     let zipOffset = readU64LE(offsetBuf)
-    let zipSize = totalBytes - zipOffset - 8
+    let zipSize = totalBytes - zipOffset - 16
 
     if zipOffset == 0 or zipOffset >= totalBytes or zipSize <= 0
         result["reason"] = "No valid dpack bundle found in this file."

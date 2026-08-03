@@ -65,13 +65,53 @@ The `options` dictionary accepts the following keys:
    - **`True`** *(Default)*: Shows the console window (terminal). Output from `print()` and input from `input()` appear in the terminal.
    - **`False`**: Hides the console window completely (for GUI applications like WebView, Qt, Raylib).
 
-4. **`quiet`** *(Bool)*: 
+4. **`portable`** *(Bool)*:
+   - **`False`** *(Default)*: Extracts application cache to system `%TEMP%` / `/tmp`.
+   - **`True`**: Portable mode. Places the cache folder locally next to the executable (ideal for USB flash drives and self-contained deployments).
+
+5. **`encrypt`** / **`protect`** *(Bool)*:
+   - **`False`** *(Default)*: Standard bundled files.
+   - **`True`**: Source code protection. Encrypts all user `.dz` scripts inside the executable so they cannot be inspected or extracted by standard ZIP / decompiler tools.
+
+6. **`quiet`** *(Bool)*: 
    - **`False`** *(Default)*: Shows detailed progress logs in the console during the build.
    - **`True`**: Hides all build logs.
 
 ---
 
-## Comprehensive Examples
+## 📄 Project Configuration File (`dpack.json`)
+
+You can create a `dpack.json` file in your project directory to define build settings automatically without writing a build script:
+
+```json
+{
+  "main": "main.dz",
+  "output": "my_app.exe",
+  "console": false,
+  "encrypt": true,
+  "portable": true,
+  "assets": true
+}
+```
+
+Simply run `dpack pack` in terminal or `dpack.pack()` in code, and it will automatically detect and load your `dpack.json` settings!
+
+---
+
+## 🧹 Cleaning Cache (`dpack.cleanCache()`)
+
+To clean up old cached application build folders from system temp directory and free disk space:
+
+```dz
+use dpack
+
+dpack.cleanCache()
+```
+
+Or via CLI:
+```bash
+dpack clean
+```
 
 ### Example 2: Bundling a Game (Raylib)
 Imagine you have a game called `snake.dz` and it uses sounds. You want the output to be called `MySnakeGame.exe` and you only want to include specific audio files.

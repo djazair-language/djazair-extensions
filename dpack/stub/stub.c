@@ -81,7 +81,75 @@ static uint64_t fnv1a_str(const char *s, uint64_t hash) {
     return hash;
 }
 
-static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zip_offset, uint64_t zip_size, char *out, size_t sz) {
+static void decrypt_file(const char *filepath) {
+    FILE *f = fopen(filepath, "rb+");
+    if (!f) return;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    if (sz <= 0) { fclose(f); return; }
+    fseek(f, 0, SEEK_SET);
+
+    unsigned char *buf = (unsigned char *)malloc(sz);
+    if (!buf) { fclose(f); return; }
+    if (fread(buf, 1, sz, f) == (size_t)sz) {
+        for (long i = 0; i < sz; i++) {
+            buf[i] ^= 0x5B;
+        }
+        fseek(f, 0, SEEK_SET);
+        fwrite(buf, 1, sz, f);
+    }
+    free(buf);
+    fclose(f);
+}
+
+#ifdef _WIN32
+static void decrypt_dir_dz(const char *dirpath) {
+    char search_path[2048];
+    snprintf(search_path, sizeof(search_path), "%s\\*", dirpath);
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA(search_path, &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+    do {
+        if (strcmp(fd.cFileName, ".") == 0 || strcmp(fd.cFileName, "..") == 0 || strcmp(fd.cFileName, "src") == 0) continue;
+        char child_path[2048];
+        snprintf(child_path, sizeof(child_path), "%s\\%s", dirpath, fd.cFileName);
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            decrypt_dir_dz(child_path);
+        } else {
+            size_t len = strlen(fd.cFileName);
+            if (len >= 3 && strcmp(fd.cFileName + len - 3, ".dz") == 0) {
+                decrypt_file(child_path);
+            }
+        }
+    } while (FindNextFileA(hFind, &fd));
+    FindClose(hFind);
+}
+#else
+static void decrypt_dir_dz(const char *dirpath) {
+    DIR *d = opendir(dirpath);
+    if (!d) return;
+    struct dirent *entry;
+    while ((entry = readdir(d)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || strcmp(entry->d_name, "src") == 0) continue;
+        char child_path[2048];
+        snprintf(child_path, sizeof(child_path), "%s/%s", dirpath, entry->d_name);
+        struct stat st;
+        if (stat(child_path, &st) == 0) {
+            if (S_ISDIR(st.st_mode)) {
+                decrypt_dir_dz(child_path);
+            } else {
+                size_t len = strlen(entry->d_name);
+                if (len >= 3 && strcmp(entry->d_name + len - 3, ".dz") == 0) {
+                    decrypt_file(child_path);
+                }
+            }
+        }
+    }
+    closedir(d);
+}
+#endif
+
+static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zip_offset, uint64_t zip_size, int portable, char *out, size_t sz) {
     uint64_t h = 14695981039346656037ULL;
     h = fnv1a_str(self_path, h);
     h = fnv1a_combine(h, file_size);
@@ -103,7 +171,7 @@ static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zi
 #endif
     h = fnv1a_combine(h, mtime);
 
-    /* Also sample first 256 bytes of embedded ZIP for content signature */
+    /* Sample first 256 bytes of embedded ZIP for content signature */
     FILE *f = fopen(self_path, "rb");
     if (f) {
         if (fseek(f, (long)zip_offset, SEEK_SET) == 0) {
@@ -116,18 +184,27 @@ static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zi
         fclose(f);
     }
 
+    if (portable) {
+        /* Portable mode: place cache in local directory next to self EXE */
+        char exe_dir[2048] = {0};
+        strncpy(exe_dir, self_path, sizeof(exe_dir) - 1);
+        char *last_sep = strrchr(exe_dir, PATH_SEP[0]);
+        if (last_sep) *last_sep = '\0';
+        snprintf(out, sz, "%s%s.dpack_cache_%llx", exe_dir, PATH_SEP, (unsigned long long)h);
+    } else {
 #ifdef _WIN32
-    char tmp[MAX_PATH];
-    if (!GetTempPathA(MAX_PATH, tmp)) {
-        const char *env_tmp = getenv("TEMP");
-        snprintf(tmp, sizeof(tmp), "%s\\", env_tmp ? env_tmp : "C:\\Windows\\Temp");
-    }
-    snprintf(out, sz, "%sdpack_app_%llx", tmp, (unsigned long long)h);
+        char tmp[MAX_PATH];
+        if (!GetTempPathA(MAX_PATH, tmp)) {
+            const char *env_tmp = getenv("TEMP");
+            snprintf(tmp, sizeof(tmp), "%s\\", env_tmp ? env_tmp : "C:\\Windows\\Temp");
+        }
+        snprintf(out, sz, "%sdpack_app_%llx", tmp, (unsigned long long)h);
 #else
-    const char *tmp = getenv("TMPDIR");
-    if (!tmp) tmp = "/tmp";
-    snprintf(out, sz, "%s/dpack_app_%llx", tmp, (unsigned long long)h);
+        const char *tmp = getenv("TMPDIR");
+        if (!tmp) tmp = "/tmp";
+        snprintf(out, sz, "%s/dpack_app_%llx", tmp, (unsigned long long)h);
 #endif
+    }
 }
 
 /* ── Copy a range of bytes from one file to another ─────────────────────── */
@@ -203,8 +280,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* ── Step 2: read ZIP offset from last 8 bytes ── */
-    if (fseek(self, -8, SEEK_END) != 0) {
+    /* ── Step 2: read 16-byte footer from end: [uint32_t flags][uint32_t reserved][uint64_t zip_offset] ── */
+    if (fseek(self, -16, SEEK_END) != 0) {
         fprintf(stderr, "[dpack] Cannot seek in executable\n");
         fclose(self);
         return 1;
@@ -215,17 +292,18 @@ int main(int argc, char *argv[]) {
     file_size_long = ftell(self);
     uint64_t file_size = (uint64_t)file_size_long;
 
-    fseek(self, -8, SEEK_END);
-    unsigned char offset_buf[8];
-    if (fread(offset_buf, 1, 8, self) != 8) {
-        fprintf(stderr, "[dpack] Cannot read ZIP offset\n");
+    fseek(self, -16, SEEK_END);
+    unsigned char footer_buf[16];
+    if (fread(footer_buf, 1, 16, self) != 16) {
+        fprintf(stderr, "[dpack] Cannot read footer\n");
         fclose(self);
         return 1;
     }
     fclose(self);
 
-    uint64_t zip_offset = read_u64_le(offset_buf);
-    uint64_t zip_size   = file_size - zip_offset - 8;
+    uint32_t flags = (uint32_t)footer_buf[0] | ((uint32_t)footer_buf[1] << 8) | ((uint32_t)footer_buf[2] << 16) | ((uint32_t)footer_buf[3] << 24);
+    uint64_t zip_offset = read_u64_le(footer_buf + 8);
+    uint64_t zip_size   = file_size - zip_offset - 16;
 
     if (zip_offset == 0 || zip_offset >= file_size || zip_size == 0) {
         fprintf(stderr, "[dpack] Invalid bundle: no embedded data found.\n");
@@ -233,9 +311,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    int is_portable = (flags & 0x01) ? 1 : 0;
+    int is_encrypted = (flags & 0x02) ? 1 : 0;
+
     /* ── Step 3: Determine cache directory for this application version ── */
     char tmp_dir[2048] = {0};
-    get_cache_dir(self_path, file_size, zip_offset, zip_size, tmp_dir, sizeof(tmp_dir));
+    get_cache_dir(self_path, file_size, zip_offset, zip_size, is_portable, tmp_dir, sizeof(tmp_dir));
 
     char marker_path[2200];
     snprintf(marker_path, sizeof(marker_path), "%s%s.complete", tmp_dir, PATH_SEP);
@@ -272,6 +353,11 @@ int main(int argc, char *argv[]) {
 #else
         remove(zip_path);
 #endif
+
+        /* If encrypted, decrypt all .dz files in cache directory */
+        if (is_encrypted) {
+            decrypt_dir_dz(tmp_dir);
+        }
 
         /* Create completion marker */
         FILE *cm = fopen(marker_path, "wb");

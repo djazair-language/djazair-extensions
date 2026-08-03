@@ -151,6 +151,14 @@ class Packer
         end
         self.activeStubBin = activeStub
 
+        let flags = 0
+        if options.has("portable") and options["portable"] == True
+            flags = flags | 1
+        end
+        if (options.has("encrypt") and options["encrypt"] == True) or (options.has("protect") and options["protect"] == True)
+            flags = flags | 2
+        end
+
         # ── Step 2: Build staging directory ───────────────────────────────
         self.progress(2, 5, "Staging files...")
         let tmpStage = path.join(process.cwd(), ".dpack_stage_tmp")
@@ -163,6 +171,11 @@ class Packer
 
         try
             bundledAssetCount = self.buildStage(tmpStage, absScript, extensions, assetsOpt, outputPath)
+            
+            if (flags & 2) != 0
+                self.encryptStageScripts(tmpStage)
+            end
+
             let zipPath = path.join(process.cwd(), ".dpack_bundle.zip")
             if file.exists(zipPath)
                 file.delete(zipPath)
@@ -174,7 +187,7 @@ class Packer
 
             # ── Step 4: Append ZIP to stub ────────────────────────────────
             self.progress(4, 5, "Assembling executable...")
-            self.appendBundles(zipPath, outputPath)
+            self.appendBundles(zipPath, outputPath, flags)
 
             if file.exists(zipPath)
                 file.delete(zipPath)
@@ -386,9 +399,35 @@ class Packer
         end
     end
 
-    # Appends the ZIP to the stub binary and writes the 8-byte offset natively.
-    # Final layout: [stub bytes][ZIP bytes][uint64 LE: zip start offset]
-    appendBundles(zipPath, outputPath)
+    # Encrypts user .dz scripts in staging directory using XOR 0x5B (91)
+    encryptStageScripts(dirPath)
+        let items = dir.list(dirPath)
+        for item in items
+            # Skip std/ library and prelude in src/ - only encrypt user app code
+            if item == "src"
+                continue
+            end
+            let itemPath = path.join(dirPath, item)
+            if file.isDir(itemPath)
+                self.encryptStageScripts(itemPath)
+            elif itemPath.endsWith(".dz")
+                let content = file.read(itemPath)
+                let encChars = []
+                let i = 0
+                while i < content.length()
+                    let ch = chr(ord(content[i]) ^ 91)
+                    encChars.append(ch)
+                    i += 1
+                end
+                let encStr = encChars.join("")
+                file.write(itemPath, encStr)
+            end
+        end
+    end
+
+    # Appends the ZIP to the stub binary and writes the 16-byte footer natively.
+    # Final layout: [stub bytes][ZIP bytes][flags: 4B][reserved: 4B][zip offset: 8B]
+    appendBundles(zipPath, outputPath, flags = 0)
         # Step 1: Get stub size (= zip offset)
         let stubSize = file.size(self.activeStubBin)
 
@@ -404,9 +443,14 @@ class Packer
         outHandle.writeBytes(stubBytes)
         outHandle.writeBytes(zipBytes)
 
-        # Step 3: Append 8-byte little-endian offset (zip start = stub size)
+        # Step 3: Append 16-byte footer
         use bytes
+        let flagsBytes = bytes.fromInteger(flags, 4, False)
+        let resBytes   = bytes.fromInteger(0, 4, False)
         let offsetBytes = bytes.fromInteger(stubSize, 8, False)
+        
+        outHandle.writeBytes(flagsBytes)
+        outHandle.writeBytes(resBytes)
         outHandle.writeBytes(offsetBytes)
         outHandle.close()
     end
