@@ -288,7 +288,7 @@ class Packer
             
             for item in items
                 # Skip output executable, main script, staging folder, and standard ignored files
-                if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip"
+                if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip" or item == "extensions" or item == "src" or item == "build" or item == "node_modules" or item == ".dpm_cache"
                     continue
                 end
                 

@@ -1,7 +1,0 @@
-use process
-use path
-
-let coreDir = process.scriptDir()
-print("coreDir = " + coreDir)
-let repoRoot = path.resolve(path.join(coreDir, "..", ".."))
-print("repoRoot = " + repoRoot)
