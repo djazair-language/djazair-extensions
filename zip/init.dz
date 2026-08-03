@@ -1,4 +1,7 @@
 use assert
+use dir
+use path
+use file
 let _z = __dynamic("zip")
 
 let compress = _z.compress
@@ -46,10 +49,21 @@ class ZipFile
         end
     end
 
-    extractall(path = ".")
+    extractall(extractPath = ".")
         let names = self.namelist()
         for name in names
-            self.extract(name, path + "/" + name)
+            let destPath = path.join(extractPath, name)
+            if name.endsWith("/")
+                if !file.exists(destPath)
+                    dir.createAll(destPath)
+                end
+            else
+                let parentDir = path.dirname(destPath)
+                if !file.exists(parentDir)
+                    dir.createAll(parentDir)
+                end
+                self.extract(name, destPath)
+            end
         end
     end
 
