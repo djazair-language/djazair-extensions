@@ -411,16 +411,14 @@ class Packer
             if file.isDir(itemPath)
                 self.encryptStageScripts(itemPath)
             elif itemPath.endsWith(".dz")
-                let content = file.read(itemPath)
-                let encChars = []
+                let rawBytes = file.readBytes(itemPath)
+                let len = rawBytes.length()
                 let i = 0
-                while i < content.length()
-                    let ch = chr(ord(content[i]) ^ 91)
-                    encChars.append(ch)
+                while i < len
+                    rawBytes[i] = rawBytes[i] ^ 91
                     i += 1
                 end
-                let encStr = encChars.join("")
-                file.write(itemPath, encStr)
+                file.writeBytes(itemPath, rawBytes)
             end
         end
     end
