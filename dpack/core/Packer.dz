@@ -18,6 +18,8 @@ use process
 use os
 use datetime
 use math
+use zip
+use bytes
 
 import "Scanner.dz" as Scanner
 
@@ -347,38 +349,24 @@ class Packer
         end
     end
 
-    # Creates a ZIP archive natively on Linux, but uses PowerShell on Windows
-    # to avoid binary corruption caused by file.read() text conversion.
+    # Creates a ZIP archive using the native zip library (cross-platform, binary-safe).
     createZip(stageDir, zipPath)
-        if os.isWindows()
-            let winStage = stageDir.replace("/", "\\").replace("'", "''")
-            let winZip   = zipPath.replace("/", "\\").replace("'", "''")
-            let r = process.exec("powershell -NoProfile -Command \"Compress-Archive -Path '" + winStage + "\\*' -DestinationPath '" + winZip + "' -Force\"")
-            if r["exit_code"] != 0
-                throw "dpack: Failed to create ZIP bundle.\n" + r["stderr"]
-            end
-        else
-            use zip
-            let z = new zip.ZipFile(zipPath, "w")
-            self.addDirToZip(z, stageDir, "")
-            z.close()
-        end
+        let z = new zip.ZipFile(zipPath, "w")
+        self.addDirToZip(z, stageDir, "")
+        z.close()
     end
 
     addDirToZip(z, currentDir, basePath)
         let items = dir.list(currentDir)
         for itemName in items
             let fullPath = path.join(currentDir, itemName)
-            let arcName = ""
-            if basePath == ""
-                arcName = itemName
-            else
-                arcName = basePath + "/" + itemName
-            end
+            let arcName = if basePath == "" ? itemName else basePath + "/" + itemName
             if file.isDir(fullPath)
                 self.addDirToZip(z, fullPath, arcName)
             else
-                let content = file.read(fullPath)
+                # Use readBytes + bytes.toString for binary-safe reading
+                let rawBytes = file.readBytes(fullPath)
+                let content  = bytes.toString(rawBytes)
                 z.writestr(arcName, content)
             end
         end
