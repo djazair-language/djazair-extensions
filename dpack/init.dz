@@ -1,15 +1,12 @@
-# dpack — Djazair Self-Contained Executable Packer
+# dpack — Djazair Standalone Executable Packer Library
 #
-# Usage:
-#   djazair dpack/init.dz pack <script.dz> [options]
-#   dpm pack <script.dz> [options]
+# Usage in Djazair code:
+#   use dpack
 #
-# Options:
-#   -o, --output <name>        Output file name (default: script name without .dz)
-#   --include <ext>            Force-include an extension by name (repeatable)
-#   --quiet                    Suppress verbose output
-#   -h, --help                 Show help
-#   -v, --version              Show version
+#   dpack.pack("main.dz")
+#   dpack.cleanCache()
+#   dpack.verify("app.exe")
+#   dpack.inspect("app.exe")
 #
 # Developer: Harizi Riyadh (hariziriyadh@gmail.com)
 
@@ -25,38 +22,7 @@ use json
 import "core/Packer.dz"   as PackerMod
 import "core/Inspector.dz" as Inspector
 
-let DPACK_VERSION = "1.1.0"
-
-fn printHelp()
-    print("")
-    print("\033[1;32mdpack\033[0m v" + DPACK_VERSION + " — Djazair Standalone Executable Packer")
-    print("")
-    print("Usage:")
-    print("  dpack pack <script.dz> [options]    Pack a script into an executable")
-    print("  dpack clean                          Clean cached application build folders")
-    print("  dpack verify <app.exe>              Verify if an EXE is a valid dpack bundle")
-    print("  dpack inspect <app.exe>             List all files inside a packed EXE")
-    print("")
-    print("Options:")
-    print("  -o, --output <name>     Output file name")
-    print("  --no-console            Build as GUI app (hide console window)")
-    print("  --portable              Portable mode (extract cache next to EXE)")
-    print("  --encrypt               Encrypt bundled source scripts")
-    print("  --include <ext>         Force-include an extension")
-    print("  --quiet                 Suppress build output")
-    print("  -h, --help              Show help")
-    print("  -v, --version           Show version")
-    print("")
-    print("Examples:")
-    print("  dpack pack main.dz")
-    print("  dpack pack main.dz -o app.exe --no-console --encrypt")
-    print("  dpack clean")
-    print("")
-end
-
-fn printVersion()
-    print("dpack v" + DPACK_VERSION)
-end
+let Packer = PackerMod.Packer
 
 fn defaultOutputName(scriptPath)
     let base = path.basename(scriptPath)
@@ -71,9 +37,8 @@ fn defaultOutputName(scriptPath)
     return path.join(path.dirname(scriptPath), base)
 end
 
-let Packer = PackerMod.Packer
-
-# Convenience function for packing a script programmatically.
+# Main function for packing a script programmatically.
+# Loads dpack.json if present in the project directory.
 fn pack(scriptPath = Null, outputPath = Null, options = {})
     # ── Load dpack.json if present ───────────────────────────────────────
     let configPath = path.join(process.cwd(), "dpack.json")
@@ -95,7 +60,7 @@ fn pack(scriptPath = Null, outputPath = Null, options = {})
                 if isNull(outputPath) and cfg.has("output")
                     outputPath = cfg["output"]
                 end
-                # Merge config keys into options (options takes precedence)
+                # Merge config keys into options (explicit options takes precedence)
                 let keys = cfg.keys()
                 for k in keys
                     if !options.has(k)
@@ -226,46 +191,4 @@ fn inspect(exePath)
     print("  Total: " + str(fileList.length()) + " files")
     print("")
     return fileList
-end
-
-# ── CLI Entry Point ──────────────────────────────────────────────────────────
-let args = process.args()
-if args.length() > 0
-    let cmd = args[0]
-    if cmd == "clean"
-        cleanCache()
-    elif cmd == "verify" and args.length() > 1
-        let v = verify(args[1])
-        print("Valid: " + str(v["valid"]) + " (" + v["reason"] + ")")
-    elif cmd == "inspect" and args.length() > 1
-        inspect(args[1])
-    elif cmd == "-v" or cmd == "--version"
-        printVersion()
-    elif cmd == "-h" or cmd == "--help"
-        printHelp()
-    elif cmd == "pack" or cmd.endsWith(".dz")
-        let script = if cmd == "pack" ? (if args.length() > 1 ? args[1] else Null) else cmd
-        let opts = {}
-        let outName = Null
-        
-        let i = 0
-        while i < args.length()
-            let a = args[i]
-            if (a == "-o" or a == "--output") and i + 1 < args.length()
-                outName = args[i + 1]
-                i += 1
-            elif a == "--no-console"
-                opts["console"] = False
-            elif a == "--portable"
-                opts["portable"] = True
-            elif a == "--encrypt" or a == "--protect"
-                opts["encrypt"] = True
-            elif a == "--quiet"
-                opts["quiet"] = True
-            end
-            i += 1
-        end
-
-        pack(script, outName, opts)
-    end
 end

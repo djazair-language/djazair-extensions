@@ -94,7 +94,7 @@ You can create a `dpack.json` file in your project directory to define build set
 }
 ```
 
-Simply run `dpack pack` in terminal or `dpack.pack()` in code, and it will automatically detect and load your `dpack.json` settings!
+Simply run `dpack.pack()` in your code, and it will automatically detect and load your `dpack.json` settings!
 
 ---
 
@@ -106,11 +106,6 @@ To clean up old cached application build folders from system temp directory and 
 use dpack
 
 dpack.cleanCache()
-```
-
-Or via CLI:
-```bash
-dpack clean
 ```
 
 ### Example 2: Bundling a Game (Raylib)
