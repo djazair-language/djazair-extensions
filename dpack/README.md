@@ -61,7 +61,11 @@ The `options` dictionary accepts the following keys:
 2. **`extensions`** *(Array)*: Sometimes you might load an extension dynamically, which hides it from the automatic scanner. You can force-include it here.
    - Example: `["sqlite", "kasbah"]`
 
-3. **`quiet`** *(Bool)*: 
+3. **`console`** *(Bool)*:
+   - **`True`** *(Default)*: Shows the console window (terminal). Output from `print()` and input from `input()` appear in the terminal.
+   - **`False`**: Hides the console window completely (for GUI applications like WebView, Qt, Raylib).
+
+4. **`quiet`** *(Bool)*: 
    - **`False`** *(Default)*: Shows detailed progress logs in the console during the build.
    - **`True`**: Hides all build logs.
 

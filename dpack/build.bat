@@ -1,9 +1,14 @@
 @echo off
-echo Building dpack stub...
-gcc -O2 -Wall -mwindows stub\stub.c -o stub\stub_win.exe -lws2_32
+echo Building dpack stubs...
+gcc -O2 -Wall stub\stub.c -o stub\stub_win.exe -lws2_32
 if %errorlevel% neq 0 (
-    echo Error: Failed to compile stub.
+    echo Error: Failed to compile console stub.
     exit /b %errorlevel%
 )
-echo dpack stub built successfully.
+gcc -O2 -Wall -DSTUB_GUI -mwindows stub\stub.c -o stub\stub_win_gui.exe -lws2_32
+if %errorlevel% neq 0 (
+    echo Error: Failed to compile GUI stub.
+    exit /b %errorlevel%
+)
+echo dpack stubs built successfully.
 exit /b 0

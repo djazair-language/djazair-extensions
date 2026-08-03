@@ -44,12 +44,7 @@ class Packer
         if !file.exists(dpackRoot)
             dpackRoot = path.resolve(path.join(self.repoRoot, "..", "djazair-extensions", "dpack"))
         end
-
-        if os.isWindows()
-            self.stubBin = path.join(dpackRoot, "stub", "stub_win.exe")
-        else
-            self.stubBin = path.join(dpackRoot, "stub", "stub_linux")
-        end
+        self.dpackRoot = dpackRoot
 
         # Standard library and prelude paths
         self.stdDir     = path.join(self.repoRoot, "src", "libs", "std")
@@ -111,10 +106,6 @@ class Packer
             throw "dpack: Interpreter not found: ${self.interpBin}\n       Please build Djazair first."
         end
 
-        if !file.exists(self.stubBin)
-            throw "dpack: Stub binary not found: ${self.stubBin}\n       Please rebuild dpack stub."
-        end
-
         let extraExtensions = if options.has("extensions") ? options["extensions"] else []
         let assetsOpt = if options.has("assets") ? options["assets"] else True
 
@@ -136,6 +127,29 @@ class Packer
                 extensions.append(ext)
             end
         end
+
+        # Determine Console vs GUI mode (Windows)
+        # Default: Console mode (console: True)
+        let isConsole = if options.has("console") ? options["console"] else True
+
+        let activeStub = Null
+        if os.isWindows()
+            if isConsole
+                activeStub = path.join(self.dpackRoot, "stub", "stub_win.exe")
+            else
+                activeStub = path.join(self.dpackRoot, "stub", "stub_win_gui.exe")
+                if !file.exists(activeStub)
+                    activeStub = path.join(self.dpackRoot, "stub", "stub_win.exe")
+                end
+            end
+        else
+            activeStub = path.join(self.dpackRoot, "stub", "stub_linux")
+        end
+
+        if !file.exists(activeStub)
+            throw "dpack: Stub binary not found: ${activeStub}\n       Please rebuild dpack stub."
+        end
+        self.activeStubBin = activeStub
 
         # ── Step 2: Build staging directory ───────────────────────────────
         self.progress(2, 5, "Staging files...")
@@ -376,10 +390,10 @@ class Packer
     # Final layout: [stub bytes][ZIP bytes][uint64 LE: zip start offset]
     appendBundles(zipPath, outputPath)
         # Step 1: Get stub size (= zip offset)
-        let stubSize = file.size(self.stubBin)
+        let stubSize = file.size(self.activeStubBin)
 
         # Step 2: Concatenate stub + ZIP natively using bytes
-        let stubBytes = file.readBytes(self.stubBin)
+        let stubBytes = file.readBytes(self.activeStubBin)
         let zipBytes = file.readBytes(zipPath)
 
         let outHandle = file.open(outputPath, "wb")

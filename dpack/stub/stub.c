@@ -67,18 +67,66 @@ static int get_self_path(char *buf, size_t sz) {
 }
 
 /* ── Create a unique temp directory ─────────────────────────────────────── */
-static int make_temp_dir(char *out, size_t sz) {
+static uint64_t fnv1a_combine(uint64_t hash, uint64_t val) {
+    hash ^= val;
+    hash *= 1099511628211ULL;
+    return hash;
+}
+
+static uint64_t fnv1a_str(const char *s, uint64_t hash) {
+    while (*s) {
+        hash ^= (unsigned char)*s++;
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zip_offset, uint64_t zip_size, char *out, size_t sz) {
+    uint64_t h = 14695981039346656037ULL;
+    h = fnv1a_str(self_path, h);
+    h = fnv1a_combine(h, file_size);
+    h = fnv1a_combine(h, zip_offset);
+    h = fnv1a_combine(h, zip_size);
+
+    /* Include file modification timestamp (mtime) */
+    uint64_t mtime = 0;
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+    if (GetFileAttributesExA(self_path, GetFileExInfoStandard, &fileInfo)) {
+        mtime = ((uint64_t)fileInfo.ftLastWriteTime.dwHighDateTime << 32) | fileInfo.ftLastWriteTime.dwLowDateTime;
+    }
+#else
+    struct stat st;
+    if (stat(self_path, &st) == 0) {
+        mtime = (uint64_t)st.st_mtime;
+    }
+#endif
+    h = fnv1a_combine(h, mtime);
+
+    /* Also sample first 256 bytes of embedded ZIP for content signature */
+    FILE *f = fopen(self_path, "rb");
+    if (f) {
+        if (fseek(f, (long)zip_offset, SEEK_SET) == 0) {
+            unsigned char sample[256];
+            size_t n = fread(sample, 1, sizeof(sample), f);
+            for (size_t i = 0; i < n; i++) {
+                h = fnv1a_combine(h, sample[i]);
+            }
+        }
+        fclose(f);
+    }
+
 #ifdef _WIN32
     char tmp[MAX_PATH];
-    if (!GetTempPathA(MAX_PATH, tmp)) return 0;
-    /* Use PID for uniqueness */
-    snprintf(out, sz, "%sdpack-%lu", tmp, (unsigned long)GetCurrentProcessId());
-    return CreateDirectoryA(out, NULL) ? 1 : 0;
+    if (!GetTempPathA(MAX_PATH, tmp)) {
+        const char *env_tmp = getenv("TEMP");
+        snprintf(tmp, sizeof(tmp), "%s\\", env_tmp ? env_tmp : "C:\\Windows\\Temp");
+    }
+    snprintf(out, sz, "%sdpack_app_%llx", tmp, (unsigned long long)h);
 #else
     const char *tmp = getenv("TMPDIR");
     if (!tmp) tmp = "/tmp";
-    snprintf(out, sz, "%s/dpack-%d-XXXXXX", tmp, (int)getpid());
-    return mkdtemp(out) ? 1 : 0;
+    snprintf(out, sz, "%s/dpack_app_%llx", tmp, (unsigned long long)h);
 #endif
 }
 
@@ -185,34 +233,53 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* ── Step 3: create temp directory ── */
+    /* ── Step 3: Determine cache directory for this application version ── */
     char tmp_dir[2048] = {0};
-    if (!make_temp_dir(tmp_dir, sizeof(tmp_dir))) {
-        fprintf(stderr, "[dpack] Cannot create temp directory\n");
-        return 1;
-    }
+    get_cache_dir(self_path, file_size, zip_offset, zip_size, tmp_dir, sizeof(tmp_dir));
 
-    /* ── Step 4: copy ZIP from self to temp ── */
-    char zip_path[2200];
-    snprintf(zip_path, sizeof(zip_path), "%s%sbundle.zip", tmp_dir, PATH_SEP);
-    if (!copy_range(self_path, zip_offset, zip_size, zip_path)) {
-        fprintf(stderr, "[dpack] Cannot extract bundle data\n");
-        rmdir_recursive(tmp_dir);
-        return 1;
-    }
+    char marker_path[2200];
+    snprintf(marker_path, sizeof(marker_path), "%s%s.complete", tmp_dir, PATH_SEP);
 
-    /* ── Step 5: extract ZIP ── */
-    if (!extract_zip(zip_path, tmp_dir)) {
-        fprintf(stderr, "[dpack] Cannot extract bundle\n");
-        rmdir_recursive(tmp_dir);
-        return 1;
-    }
-    /* Remove temp zip */
+    /* ── Step 4: Check if app is already extracted in cache ── */
+    FILE *mf = fopen(marker_path, "rb");
+    if (mf) {
+        /* Already extracted! Fast path: skip extraction */
+        fclose(mf);
+    } else {
+        /* Not extracted yet: create cache dir and extract */
 #ifdef _WIN32
-    DeleteFileA(zip_path);
+        CreateDirectoryA(tmp_dir, NULL);
 #else
-    remove(zip_path);
+        mkdir(tmp_dir, 0755);
 #endif
+
+        char zip_path[2200];
+        snprintf(zip_path, sizeof(zip_path), "%s%sbundle.zip", tmp_dir, PATH_SEP);
+        if (!copy_range(self_path, zip_offset, zip_size, zip_path)) {
+            fprintf(stderr, "[dpack] Cannot extract bundle data\n");
+            rmdir_recursive(tmp_dir);
+            return 1;
+        }
+
+        if (!extract_zip(zip_path, tmp_dir)) {
+            fprintf(stderr, "[dpack] Cannot extract bundle\n");
+            rmdir_recursive(tmp_dir);
+            return 1;
+        }
+
+#ifdef _WIN32
+        DeleteFileA(zip_path);
+#else
+        remove(zip_path);
+#endif
+
+        /* Create completion marker */
+        FILE *cm = fopen(marker_path, "wb");
+        if (cm) {
+            fputs("complete", cm);
+            fclose(cm);
+        }
+    }
 
     /* ── Step 6: set up paths ── */
     char interp_path[4096];
@@ -245,14 +312,26 @@ int main(int argc, char *argv[]) {
     ZeroMemory(&pi, sizeof(pi));
     si.cb = sizeof(si);
 
+#ifdef STUB_GUI
+    DWORD creationFlags = CREATE_NO_WINDOW;
+    BOOL inheritHandles = FALSE;
+#else
+    DWORD creationFlags = 0;
+    BOOL inheritHandles = TRUE;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+#endif
+
     int exit_code = 1;
     if (CreateProcessA(
             NULL,               /* application name (use cmd line) */
             cmd,                /* command line */
             NULL,               /* process security */
             NULL,               /* thread security */
-            FALSE,              /* inherit handles */
-            CREATE_NO_WINDOW,   /* ← no black console window */
+            inheritHandles,     /* inherit handles */
+            creationFlags,      /* creation flags */
             NULL,               /* environment */
             tmp_dir,            /* working directory = extracted tmp */
             &si,
@@ -287,8 +366,6 @@ int main(int argc, char *argv[]) {
     free(new_argv);
 #endif
 
-    /* ── Step 8: cleanup ── */
-    rmdir_recursive(tmp_dir);
-
+    /* ── Step 8: finish (cached directory is preserved for fast future launches) ── */
     return exit_code;
 }
