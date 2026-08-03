@@ -231,23 +231,39 @@ int main(int argc, char *argv[]) {
 
     /* ── Step 7: build command ── */
 #ifdef _WIN32
-    /* Build command string for Windows */
-    /* cmd.exe requires the entire command to be wrapped in quotes if the executable path is quoted. */
+    /* Build command line for CreateProcess */
     char cmd[8192];
     int  pos = 0;
-    pos += snprintf(cmd + pos, sizeof(cmd) - pos, "\"\"%s\" \"%s\"", interp_path, script_path);
+    pos += snprintf(cmd + pos, sizeof(cmd) - pos, "\"%s\" \"%s\"", interp_path, script_path);
     for (int i = 1; i < argc && pos < (int)sizeof(cmd) - 64; i++) {
         pos += snprintf(cmd + pos, sizeof(cmd) - pos, " \"%s\"", argv[i]);
     }
-    /* Add closing quote for the entire command */
-    if (pos < (int)sizeof(cmd) - 2) {
-        snprintf(cmd + pos, sizeof(cmd) - pos, "\"");
+
+    STARTUPINFOA        si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    ZeroMemory(&pi, sizeof(pi));
+    si.cb = sizeof(si);
+
+    int exit_code = 1;
+    if (CreateProcessA(
+            NULL,               /* application name (use cmd line) */
+            cmd,                /* command line */
+            NULL,               /* process security */
+            NULL,               /* thread security */
+            FALSE,              /* inherit handles */
+            CREATE_NO_WINDOW,   /* ← no black console window */
+            NULL,               /* environment */
+            tmp_dir,            /* working directory = extracted tmp */
+            &si,
+            &pi)) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        DWORD code = 1;
+        GetExitCodeProcess(pi.hProcess, &code);
+        exit_code = (int)code;
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
-    
-    int exit_code = system(cmd);
-    /* system() returns the exit code shifted on some platforms */
-    if (exit_code != 0 && exit_code != -1) exit_code = (exit_code >> 8) & 0xff;
-    if (exit_code == -1) exit_code = 1;
 #else
     /* On Unix, use execv for proper signal handling */
     char **new_argv = malloc(sizeof(char *) * (argc + 2));

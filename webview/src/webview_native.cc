@@ -1564,6 +1564,47 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFolder) {
 
     const char *title = AS_CSTRING(args[0]);
 #if defined(_WIN32)
+    IFileOpenDialog *pFileOpen;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, 
+            IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+    if (SUCCEEDED(hr)) {
+        DWORD dwOptions;
+        if (SUCCEEDED(pFileOpen->GetOptions(&dwOptions))) {
+            pFileOpen->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+        }
+
+        int titleLen = MultiByteToWideChar(CP_UTF8, 0, title, -1, NULL, 0);
+        if (titleLen > 0) {
+            std::wstring wTitle(titleLen, 0);
+            MultiByteToWideChar(CP_UTF8, 0, title, -1, &wTitle[0], titleLen);
+            pFileOpen->SetTitle(wTitle.c_str());
+        }
+
+        if (SUCCEEDED(pFileOpen->Show(NULL))) {
+            IShellItem *pItem;
+            if (SUCCEEDED(pFileOpen->GetResult(&pItem))) {
+                PWSTR pszFilePath;
+                if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath))) {
+                    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, NULL, 0, NULL, NULL);
+                    if (utf8Len > 0) {
+                        std::string utf8Path(utf8Len - 1, 0);
+                        WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, &utf8Path[0], utf8Len, NULL, NULL);
+                        CoTaskMemFree(pszFilePath);
+                        pItem->Release();
+                        pFileOpen->Release();
+                        return djazair_str(vm, utf8Path.c_str());
+                    }
+                    CoTaskMemFree(pszFilePath);
+                }
+                pItem->Release();
+            }
+        }
+        pFileOpen->Release();
+        return djazair_null();
+    }
+
+    // Fallback to classic dialog
     BROWSEINFOA bi = {0};
     bi.lpszTitle = title;
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
