@@ -1,4 +1,0 @@
-# app.dz — Root Module Alias
-import "core/app.dz" as appMod
-let QApplication = appMod.QApplication
-
