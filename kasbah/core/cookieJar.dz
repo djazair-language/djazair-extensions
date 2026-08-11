@@ -1,0 +1,56 @@
+# Kasbah Core — cookieJar class
+# High-level interface for reading and writing cookies within a request handler.
+# Automatically attached to both req.cookies and res.cookies by kasbahApp.
+
+import "../helpers/cookie.dz" as *
+
+class cookieJar
+    init(parsedCookies, res)
+        self.cookieData  = parsedCookies
+        self.resInstance = res
+    end
+
+    # Returns the value of the named cookie, or fallback if absent.
+    get(name, fallback = Null)
+        if self.cookieData.has(name)
+            return self.cookieData[name]
+        end
+        return fallback
+    end
+
+    # Sets a cookie on the outgoing response.
+    set(name, value, options = {})
+        self.resInstance.cookie(name, value, options)
+        return self
+    end
+
+    # Marks a cookie for deletion on the outgoing response.
+    delete(name)
+        self.resInstance.deleteCookie(name)
+        return self
+    end
+
+    # Returns True if the named cookie exists in the incoming request.
+    has(name)
+        return self.cookieData.has(name)
+    end
+
+    # Returns a shallow copy map of all incoming cookies.
+    all()
+        let result = {}
+        for k, v in self.cookieData
+            result[k] = v
+        end
+        return result
+    end
+
+    # Clears all incoming cookies in memory and sends delete headers to the client.
+    clear()
+        let names = self.cookieData.keys()
+        for name in names
+            self.resInstance.deleteCookie(name)
+            self.cookieData.delete(name)
+        end
+        return self
+    end
+end

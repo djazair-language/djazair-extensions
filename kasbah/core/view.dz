@@ -1,0 +1,270 @@
+# Kasbah Core — View class
+# Handles reading HTML templates, parsing AST, and evaluating Loops, Conditionals, and Layouts.
+
+use file
+use path
+use regex
+import "../helpers/utils.dz" as *
+
+class view
+    init(config)
+        self.configMap = config
+    end
+
+    getSafePath(templateName)
+        let viewsDir = ""
+        if self.configMap.has("views") && self.configMap["views"] != ""
+            viewsDir = path.normalize(self.configMap["views"])
+        else
+            viewsDir = path.resolve("views")
+        end
+
+        if !templateName.contains(".")
+            templateName = "${templateName}.html"
+        end
+
+        let safePath = path.normalize("${viewsDir}/${templateName}")
+        let viewsDirLower = viewsDir.lower()
+        if !viewsDirLower.endsWith("/") && !viewsDirLower.endsWith("\\")
+            let okSlash = safePath.lower().startsWith("${viewsDirLower}/")
+            let okBackslash = safePath.lower().startsWith("${viewsDirLower}\\")
+            if !okSlash && !okBackslash
+                throw "Forbidden view path traversal: ${templateName}"
+            end
+        else
+            if !safePath.lower().startsWith(viewsDirLower)
+                throw "Forbidden view path traversal: ${templateName}"
+            end
+        end
+        return safePath
+    end
+
+    readFile(templateName)
+        let safePath = self.getSafePath(templateName)
+        if !file.exists(safePath)
+            throw "View not found: ${templateName}"
+        end
+        let content = ""
+        let fh = file.open(safePath, "r")
+        try
+            content = fh.read()
+        catch err
+            throw "Error reading view file: ${templateName}"
+        finally
+            fh.close()
+        end
+        return content
+    end
+
+    tokenize(templateString)
+        let pat = regex.compile("(\\{\\{\\{[^\}]+\\}\\}\\}|\\{\\{[^\}]+\\}\\}|\\{%[^%]+%\\})")
+        let tokens = []
+        let i = 0
+        let len = templateString.length()
+        
+        while i < len
+            let substr = templateString.slice(i)
+            let m = pat.search(substr)
+            if isNull(m)
+                tokens.append({"type": "TEXT", "val": substr})
+                break
+            end
+            
+            let startIdx = m.start(0)
+            let endIdx = m.endPos(0)
+            let tag = m.group(0)
+            
+            if startIdx > 0
+                tokens.append({"type": "TEXT", "val": substr.slice(0, startIdx)})
+            end
+            
+            if tag.startsWith("{{{")
+                tokens.append({"type": "RAW", "val": tag.slice(3, tag.length()-3).strip()})
+            elif tag.startsWith("{{")
+                tokens.append({"type": "ESC", "val": tag.slice(2, tag.length()-2).strip()})
+            elif tag.startsWith("{%")
+                tokens.append({"type": "TAG", "val": tag.slice(2, tag.length()-2).strip()})
+            end
+            
+            i = i + endIdx
+        end
+        return tokens
+    end
+
+    parseTokens(tokens, state)
+        let nodes = []
+        while state["i"] < tokens.length()
+            let t = tokens[state["i"]]
+            state["i"] = state["i"] + 1
+            if t["type"] == "TEXT" or t["type"] == "ESC" or t["type"] == "RAW"
+                nodes.append(t)
+            elif t["type"] == "TAG"
+                let val = t["val"]
+                let tag = val
+                let spaceIdx = val.index(" ")
+                if spaceIdx != -1
+                    tag = val.slice(0, spaceIdx)
+                end
+                
+                if tag == "if"
+                    let cond = val.slice(2).strip()
+                    let trueNodes = self.parseTokens(tokens, state)
+                    let falseNodes = []
+                    let lastT = tokens[state["i"] - 1]
+                    if lastT["type"] == "TAG" and lastT["val"].startsWith("else")
+                        falseNodes = self.parseTokens(tokens, state)
+                    end
+                    nodes.append({"type": "IF", "cond": cond, "trueNodes": trueNodes, "falseNodes": falseNodes})
+                elif tag == "else" or tag == "endif"
+                    return nodes
+                elif tag == "for"
+                    let loopParts = val.slice(3).strip().split(" in ")
+                    let varName = loopParts[0].strip()
+                    let listName = loopParts[1].strip()
+                    let bodyNodes = self.parseTokens(tokens, state)
+                    nodes.append({"type": "FOR", "var": varName, "list": listName, "body": bodyNodes})
+                elif tag == "endfor"
+                    return nodes
+                elif tag == "include"
+                    let tplName = val.slice(7).strip()
+                    if (tplName.startsWith("'") and tplName.endsWith("'")) or (tplName.startsWith("\"") and tplName.endsWith("\""))
+                        tplName = tplName.slice(1, tplName.length()-1)
+                    end
+                    nodes.append({"type": "INCLUDE", "val": tplName})
+                elif tag == "extends"
+                    let tplName = val.slice(7).strip()
+                    if (tplName.startsWith("'") and tplName.endsWith("'")) or (tplName.startsWith("\"") and tplName.endsWith("\""))
+                        tplName = tplName.slice(1, tplName.length()-1)
+                    end
+                    nodes.append({"type": "EXTENDS", "val": tplName})
+                elif tag == "block"
+                    let bName = val.slice(5).strip()
+                    let bodyNodes = self.parseTokens(tokens, state)
+                    nodes.append({"type": "BLOCK", "name": bName, "body": bodyNodes})
+                elif tag == "endblock"
+                    return nodes
+                end
+            end
+        end
+        return nodes
+    end
+
+    evalExpr(expr, data)
+        expr = expr.strip()
+        let isNegated = False
+        if expr.startsWith("!")
+            isNegated = True
+            expr = expr.slice(1).strip()
+        end
+        
+        let parts = expr.split(".")
+        let current = data
+        for p in parts
+            if isMap(current) and current.has(p)
+                current = current[p]
+            else
+                current = Null
+                break
+            end
+        end
+        
+        if isNegated
+            if isNull(current) or current == False or current == 0 or current == "" or (isArray(current) and current.length() == 0)
+                return True
+            end
+            return False
+        end
+        return current
+    end
+
+    evalNodes(nodes, data, blocksMap)
+        let out = ""
+        for n in nodes
+            if n["type"] == "TEXT"
+                out += n["val"]
+            elif n["type"] == "ESC"
+                let val = self.evalExpr(n["val"], data)
+                if !isNull(val)
+                    out += escapeHtml(str(val))
+                end
+            elif n["type"] == "RAW"
+                let val = self.evalExpr(n["val"], data)
+                if !isNull(val)
+                    out += str(val)
+                end
+            elif n["type"] == "IF"
+                let condVal = self.evalExpr(n["cond"], data)
+                let isTruthy = False
+                if !isNull(condVal) and condVal != False and condVal != 0 and condVal != ""
+                    if !isArray(condVal) or condVal.length() > 0
+                        isTruthy = True
+                    end
+                end
+                
+                if isTruthy
+                    out += self.evalNodes(n["trueNodes"], data, blocksMap)
+                else
+                    out += self.evalNodes(n["falseNodes"], data, blocksMap)
+                end
+            elif n["type"] == "FOR"
+                let listVal = self.evalExpr(n["list"], data)
+                if isArray(listVal)
+                    for item in listVal
+                        let localData = {}
+                        for k, v in data
+                            localData[k] = v
+                        end
+                        localData[n["var"]] = item
+                        out += self.evalNodes(n["body"], localData, blocksMap)
+                    end
+                end
+            elif n["type"] == "INCLUDE"
+                out += self.render(n["val"], data)
+            elif n["type"] == "BLOCK"
+                let bName = n["name"]
+                if blocksMap.has(bName)
+                    out += self.evalNodes(blocksMap[bName], data, blocksMap)
+                else
+                    out += self.evalNodes(n["body"], data, blocksMap)
+                end
+            end
+        end
+        return out
+    end
+
+    extractBlocks(nodes, blocksMap)
+        for n in nodes
+            if n["type"] == "BLOCK"
+                blocksMap[n["name"]] = n["body"]
+            end
+        end
+    end
+
+    render(templateName, data = {})
+        let content = self.readFile(templateName)
+        let tokens = self.tokenize(content)
+        let state = {"i": 0}
+        let nodes = self.parseTokens(tokens, state)
+        
+        let extendsNode = Null
+        for n in nodes
+            if n["type"] == "EXTENDS"
+                extendsNode = n
+                break
+            end
+        end
+        
+        if !isNull(extendsNode)
+            let blocksMap = {}
+            self.extractBlocks(nodes, blocksMap)
+            let parentContent = self.readFile(extendsNode["val"])
+            let parentTokens = self.tokenize(parentContent)
+            let pState = {"i": 0}
+            let parentNodes = self.parseTokens(parentTokens, pState)
+            return self.evalNodes(parentNodes, data, blocksMap)
+        else
+            let emptyMap = {}
+            return self.evalNodes(nodes, data, emptyMap)
+        end
+    end
+end

@@ -1,0 +1,246 @@
+# Kasbah Core — kasbahResponse class
+# Wraps the built-in httpResponse with a fluent, high-level API.
+
+use json as *
+use http
+use file
+use path
+use bytes
+import "../helpers/cookie.dz" as *
+import "../helpers/utils.dz" as *
+import "view.dz" as *
+
+class kasbahResponse
+    init(httpRes, appConfig = {})
+        self.httpObj    = httpRes
+        self.statusCode = 200
+        self.headersMap = {}
+        self.cookieList = []
+        self.sentFlag   = False
+        self.configMap  = appConfig
+        self.cookies    = Null
+        self.session    = Null
+    end
+
+    # Sets the HTTP response status code.
+    status(code)
+        self.statusCode = code
+        self.httpObj.status(code)
+        return self
+    end
+
+    # Sets an HTTP response header (case-insensitive key).
+    setHeader(name, value)
+        if !isValidHeaderName(name)
+            return self
+        end
+        let headerValue = str(value)
+        if headerValue.contains("\r") || headerValue.contains("\n")
+            return self
+        end
+        self.headersMap[name.lower()] = headerValue
+        return self
+    end
+
+    # Fluent getter/setter for HTTP response headers.
+    header(name, value = Null)
+        if !isNull(value)
+            return self.setHeader(name, value)
+        end
+        if self.headersMap.has(name.lower())
+            return self.headersMap[name.lower()]
+        end
+        return ""
+    end
+
+    # Removes an HTTP response header by name.
+    removeHeader(name)
+        self.headersMap.delete(name.lower())
+        return self
+    end
+
+    # Sets status code and sends standard HTTP status text as response body.
+    sendStatus(code)
+        self.status(code)
+        self.text(httpStatusText(code))
+        return self
+    end
+
+    # Sends a raw string body with status line and all queued headers and cookies.
+    sendRaw(body)
+        if self.sentFlag
+            return
+        end
+        self.sentFlag = True
+
+        let builder = new http.httpResponseBuilder()
+        builder.status(self.statusCode)
+
+        for key, val in self.headersMap
+            builder.setHeader(key, val)
+        end
+
+        let raw = builder.build(body)
+
+        if self.cookieList.length() > 0
+            let cookieLines = ""
+            for c in self.cookieList
+                let serialized = serializeCookie(c["name"], c["value"], c["options"])
+                if serialized != ""
+                    cookieLines += "set-cookie: ${serialized}\r\n"
+                end
+            end
+            let sepIdx = raw.index("\r\n\r\n")
+            if sepIdx != -1
+                raw = raw.slice(0, sepIdx) + "\r\n" + cookieLines + "\r\n" + raw.slice(sepIdx + 4)
+            end
+        end
+
+        self.httpObj.sendRaw(raw)
+    end
+
+    # Sends string response body.
+    send(body)
+        self.sendRaw(body)
+        return self
+    end
+
+    # Sends plain text response body (`text/plain; charset=utf-8`).
+    text(body)
+        self.setHeader("Content-Type", "text/plain; charset=utf-8")
+        return self.send(body)
+    end
+
+    # Sends HTML response body (`text/html; charset=utf-8`).
+    html(body)
+        self.setHeader("Content-Type", "text/html; charset=utf-8")
+        return self.send(body)
+    end
+
+    # Serializes data as JSON and sends response (`application/json; charset=utf-8`).
+    json(data)
+        self.setHeader("Content-Type", "application/json; charset=utf-8")
+        let strData = encode(data)
+        self.sendRaw(strData)
+        return self
+    end
+
+    # Streams a binary or text file to the client with appropriate MIME type and Content-Length.
+    file(filePath)
+        let safePath = path.normalize(filePath)
+
+        if !file.exists(safePath)
+            self.status(404).send("File not found")
+            return self
+        end
+
+        if !self.headersMap.has("content-type")
+            let ext = path.extname(safePath)
+            self.setHeader("Content-Type", mimeType(ext))
+        end
+
+        let fileData = file.readBytes(safePath)
+
+        let builder = new http.httpResponseBuilder()
+        builder.status(self.statusCode)
+
+        for key, val in self.headersMap
+            builder.setHeader(key, val)
+        end
+        builder.setHeader("Content-Length", str(fileData.length()))
+
+        let headerStr = builder.build("")
+
+        if self.cookieList.length() > 0
+            let cookieLines = ""
+            for c in self.cookieList
+                let serialized = serializeCookie(c["name"], c["value"], c["options"])
+                if serialized != ""
+                    cookieLines += "set-cookie: ${serialized}\r\n"
+                end
+            end
+            let sepIdx = headerStr.index("\r\n\r\n")
+            if sepIdx != -1
+                headerStr = headerStr.slice(0, sepIdx) + "\r\n" + cookieLines + "\r\n"
+            end
+        end
+
+        self.httpObj.sendWithBytes(headerStr, fileData)
+        self.sentFlag = True
+        return self
+    end
+
+    # Renders an HTML template view and sends it as response.
+    view(templateName, data = {})
+        try
+            let v = new view(self.configMap)
+            let content = v.render(templateName, data)
+            return self.html(content)
+        catch err
+            if str(err).startsWith("View not found")
+                self.status(404).send("View not found")
+            else
+                self.status(500).send("Internal Server Error")
+            end
+            return self
+        end
+    end
+
+    # Triggers a file download in the browser with Content-Disposition header.
+    download(filePath, filename = Null)
+        if isNull(filename)
+            filename = path.basename(filePath)
+        end
+        filename = sanitizeFilename(filename)
+        if filename == ""
+            filename = "download"
+        end
+        self.setHeader("Content-Disposition", "attachment; filename=\"${filename}\"")
+        return self.file(filePath)
+    end
+
+    # Sends a redirect response to the target URL.
+    redirect(url, code = 302)
+        self.status(code)
+        self.setHeader("Location", url)
+        self.sendRaw("")
+        return self
+    end
+
+    # Queues a Set-Cookie header on the response.
+    cookie(name, value, options = {})
+        self.cookieList.append({"name": name, "value": value, "options": options})
+        return self
+    end
+
+    # Queues a Set-Cookie delete header on the response.
+    deleteCookie(name)
+        return self.cookie(name, "", {
+            "maxAge":  0,
+            "path":    "/",
+            "expires": "Thu, 01 Jan 1970 00:00:00 GMT"
+        })
+    end
+
+    # Sets Content-Type header by file extension shortcut.
+    type(ext)
+        if ext.length() > 0 && ext[0] != "."
+            ext = ".${ext}"
+        end
+        if ext.length() == 0
+            return self
+        end
+        self.setHeader("Content-Type", mimeType(ext))
+        return self
+    end
+
+    # Sets HTTP Link header for Web Linking (RFC 5988).
+    links(linkMap)
+        let parts = []
+        for rel, href in linkMap
+            parts.append("<${href}>; rel=\"${rel}\"")
+        end
+        self.setHeader("Link", parts.join(", "))
+        return self
+    end
+end

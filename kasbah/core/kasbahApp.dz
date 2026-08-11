@@ -1,0 +1,514 @@
+# Kasbah Core — Application class
+# Central orchestrator: configures middleware, registers routes, starts the HTTP server.
+
+use http
+use os
+use file
+use path
+use datetime
+use json
+use process
+
+import "kasbahRequest.dz" as reqClass
+import "kasbahResponse.dz" as resClass
+
+import "../middleware/bodyParser.dz" as *
+import "../middleware/logger.dz" as *
+import "../middleware/session.dz" as *
+import "../middleware/static.dz" as *
+import "../helpers/utils.dz" as *
+import "../helpers/cookie.dz" as *
+import "cookieJar.dz" as *
+
+let KASBAH_SERVER_CONFIG = {}
+
+fn setServerConfig(options)
+    if isMap(options)
+        KASBAH_SERVER_CONFIG = merge(KASBAH_SERVER_CONFIG, options)
+    end
+end
+
+class routerGroup
+    init(app, prefix, middlewares)
+        self.app = app
+        self.prefix = prefix
+        self.middlewares = middlewares
+    end
+
+    # Wraps a route handler function with the group's middleware pipeline.
+    wrapHandler(handler)
+        if self.middlewares.length() == 0
+            return handler
+        end
+        let mws = self.middlewares
+        return fn(req, res)
+            for mw in mws
+                mw(req, res)
+                if res.sentFlag
+                    return
+                end
+            end
+            handler(req, res)
+        end
+    end
+
+    # Registers a GET route within this group.
+    get(pattern, handler)
+        self.app.get(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Registers a POST route within this group.
+    post(pattern, handler)
+        self.app.post(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Registers a PUT route within this group.
+    put(pattern, handler)
+        self.app.put(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Registers a DELETE route within this group.
+    delete(pattern, handler)
+        self.app.delete(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Registers a PATCH route within this group.
+    patch(pattern, handler)
+        self.app.patch(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Registers a route for all HTTP methods within this group.
+    all(pattern, handler)
+        self.app.all(self.prefix + pattern, self.wrapHandler(handler))
+        return self
+    end
+
+    # Creates a nested sub-group of routes.
+    group(prefix, middlewares_or_callback, callback = Null)
+        let mws = []
+        let cb = callback
+        if isNull(callback)
+            cb = middlewares_or_callback
+        else
+            mws = middlewares_or_callback
+        end
+        let combinedMws = []
+        for mw in self.middlewares
+            combinedMws.append(mw)
+        end
+        for mw in mws
+            combinedMws.append(mw)
+        end
+
+        let g = new routerGroup(self.app, self.prefix + prefix, combinedMws)
+        cb(g)
+        return self
+    end
+end
+
+class kasbahApp
+    init(config = {})
+        let defaults = {
+            "port":          3000,
+            "host":          "0.0.0.0",
+            "bodyParser":    True,
+            "maxBodySize":   10,    # MB
+            "logger":        True,
+            "session":       False,
+            "sessionSecret": "",
+            "sessionCookieName": "kasbah.sid",
+            "sessionMaxAge": 86400,
+            "sessionSecure": False,
+            "sessionSameSite": "Lax",
+            "sessionDir": "",
+            "trustProxy":    False,
+            "exposeErrors":  False,
+            "static":        "",
+            "views":         "",
+            "keepAlive":     False,
+            "keepAliveTTL":  30,
+            "maxRequests":   100
+        }
+        self.appConfig = merge(merge(defaults, KASBAH_SERVER_CONFIG), config)
+
+        if self.appConfig["static"] != ""
+            self.appConfig["static"] = path.resolve(self.appConfig["static"])
+        end
+
+        if self.appConfig["views"] != ""
+            self.appConfig["views"] = path.resolve(self.appConfig["views"])
+        end
+
+        self.staticRoutes  = {
+            "GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "PATCH": {}, "HEAD": {}, "OPTIONS": {}
+        }
+        self.dynamicRoutes = {
+            "GET": [], "POST": [], "PUT": [], "DELETE": [], "PATCH": [], "HEAD": [], "OPTIONS": {}
+        }
+        self.middlewaresList = []
+        self.pipelineList    = []
+        self.serverInstance  = Null
+        self.errorHandler    = Null
+
+        self.loggerInstance = Null
+        if self.appConfig["logger"]
+            let logOpts = {}
+            if isMap(self.appConfig["logger"])
+                logOpts = self.appConfig["logger"]
+            end
+            self.loggerInstance = new kasbahLogger(logOpts)
+        end
+    end
+
+    # Registers a global middleware function.
+    middleware(mwFn)
+        self.middlewaresList.append(mwFn)
+        return self
+    end
+
+    # Registers a custom global error handler function `onError(err, req, res)`.
+    onError(handler)
+        self.errorHandler = handler
+        return self
+    end
+
+    # Registers a route group with an optional middleware list.
+    group(prefix, middlewares_or_callback, callback = Null)
+        let mws = []
+        let cb = callback
+        if isNull(callback)
+            cb = middlewares_or_callback
+        else
+            mws = middlewares_or_callback
+        end
+        let g = new routerGroup(self, prefix, mws)
+        cb(g)
+        return self
+    end
+
+    # Internal helper to add a static or dynamic route.
+    addRoute(method, pattern, handler)
+        if pattern.length() > 1 && pattern.endsWith("/")
+            pattern = pattern.slice(0, pattern.length() - 1)
+        end
+
+        if pattern.contains(":")
+            self.dynamicRoutes[method].append({
+                "pattern": pattern,
+                "segs": pattern.split("/"),
+                "handler": handler
+            })
+        else
+            self.staticRoutes[method][pattern] = handler
+        end
+    end
+
+    # Registers a GET route.
+    get(pattern, handler)
+        self.addRoute("GET", pattern, handler)
+        return self
+    end
+
+    # Registers a POST route.
+    post(pattern, handler)
+        self.addRoute("POST", pattern, handler)
+        return self
+    end
+
+    # Registers a PUT route.
+    put(pattern, handler)
+        self.addRoute("PUT", pattern, handler)
+        return self
+    end
+
+    # Registers a DELETE route.
+    delete(pattern, handler)
+        self.addRoute("DELETE", pattern, handler)
+        return self
+    end
+
+    # Registers a PATCH route.
+    patch(pattern, handler)
+        self.addRoute("PATCH", pattern, handler)
+        return self
+    end
+
+    # Registers a route for all standard HTTP methods.
+    all(pattern, handler)
+        let methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+        for m in methods
+            self.addRoute(m, pattern, handler)
+        end
+        return self
+    end
+
+    # Dispatches incoming request to matching static or dynamic route handler.
+    dispatchRoute(req, res)
+        let route = self.matchRoute(req.method, req.path)
+        if isNull(route)
+            return False
+        end
+
+        req.params = route["params"]
+        route["handler"](req, res)
+        return True
+    end
+
+    # Matches HTTP method and URL path string against static and dynamic route tables.
+    matchRoute(method, pathStr)
+        if pathStr.length() > 1 && pathStr.endsWith("/")
+            pathStr = pathStr.slice(0, pathStr.length() - 1)
+        end
+
+        if self.staticRoutes.has(method) && self.staticRoutes[method].has(pathStr)
+            return {"handler": self.staticRoutes[method][pathStr], "params": {}}
+        end
+
+        let pathSegs = pathStr.split("/")
+
+        if self.dynamicRoutes.has(method)
+            for route in self.dynamicRoutes[method]
+                let patternSegs = route["segs"]
+                if patternSegs.length() != pathSegs.length()
+                    continue
+                end
+
+                let params = {}
+                let matched = True
+
+                let segCount = patternSegs.length()
+                let i = 0
+                while i < segCount
+                    let ps = patternSegs[i]
+                    let rs = pathSegs[i]
+
+                    if ps.length() > 0 && ps[0] == ":"
+                        params[ps.slice(1)] = rs
+                    elif ps != rs
+                        matched = False
+                        break
+                    end
+                    i = i + 1
+                end
+
+                if matched
+                    return {"handler": route["handler"], "params": params}
+                end
+            end
+        end
+
+        return Null
+    end
+
+    # Prepares incoming request and response objects (resolves IP, URL decoding, cookie jar setup).
+    prepareRequest(req, res, httpReq)
+        req.ip = ""
+        if self.appConfig["trustProxy"]
+            req.ip = httpReq.header("x-forwarded-for")
+            if req.ip.contains(",")
+                req.ip = req.ip.split(",")[0].strip()
+            end
+            if req.ip == ""
+                req.ip = httpReq.header("x-real-ip")
+            end
+        end
+        if req.ip == ""
+            req.ip = httpReq.remoteAddr
+        end
+        if req.ip == ""
+            req.ip = "unknown"
+        end
+
+        req.path = urlDecodePath(req.path)
+        while req.path.contains("//")
+            req.path = req.path.replace("//", "/")
+        end
+
+        let rawCookies = {}
+        let cHeader = httpReq.header("cookie")
+        if cHeader != ""
+            rawCookies = parseCookie(cHeader)
+        end
+        let jar = new cookieJar(rawCookies, res)
+        req.cookies = jar
+        res.cookies = jar
+    end
+
+    # Central error handler dispatcher.
+    handleError(err, req, res)
+        if !isNull(self.loggerInstance)
+            self.loggerInstance.onError(req, err)
+        end
+
+        try
+            if !isNull(self.errorHandler)
+                self.errorHandler(err, req, res)
+            else
+                if !res.sentFlag
+                    let errorBody = {"error": "Internal Server Error"}
+                    if self.appConfig["exposeErrors"]
+                        errorBody["message"] = str(err)
+                    end
+                    res.status(500).json(errorBody)
+                end
+            end
+        catch handlerErr
+            if !res.sentFlag
+                res.status(500).text("Internal Server Error")
+            end
+        end
+    end
+
+    # Builds the primary request-response handler closure for http.createServer().
+    buildHandler()
+        return fn(httpReq, httpRes)
+            let req = Null
+            let res = Null
+            try
+                req = new reqClass.kasbahRequest(httpReq)
+                res = new resClass.kasbahResponse(httpRes, self.appConfig)
+                self.prepareRequest(req, res, httpReq)
+
+                if !isNull(self.loggerInstance)
+                    self.loggerInstance.onRequest(req)
+                end
+
+                for mw in self.pipelineList
+                    mw(req, res)
+                    if res.sentFlag
+                        break
+                    end
+                end
+            catch err
+                if isNull(res)
+                    httpRes.status(500).send("Internal Server Error")
+                else
+                    self.handleError(err, req, res)
+                end
+            end
+
+            try
+                if !isNull(req)
+                    self.saveSession(req)
+                    self.cleanupUploads(req)
+                end
+
+                if !isNull(self.loggerInstance) && !isNull(req) && !isNull(res)
+                    self.loggerInstance.onComplete(req, res)
+                end
+            catch postErr
+                if !isNull(self.loggerInstance) && !isNull(req)
+                    self.loggerInstance.onError(req, "Post-request error: ${postErr}")
+                end
+            end
+        end
+    end
+
+    # Cleans up temporary files generated during file upload parsing.
+    cleanupUploads(req)
+        let files = req.get("uploadedFiles")
+        if !isNull(files)
+            for f in files
+                try
+                    if file.exists(f)
+                        file.delete(f)
+                    end
+                catch err
+                end
+            end
+        end
+    end
+
+    # Persists session data to file storage after request completion.
+    saveSession(req)
+        if self.appConfig["session"]
+            let store = req.get("store")
+            if !isNull(store) && !isNull(req.session)
+                let sid = req.get("sid")
+                let sessData = {}
+                if isMap(req.session)
+                    sessData = req.session
+                else
+                    sid = req.session.id()
+                    sessData = req.session.all()
+                end
+                if !isNull(sid)
+                    store.write(sid, sessData)
+                end
+            end
+        end
+    end
+
+    # Starts the Kasbah HTTP web server on configured port.
+    listen(port = Null, quiet = False)
+        if !isNull(port)
+            self.appConfig["port"] = port
+        end
+
+        self.pipelineList = []
+
+        if self.appConfig["bodyParser"]
+            self.pipelineList.append(bodyParser(self.appConfig["maxBodySize"]))
+        end
+        if self.appConfig["session"]
+            let sessionOptions = {
+                "secret": self.appConfig["sessionSecret"],
+                "name": self.appConfig["sessionCookieName"],
+                "maxAge": self.appConfig["sessionMaxAge"],
+                "secure": self.appConfig["sessionSecure"],
+                "sameSite": self.appConfig["sessionSameSite"]
+            }
+            if self.appConfig["sessionDir"] != ""
+                sessionOptions["dir"] = self.appConfig["sessionDir"]
+            end
+            self.pipelineList.append(session(sessionOptions))
+        end
+        if self.appConfig["static"] != ""
+            self.pipelineList.append(serveStatic(self.appConfig["static"]))
+        end
+
+        for mw in self.middlewaresList
+            self.pipelineList.append(mw)
+        end
+
+        self.pipelineList.append(fn(req, res)
+            let handled = self.dispatchRoute(req, res)
+            if !handled && !res.sentFlag
+                res.status(404).json({
+                    "error":  "Not Found",
+                    "path":   req.path,
+                    "method": req.method
+                })
+            end
+        end)
+
+        if !quiet
+            print("Kasbah server starting on ${self.appConfig["host"]}:${self.appConfig["port"]}")
+        end
+
+        self.serverInstance = http.createServer(self.buildHandler(), {
+            "maxBody":      self.appConfig["maxBodySize"] * 1024 * 1024,
+            "keepAlive":    self.appConfig["keepAlive"],
+            "keepAliveTTL": self.appConfig["keepAliveTTL"],
+            "maxRequests":  self.appConfig["maxRequests"]
+        })
+        try
+            self.serverInstance.listen(self.appConfig["port"])
+        catch err
+            print("Error: Failed to start server on port ${self.appConfig["port"]} — ${str(err)}")
+            process.exit(1)
+        end
+    end
+
+    # Stops the HTTP server instance.
+    close()
+        if !isNull(self.serverInstance)
+            self.serverInstance.close()
+        end
+    end
+end

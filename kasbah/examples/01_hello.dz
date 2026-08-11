@@ -1,0 +1,38 @@
+# Kasbah Example 01 — Hello World
+# Minimal server demonstrating basic text, JSON, status, and custom headers
+#
+# Usage:
+#   GET /        -> text
+#   GET /json    -> JSON
+#   GET /status  -> 200 OK via sendStatus()
+#   GET /headers -> custom header via res.header()
+
+use kasbah
+
+let app = new kasbah.kasbahApp({
+    "port": 8080
+})
+
+app.get("/", fn(req, res)
+    res.text("Hello from Kasbah!")
+end)
+
+app.get("/json", fn(req, res)
+    res.json({
+        "message": "Hello from Kasbah!",
+        "version": "0.1.0",
+        "framework": "Kasbah"
+    })
+end)
+
+app.get("/status", fn(req, res)
+    res.sendStatus(200)
+end)
+
+app.get("/headers", fn(req, res)
+    res.header("x-powered-by", "Kasbah")
+    res.header("x-custom", "hello")
+    res.json({"headers": "check response headers"})
+end)
+
+app.listen()

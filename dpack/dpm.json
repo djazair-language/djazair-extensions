@@ -1,0 +1,9 @@
+{
+    "name": "dpack",
+    "version": "1.0.0",
+    "description": "Standalone executable bundler for Djazair.",
+    "author": "Djazair Team",
+    "dependencies": {
+        "zip": "latest"
+    }
+}
