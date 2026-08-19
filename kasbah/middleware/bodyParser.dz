@@ -114,7 +114,8 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         end
 
         let headerSection = bytes.toString(byteArrAll.slice(0, headerEnd))
-        let contentSection = bytes.toString(byteArrAll.slice(headerEnd + contentOffset))
+        # Keep content as raw bytes to preserve binary files (PNG, PDF, etc.)
+        let contentBytes = byteArrAll.slice(headerEnd + contentOffset)
 
         let cdHeader = ""
         let ctHeader = "text/plain"
@@ -139,9 +140,8 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         end
 
         if filename != ""
-            let byteArr = bytes.fromString(contentSection)
             let byteLimit = maxBodySize * 1024 * 1024
-            if byteArr.length() > byteLimit
+            if contentBytes.length() > byteLimit
                 res.status(413).json({
                     "error": "File too large",
                     "field": name,
@@ -155,7 +155,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
                 dir.createAll(tempDir)
             end
             let tempPath = "${tempDir}/${generateId(32)}"
-            file.writeBytes(tempPath, byteArr)
+            file.writeBytes(tempPath, contentBytes)
 
             let tracked = req.get("uploadedFiles")
             if isNull(tracked)
@@ -169,7 +169,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
                 "filename": filename,
                 "type":     ctHeader,
                 "tempPath": tempPath,
-                "size":     byteArr.length()
+                "size":     contentBytes.length()
             }
             if req.files.has(name)
                 if isArray(req.files[name])
@@ -181,7 +181,8 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
                 req.files[name] = fileInfo
             end
         else
-            req.body[name] = contentSection
+            # Text fields: safe to decode bytes back to string
+            req.body[name] = bytes.toString(contentBytes)
         end
     end
 end

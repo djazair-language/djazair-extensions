@@ -19,18 +19,22 @@ import "middleware/logger.dz" as logMod
 import "middleware/session.dz" as sessMod
 import "middleware/static.dz" as staticMod
 
-let kasbahApp      = appMod.kasbahApp
-let request        = reqMod.kasbahRequest
-let response       = resMod.kasbahResponse
-let view           = viewMod.view
-let cookieJar      = cookieMod.cookieJar
-let sessionManager = sessMgrMod.sessionManager
-let validator      = valMod.validator
-let fileManager    = fileMgrMod.fileManager
-let bodyParser     = bodyMod.bodyParser
-let kasbahLogger   = logMod.kasbahLogger
-let session        = sessMod.session
-let serveStatic    = staticMod.serveStatic
+import "helpers/utils.dz" as utilsMod
 
-let setServerConfig = appMod.setServerConfig
-let setClientConfig = http.setClientConfig
+let kasbahApp        = appMod.kasbahApp
+let request          = reqMod.kasbahRequest
+let response         = resMod.kasbahResponse
+let view             = viewMod.view
+let cookieJar        = cookieMod.cookieJar
+let sessionManager   = sessMgrMod.sessionManager
+let validator        = valMod.validator
+let fileManager      = fileMgrMod.fileManager
+let bodyParser       = bodyMod.bodyParser
+let kasbahLogger     = logMod.kasbahLogger
+let session          = sessMod.session
+let serveStatic      = staticMod.serveStatic
+
+let setServerConfig  = appMod.setServerConfig
+let setClientConfig  = http.setClientConfig
+let generateId       = utilsMod.generateId
+let urlEncodeFilename = utilsMod.urlEncodeFilename

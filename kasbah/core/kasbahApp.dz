@@ -148,7 +148,7 @@ class kasbahApp
             "GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "PATCH": {}, "HEAD": {}, "OPTIONS": {}
         }
         self.dynamicRoutes = {
-            "GET": [], "POST": [], "PUT": [], "DELETE": [], "PATCH": [], "HEAD": [], "OPTIONS": {}
+            "GET": [], "POST": [], "PUT": [], "DELETE": [], "PATCH": [], "HEAD": [], "OPTIONS": []
         }
         self.middlewaresList = []
         self.pipelineList    = []
@@ -492,6 +492,7 @@ class kasbahApp
         end
 
         self.serverInstance = http.createServer(self.buildHandler(), {
+            "host":         self.appConfig["host"],
             "maxBody":      self.appConfig["maxBodySize"] * 1024 * 1024,
             "keepAlive":    self.appConfig["keepAlive"],
             "keepAliveTTL": self.appConfig["keepAliveTTL"],

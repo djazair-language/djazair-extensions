@@ -66,12 +66,52 @@ class kasbahResponse
         return self
     end
 
+    # Builds the raw Set-Cookie header lines string for all queued cookies.
+    buildCookieLines()
+        if self.cookieList.length() == 0
+            return ""
+        end
+        let lines = ""
+        for c in self.cookieList
+            let serialized = serializeCookie(c["name"], c["value"], c["options"])
+            if serialized != ""
+                lines += "set-cookie: ${serialized}\r\n"
+            end
+        end
+        return lines
+    end
+
+    # Injects queued Set-Cookie headers into a raw HTTP response string.
+    # headerOnly=False (default): injects before \r\n\r\n and keeps the body.
+    # headerOnly=True: used by res.file() which sends the body separately as bytes.
+    injectCookies(raw, headerOnly = False)
+        let lines = self.buildCookieLines()
+        if lines == ""
+            return raw
+        end
+        let sepIdx = raw.index("\r\n\r\n")
+        if sepIdx == -1
+            return raw
+        end
+        if headerOnly
+            return raw.slice(0, sepIdx) + "\r\n" + lines + "\r\n"
+        end
+        return raw.slice(0, sepIdx) + "\r\n" + lines + "\r\n" + raw.slice(sepIdx + 4)
+    end
+
     # Sends a raw string body with status line and all queued headers and cookies.
+    # Automatically sets byte-accurate Content-Length for keep-alive correctness.
     sendRaw(body)
         if self.sentFlag
             return
         end
         self.sentFlag = True
+
+        # Byte-accurate Content-Length (UTF-8 byte count, not character count)
+        if !self.headersMap.has("content-length")
+            let bodyBytes = bytes.fromString(body)
+            self.headersMap["content-length"] = str(bodyBytes.length())
+        end
 
         let builder = new http.httpResponseBuilder()
         builder.status(self.statusCode)
@@ -81,21 +121,7 @@ class kasbahResponse
         end
 
         let raw = builder.build(body)
-
-        if self.cookieList.length() > 0
-            let cookieLines = ""
-            for c in self.cookieList
-                let serialized = serializeCookie(c["name"], c["value"], c["options"])
-                if serialized != ""
-                    cookieLines += "set-cookie: ${serialized}\r\n"
-                end
-            end
-            let sepIdx = raw.index("\r\n\r\n")
-            if sepIdx != -1
-                raw = raw.slice(0, sepIdx) + "\r\n" + cookieLines + "\r\n" + raw.slice(sepIdx + 4)
-            end
-        end
-
+        raw = self.injectCookies(raw)
         self.httpObj.sendRaw(raw)
     end
 
@@ -150,20 +176,8 @@ class kasbahResponse
         builder.setHeader("Content-Length", str(fileData.length()))
 
         let headerStr = builder.build("")
-
-        if self.cookieList.length() > 0
-            let cookieLines = ""
-            for c in self.cookieList
-                let serialized = serializeCookie(c["name"], c["value"], c["options"])
-                if serialized != ""
-                    cookieLines += "set-cookie: ${serialized}\r\n"
-                end
-            end
-            let sepIdx = headerStr.index("\r\n\r\n")
-            if sepIdx != -1
-                headerStr = headerStr.slice(0, sepIdx) + "\r\n" + cookieLines + "\r\n"
-            end
-        end
+        # headerOnly=True: body (fileData) is sent separately as bytes via sendWithBytes
+        headerStr = self.injectCookies(headerStr, True)
 
         self.httpObj.sendWithBytes(headerStr, fileData)
         self.sentFlag = True
@@ -187,6 +201,7 @@ class kasbahResponse
     end
 
     # Triggers a file download in the browser with Content-Disposition header.
+    # Supports non-ASCII filenames (Arabic, Chinese, etc.) via RFC 5987 filename*.
     download(filePath, filename = Null)
         if isNull(filename)
             filename = path.basename(filePath)
@@ -195,14 +210,24 @@ class kasbahResponse
         if filename == ""
             filename = "download"
         end
-        self.setHeader("Content-Disposition", "attachment; filename=\"${filename}\"")
+        # RFC 5987: filename*=UTF-8'' for modern browsers (handles any Unicode filename)
+        # filename= kept as ASCII fallback for legacy clients
+        let encodedName = urlEncodeFilename(filename)
+        self.setHeader("Content-Disposition",
+            "attachment; filename=\"${filename}\"; filename*=UTF-8''${encodedName}")
         return self.file(filePath)
     end
 
     # Sends a redirect response to the target URL.
+    # Rejects URLs containing CRLF sequences to prevent HTTP response splitting.
     redirect(url, code = 302)
+        let safeUrl = str(url)
+        if safeUrl.contains("\r") || safeUrl.contains("\n")
+            self.status(400).text("Bad Request")
+            return self
+        end
         self.status(code)
-        self.setHeader("Location", url)
+        self.setHeader("Location", safeUrl)
         self.sendRaw("")
         return self
     end
@@ -242,5 +267,62 @@ class kasbahResponse
         end
         self.setHeader("Link", parts.join(", "))
         return self
+    end
+
+    # ── Semantic Response Helpers ──────────────────────────────────────────────
+
+    # Sends 200 OK. Serializes `data` as JSON if provided, or sends empty body.
+    ok(data = Null)
+        self.status(200)
+        if isNull(data)
+            return self.send("")
+        end
+        return self.json(data)
+    end
+
+    # Sends 201 Created. Serializes `data` as JSON if provided, or sends empty body.
+    created(data = Null)
+        self.status(201)
+        if isNull(data)
+            return self.send("")
+        end
+        return self.json(data)
+    end
+
+    # Sends 204 No Content with an empty body (used after DELETE or successful updates).
+    noContent()
+        self.status(204).send("")
+        return self
+    end
+
+    # Sends 400 Bad Request with a JSON `{"error": message}` body.
+    badRequest(message = "Bad Request")
+        return self.status(400).json({"error": message})
+    end
+
+    # Sends 401 Unauthorized with a JSON `{"error": message}` body.
+    unauthorized(message = "Unauthorized")
+        return self.status(401).json({"error": message})
+    end
+
+    # Sends 403 Forbidden with a JSON `{"error": message}` body.
+    forbidden(message = "Forbidden")
+        return self.status(403).json({"error": message})
+    end
+
+    # Sends 404 Not Found with a JSON `{"error": message}` body.
+    notFound(message = "Not Found")
+        return self.status(404).json({"error": message})
+    end
+
+    # Sends 422 Unprocessable Entity with a JSON `{"errors": errorsMap}` body.
+    # Designed to pair directly with the validator: res.validationError(v.errors())
+    validationError(errors)
+        return self.status(422).json({"errors": errors})
+    end
+
+    # Sends 500 Internal Server Error with a JSON `{"error": message}` body.
+    serverError(message = "Internal Server Error")
+        return self.status(500).json({"error": message})
     end
 end

@@ -1,6 +1,7 @@
 # Kasbah Core — kasbahRequest class
 # Wraps built-in httpRequest with params, query, cookies, session, state.
 
+use file
 import "validator.dz" as *
 import "fileManager.dz" as *
 
@@ -41,9 +42,22 @@ class kasbahRequest
         return Null
     end
 
-    # Returns True if an uploaded file exists for the form field name.
+    # Returns True if an uploaded file exists for the form field name AND its temp file is on disk.
     hasFile(name)
-        return self.files.has(name) && !isNull(self.files[name])
+        if !self.files.has(name) || isNull(self.files[name])
+            return False
+        end
+        let info = self.files[name]
+        if isArray(info)
+            if info.length() == 0
+                return False
+            end
+            info = info[0]
+        end
+        if isMap(info) && info.has("tempPath")
+            return file.exists(info["tempPath"])
+        end
+        return False
     end
 
     # Instantiates a file manager for handling upload validation and saving.
@@ -60,23 +74,24 @@ class kasbahRequest
         return new validator(d)
     end
 
-    # Returns a URL path parameter by name.
-    param(name)
+    # Returns a URL path parameter by name, or fallback if absent.
+    param(name, fallback = Null)
         if self.params.has(name)
             return self.params[name]
         end
-        return Null
+        return fallback
     end
 
-    # Returns a query string parameter by name, or all query parameters if name is Null.
-    query(name = Null)
+    # Returns a query string parameter by name, or fallback if absent.
+    # Call with no arguments to get the full query map.
+    query(name = Null, fallback = Null)
         if isNull(name)
             return self.queryMap
         end
         if self.queryMap.has(name)
             return self.queryMap[name]
         end
-        return Null
+        return fallback
     end
 
     # Returns an HTTP request header by name (case-insensitive).
@@ -84,12 +99,17 @@ class kasbahRequest
         return self.httpObj.header(name)
     end
 
-    # Returns a cookie value by name.
+    # Returns a cookie value by name, or Null if not found.
+    # Works with both a plain Map (before prepareRequest) and a cookieJar object (at runtime).
     cookie(name)
-        if isMap(self.cookies) && self.cookies.has(name)
-            return self.cookies[name]
+        if isMap(self.cookies)
+            if self.cookies.has(name)
+                return self.cookies[name]
+            end
+            return Null
         end
-        return Null
+        # cookieJar object assigned by kasbahApp.prepareRequest()
+        return self.cookies.get(name)
     end
 
     # Gets a custom request state value (set by middleware).
@@ -111,13 +131,32 @@ class kasbahRequest
         return self.httpObj.isMethod(method)
     end
 
-    # Checks if the request Accept header matches the given media type.
+    # Returns True if the client Accept header is compatible with the given media type.
+    # Handles wildcards (*/*), type-wildcards (image/*), and quality factors (;q=0.9).
+    # Examples: req.accepts("application/json"), req.accepts("text/html"), req.accepts("image/*")
     accepts(type)
         let accept = self.httpObj.header("accept")
-        if accept == ""
+        if accept == "" || accept == "*/*"
             return True
         end
-        return accept.contains(type)
+        let parts = accept.split(",")
+        for part in parts
+            let mediaRange = part.split(";")[0].strip()
+            if mediaRange == "*/*"
+                return True
+            end
+            if mediaRange == type
+                return True
+            end
+            # Handle type-wildcard: "image/*" matches "image/png"
+            if mediaRange.endsWith("/*")
+                let prefix = mediaRange.slice(0, mediaRange.length() - 2)
+                if type.startsWith("${prefix}/")
+                    return True
+                end
+            end
+        end
+        return False
     end
 
     # Merges and returns all input data (URL params + query params + request body).

@@ -1,0 +1,122 @@
+﻿# test_routing.dz
+# Comprehensive routing tests for Kasbah
+
+import "../init.dz" as kasbah
+use process
+
+let passed = 0
+let failed = 0
+
+fn test(name, condition)
+    if condition
+        print("  PASS: {name}")
+        passed += 1
+    else
+        print("  FAIL: {name}")
+        failed += 1
+    end
+end
+
+print("=== Kasbah Routing Tests ===")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 1: Static route matching
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 1: Static Routes ---")
+
+let app = new kasbah.kasbahApp({"logger": False})
+
+app.get("/", fn(req, res) end)
+let m1 = app.matchRoute("GET", "/")
+test("matches root /", !isNull(m1))
+test("root returns empty params", !isNull(m1) && m1["params"].keys().length() == 0)
+
+app.get("/hello", fn(req, res) end)
+let m2 = app.matchRoute("GET", "/hello")
+test("matches static /hello", !isNull(m2))
+
+let m3 = app.matchRoute("GET", "/notfound")
+test("returns Null for unknown path", isNull(m3))
+
+let m4 = app.matchRoute("POST", "/hello")
+test("returns Null for wrong method on static route", isNull(m4))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 2: Dynamic route matching with :params
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 2: Dynamic Routes ---")
+
+app.get("/users/:id", fn(req, res) end)
+app.get("/users/:id/posts/:postId", fn(req, res) end)
+
+let m5 = app.matchRoute("GET", "/users/42")
+test("matches single :param", !isNull(m5))
+test(":id param is extracted", !isNull(m5) && m5["params"]["id"] == "42")
+
+let m6 = app.matchRoute("GET", "/users/john/posts/99")
+test("matches two :params", !isNull(m6))
+test(":id is john", !isNull(m6) && m6["params"]["id"] == "john")
+test(":postId is 99", !isNull(m6) && m6["params"]["postId"] == "99")
+
+let m7 = app.matchRoute("GET", "/users/42/extra/segment")
+test("does not match wrong segment count", isNull(m7))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 3: Trailing slash normalization
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 3: Trailing Slash ---")
+
+app.get("/about", fn(req, res) end)
+let m8 = app.matchRoute("GET", "/about/")
+test("trailing slash on static route is normalized", !isNull(m8))
+
+app.get("/items/:id", fn(req, res) end)
+let m9 = app.matchRoute("GET", "/items/5/")
+test("trailing slash on dynamic route is normalized", !isNull(m9) && m9["params"]["id"] == "5")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 4: HTTP method registration
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 4: HTTP Methods ---")
+
+app.post("/create", fn(req, res) end)
+app.put("/update", fn(req, res) end)
+app.delete("/remove", fn(req, res) end)
+app.patch("/patch", fn(req, res) end)
+
+test("POST route matches", !isNull(app.matchRoute("POST", "/create")))
+test("PUT route matches", !isNull(app.matchRoute("PUT", "/update")))
+test("DELETE route matches", !isNull(app.matchRoute("DELETE", "/remove")))
+test("PATCH route matches", !isNull(app.matchRoute("PATCH", "/patch")))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 5: app.all() registers all methods
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 5: app.all() ---")
+
+let appAll = new kasbah.kasbahApp({"logger": False})
+appAll.all("/any", fn(req, res) end)
+
+let methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+for mth in methods
+    test("app.all() registers {mth}", !isNull(appAll.matchRoute(mth, "/any")))
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PART 6: OPTIONS in dynamicRoutes is an Array (regression for bug fix)
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- PART 6: OPTIONS dynamicRoutes regression ---")
+
+let appOpts = new kasbah.kasbahApp({"logger": False})
+appOpts.all("/resource/:id", fn(req, res) end)
+let mOpts = appOpts.matchRoute("OPTIONS", "/resource/99")
+test("OPTIONS dynamic route resolves correctly", !isNull(mOpts))
+test("OPTIONS :id param extracted", !isNull(mOpts) && mOpts["params"]["id"] == "99")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Summary
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n=== Results: {passed} passed, {failed} failed / {passed + failed} total ===")
+if failed > 0
+    process.exit(1)
+end

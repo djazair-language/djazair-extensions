@@ -2,6 +2,7 @@
 # Shared helpers used across the framework core, middleware, and response layer.
 
 use random
+use crypto
 use file
 use path
 use bytes
@@ -121,17 +122,21 @@ end
 
 # ── ID generation ──────────────────────────────────────────────────────────────
 
-# Returns a random lowercase hex string of `len` characters.
+# Returns a cryptographically secure random hex string of `len` characters.
+# Uses crypto.randomBytes (OS entropy) for unpredictable session IDs and tokens.
 fn generateId(len = 32)
     let hex = "0123456789abcdef"
+    let byteCount = int(len / 2) + 1
+    let randomBytesArr = crypto.randomBytes(byteCount)
     let result = ""
     let i = 0
-    while i < len
-        let n = random.int(0, 15)
-        result += hex[n]
+    while result.length() < len
+        let b = randomBytesArr[i % randomBytesArr.length()]
+        result += hex[int(b / 16) % 16]
+        result += hex[b % 16]
         i += 1
     end
-    return result
+    return result.slice(0, len)
 end
 
 # ── MIME / Content-Type helpers ────────────────────────────────────────────────
@@ -318,4 +323,33 @@ fn escapeHtml(strVal)
     res = res.replace("\"", "&quot;")
     res = res.replace("'", "&#039;")
     return res
+end
+
+# Percent-encodes a filename for use in RFC 5987 `filename*=UTF-8''` parameter.
+# Each character is encoded byte-by-byte in UTF-8, so Arabic, Chinese, and any
+# non-ASCII filename is handled correctly.
+# Safe chars (RFC 5987 attr-char) are passed through unchanged.
+fn urlEncodeFilename(filename)
+    if isNull(filename) || filename == ""
+        return ""
+    end
+    let safe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$&+-.^_`|~"
+    let hex = "0123456789ABCDEF"
+    let result = ""
+    let i = 0
+    let len = filename.length()
+    while i < len
+        let c = filename[i]
+        if safe.contains(c)
+            result += c
+        else
+            # Encode each UTF-8 byte of the character independently
+            let charBytes = bytes.fromString(c)
+            for b in charBytes
+                result += "%${hex[int(b / 16)]}${hex[b % 16]}"
+            end
+        end
+        i += 1
+    end
+    return result
 end

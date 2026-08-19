@@ -62,12 +62,19 @@ When creating the application, you can pass a configuration map to `new kasbah.k
 | `port` | `3000` | TCP port to listen on. |
 | `host` | `"0.0.0.0"` | Bind address. |
 | `bodyParser` | `True` | Automatically parse JSON and Form Data bodies. |
-| `maxBodySize` | `1048576` | Maximum size (in bytes) allowed for an uploaded file (Default: 1MB). |
-| `logger` | `True` | Enable the built-in request/error logger. |
+| `maxBodySize` | `10` | Maximum size (in **MB**) allowed for a request body or file upload. |
+| `logger` | `True` | Enable the built-in request/error logger. Pass a map `{"level": "warn", "format": "combined"}` for custom options. |
 | `session` | `False` | Enable file-based persistent sessions. |
-| `sessionSecret` | `"kasbah"` | Secret used to sign session cookies. |
+| `sessionSecret` | `""` | Secret used to sign session cookies. **Must be at least 32 characters.** |
+| `sessionCookieName` | `"kasbah.sid"` | Name of the session cookie sent to the browser. |
+| `sessionMaxAge` | `86400` | Session cookie lifetime in seconds (default: 24 hours). |
+| `sessionSecure` | `False` | Set `Secure` flag on the session cookie (enable in HTTPS). |
+| `sessionSameSite` | `"Lax"` | `SameSite` policy for the session cookie: `"Lax"`, `"Strict"`, or `"None"` (requires `sessionSecure: True`). |
+| `sessionDir` | `""` | Custom directory to store session files. Defaults to the OS temp directory. |
 | `static` | `""` | Absolute or relative path to a directory for serving static files. |
 | `views` | `"views"` | Directory path containing your HTML templates. |
+| `trustProxy` | `False` | Trust `X-Forwarded-For` / `X-Real-IP` headers from reverse proxies. Enable only if behind a trusted proxy. |
+| `exposeErrors` | `False` | Include the error message in `500` JSON responses. Keep `False` in production. |
 | `keepAlive` | `False` | Enable HTTP/1.1 keep-alive persistent connections. |
 | `keepAliveTTL` | `30` | Seconds to wait for next request before closing idle connection. |
 | `maxRequests` | `100` | Maximum requests per keep-alive connection before forcing close. |
