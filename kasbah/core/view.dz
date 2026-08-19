@@ -91,6 +91,13 @@ class view
         return tokens
     end
 
+    stripQuotes(strVal)
+        if (strVal.startsWith("'") and strVal.endsWith("'")) or (strVal.startsWith("\"") and strVal.endsWith("\""))
+            return strVal.slice(1, strVal.length()-1)
+        end
+        return strVal
+    end
+
     parseTokens(tokens, state)
         let nodes = []
         while state["i"] < tokens.length()
@@ -126,16 +133,10 @@ class view
                 elif tag == "endfor"
                     return nodes
                 elif tag == "include"
-                    let tplName = val.slice(7).strip()
-                    if (tplName.startsWith("'") and tplName.endsWith("'")) or (tplName.startsWith("\"") and tplName.endsWith("\""))
-                        tplName = tplName.slice(1, tplName.length()-1)
-                    end
+                    let tplName = self.stripQuotes(val.slice(7).strip())
                     nodes.append({"type": "INCLUDE", "val": tplName})
                 elif tag == "extends"
-                    let tplName = val.slice(7).strip()
-                    if (tplName.startsWith("'") and tplName.endsWith("'")) or (tplName.startsWith("\"") and tplName.endsWith("\""))
-                        tplName = tplName.slice(1, tplName.length()-1)
-                    end
+                    let tplName = self.stripQuotes(val.slice(7).strip())
                     nodes.append({"type": "EXTENDS", "val": tplName})
                 elif tag == "block"
                     let bName = val.slice(5).strip()

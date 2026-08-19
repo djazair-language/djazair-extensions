@@ -2,11 +2,8 @@
 # Central orchestrator: configures middleware, registers routes, starts the HTTP server.
 
 use http
-use os
 use file
 use path
-use datetime
-use json
 use process
 
 import "kasbahRequest.dz" as reqClass
@@ -501,7 +498,7 @@ class kasbahApp
         try
             self.serverInstance.listen(self.appConfig["port"])
         catch err
-            print("Error: Failed to start server on port ${self.appConfig["port"]} — ${str(err)}")
+            print("Error: Failed to start server on port ${self.appConfig["port"]} - ${str(err)}")
             process.exit(1)
         end
     end

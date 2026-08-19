@@ -14,8 +14,17 @@ class fieldValidator
         self.hasFailed       = False
     end
 
-    # Marks this field as required (must be non-null and non-empty).
+    # Determines if the current validation rule should be skipped.
+    shouldSkip()
+        return self.hasFailed || (self.isOptional && self.isMissing)
+    end
+
+    # Validates that the field is present and not null.
     required()
+        if self.hasFailed
+            return self
+        end
+        self.isOptional = False
         if self.isMissing
             self.parentValidator.addError(self.fieldName, "is required")
             self.hasFailed = True
@@ -23,20 +32,18 @@ class fieldValidator
         return self
     end
 
-    # Marks this field as optional (skips further checks if absent).
+    # Marks the field as optional. Skip subsequent rules if it's missing.
     optional()
+        if self.hasFailed
+            return self
+        end
         self.isOptional = True
         return self
     end
 
     # Validates that the value is a string.
     string()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if !isString(self.fieldValue)
             self.parentValidator.addError(self.fieldName, "must be a string")
             self.hasFailed = True
@@ -46,12 +53,7 @@ class fieldValidator
 
     # Validates that the value is a number.
     number()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if !isNumber(self.fieldValue)
             self.parentValidator.addError(self.fieldName, "must be a number")
             self.hasFailed = True
@@ -61,12 +63,7 @@ class fieldValidator
 
     # Validates that the value is a boolean.
     boolean()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if !isBool(self.fieldValue)
             self.parentValidator.addError(self.fieldName, "must be a boolean")
             self.hasFailed = True
@@ -76,12 +73,7 @@ class fieldValidator
 
     # Validates that the value is an array.
     array()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if !isArray(self.fieldValue)
             self.parentValidator.addError(self.fieldName, "must be an array")
             self.hasFailed = True
@@ -91,12 +83,7 @@ class fieldValidator
 
     # Validates that the value matches a valid email address pattern.
     email()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let pattern = "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$"
         let m = regex.fullMatch(pattern, str(self.fieldValue))
         if isNull(m)
@@ -108,12 +95,7 @@ class fieldValidator
 
     # Validates that the value is a valid HTTP/HTTPS URL.
     url()
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let s = str(self.fieldValue)
         if !s.startsWith("http://") && !s.startsWith("https://")
             self.parentValidator.addError(self.fieldName, "must be a valid URL (http or https)")
@@ -124,12 +106,7 @@ class fieldValidator
 
     # Validates that the value matches a regex pattern.
     matches(pattern)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let m = regex.fullMatch(pattern, str(self.fieldValue))
         if isNull(m)
             self.parentValidator.addError(self.fieldName, "does not match the required pattern")
@@ -140,12 +117,7 @@ class fieldValidator
 
     # Validates numeric minimum bound.
     min(n)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if isNumber(self.fieldValue) && self.fieldValue < n
             self.parentValidator.addError(self.fieldName, "must be at least ${n}")
             self.hasFailed = True
@@ -155,12 +127,7 @@ class fieldValidator
 
     # Validates numeric maximum bound.
     max(n)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         if isNumber(self.fieldValue) && self.fieldValue > n
             self.parentValidator.addError(self.fieldName, "must be at most ${n}")
             self.hasFailed = True
@@ -170,12 +137,7 @@ class fieldValidator
 
     # Validates string or array minimum length.
     minLength(n)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let len = 0
         if isString(self.fieldValue) || isArray(self.fieldValue)
             len = self.fieldValue.length()
@@ -189,12 +151,7 @@ class fieldValidator
 
     # Validates string or array maximum length.
     maxLength(n)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let len = 0
         if isString(self.fieldValue) || isArray(self.fieldValue)
             len = self.fieldValue.length()
@@ -208,12 +165,7 @@ class fieldValidator
 
     # Validates that the value is one of the allowed choices.
     oneOf(allowed)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let found = False
         for a in allowed
             if a == self.fieldValue
@@ -230,12 +182,7 @@ class fieldValidator
 
     # Executes a custom validation function `ruleFn(val)`.
     custom(ruleFn)
-        if self.hasFailed
-            return self
-        end
-        if self.isOptional && self.isMissing
-            return self
-        end
+        if self.shouldSkip() return self end
         let result = ruleFn(self.fieldValue)
         if result != True
             let msg = if isString(result) ? result else "failed custom validation"

@@ -31,7 +31,7 @@ class kasbahResponse
 
     # Sets an HTTP response header (case-insensitive key).
     setHeader(name, value)
-        if !isValidHeaderName(name)
+        if !isValidHttpToken(name)
             return self
         end
         let headerValue = str(value)

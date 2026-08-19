@@ -6,22 +6,23 @@ use file
 use dir
 use path
 use bytes
+
 import "../helpers/utils.dz" as *
 
 class uploadedFile
     init(info)
         if isMap(info)
             self.fieldName = if info.has("name") ? info["name"] else ""
-            self.filename  = if info.has("filename") ? info["filename"] else ""
-            self.mimeType  = if info.has("type") ? info["type"] else "application/octet-stream"
-            self.tempPath  = if info.has("tempPath") ? info["tempPath"] else ""
-            self.size      = if info.has("size") ? info["size"] else 0
+            self.filename = if info.has("filename") ? info["filename"] else ""
+            self.mimeType = if info.has("type") ? info["type"] else "application/octet-stream"
+            self.tempPath = if info.has("tempPath") ? info["tempPath"] else ""
+            self.size = if info.has("size") ? info["size"] else 0
         else
             self.fieldName = ""
-            self.filename  = path.basename(str(info))
-            self.mimeType  = mimeType(path.extname(str(info)))
-            self.tempPath  = str(info)
-            self.size      = if file.exists(str(info)) ? file.size(str(info)) else 0
+            self.filename = path.basename(str(info))
+            self.mimeType = mimeType(path.extname(str(info)))
+            self.tempPath = str(info)
+            self.size = if file.exists(str(info)) ? file.size(str(info)) else 0
         end
         self.savedPath = Null
     end
@@ -176,12 +177,12 @@ end
 
 class fileManager
     init(req, options = {})
-        self.reqRef           = req
-        self.destDir          = if options.has("dest") ? options["dest"] else "uploads"
-        self.maxByteSize      = if options.has("maxSize") ? options["maxSize"] * 1024 * 1024 else Null
+        self.reqRef = req
+        self.destDir = if options.has("dest") ? options["dest"] else "uploads"
+        self.maxByteSize = if options.has("maxSize") ? options["maxSize"] * 1024 * 1024 else Null
         self.allowedMimeTypes = if options.has("allowedTypes") ? options["allowedTypes"] else Null
-        self.keepOriginal     = if options.has("keepOriginalName") ? options["keepOriginalName"] else False
-        self.filenamePrefix   = if options.has("prefix") ? options["prefix"] else ""
+        self.keepOriginal = if options.has("keepOriginalName") ? options["keepOriginalName"] else False
+        self.filenamePrefix = if options.has("prefix") ? options["prefix"] else ""
     end
 
     typeAllowed(mimeType)
@@ -218,7 +219,7 @@ class fileManager
         end
 
         let mimeType = if rawInfo.has("type") ? rawInfo["type"] else "application/octet-stream"
-        let size     = if rawInfo.has("size") ? rawInfo["size"] else 0
+        let size = if rawInfo.has("size") ? rawInfo["size"] else 0
         let tempPath = if rawInfo.has("tempPath") ? rawInfo["tempPath"] else ""
         let origName = if rawInfo.has("filename") ? rawInfo["filename"] else "file"
 
@@ -362,7 +363,7 @@ class fileManager
 
         for spec in specs
             let fieldName = if isMap(spec) && spec.has("name") ? spec["name"] else str(spec)
-            let maxCount  = if isMap(spec) && spec.has("max") ? spec["max"] else 1
+            let maxCount = if isMap(spec) && spec.has("max") ? spec["max"] else 1
             let res = self.multiple(fieldName, maxCount)
             for f in res["files"]
                 results.append(f)

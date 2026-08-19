@@ -1,7 +1,6 @@
 # Kasbah Helpers — Utility functions
 # Shared helpers used across the framework core, middleware, and response layer.
 
-use random
 use crypto
 use file
 use path
@@ -242,9 +241,8 @@ fn urlDecodePath(pathVal)
     return urlDecode(protected)
 end
 
-# HTTP field names are tokens; this also prevents malformed names from
-# reaching the low-level response builder.
-fn isValidHeaderName(name)
+# Validates if a string is a valid HTTP token (used for header names and cookie names).
+fn isValidHttpToken(name)
     if !isString(name) || name == ""
         return False
     end
