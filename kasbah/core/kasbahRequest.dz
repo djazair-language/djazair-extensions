@@ -301,20 +301,4 @@ class kasbahRequest
     protocol()
         return if self.secure() ? "https" else "http"
     end
-
-    # =========================================================================
-    # Backward Compatibility Aliases (Deprecated)
-    # =========================================================================
-
-    inputs()
-        return self.all()
-    end
-
-    isAjax()
-        return self.ajax()
-    end
-
-    isSecure()
-        return self.secure()
-    end
 end
