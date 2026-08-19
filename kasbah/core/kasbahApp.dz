@@ -304,6 +304,7 @@ class kasbahApp
 
     # Prepares incoming request and response objects (resolves IP, URL decoding, cookie jar setup).
     prepareRequest(req, res, httpReq)
+        res.req = req
         req.ip = ""
         if self.appConfig["trustProxy"]
             req.ip = httpReq.header("x-forwarded-for")

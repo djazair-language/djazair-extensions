@@ -20,6 +20,7 @@ class kasbahResponse
         self.configMap  = appConfig
         self.cookies    = Null
         self.session    = Null
+        self.req        = Null
     end
 
     # Sets the HTTP response status code.
@@ -324,5 +325,28 @@ class kasbahResponse
     # Sends 500 Internal Server Error with a JSON `{"error": message}` body.
     serverError(message = "Internal Server Error")
         return self.status(500).json({"error": message})
+    end
+
+    # Sets the Content-Type header manually.
+    type(mimeType)
+        return self.setHeader("Content-Type", mimeType)
+    end
+
+    # Sends an XML response.
+    xml(body)
+        self.type("application/xml")
+        return self.send(body)
+    end
+
+    # Redirects the client back to their previous location (Referer header), or a fallback URL.
+    back(fallback = "/")
+        let ref = fallback
+        if !isNull(self.req)
+            let reqRef = self.req.referer()
+            if reqRef != ""
+                ref = reqRef
+            end
+        end
+        return self.redirect(ref)
     end
 end

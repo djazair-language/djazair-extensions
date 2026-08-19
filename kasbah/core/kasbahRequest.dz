@@ -240,4 +240,56 @@ class kasbahRequest
         end
         return ct.contains(type)
     end
+
+    # Returns True if the client explicitly requests JSON.
+    wantsJson()
+        return self.accepts("application/json") || self.accepts("application/vnd.api+json")
+    end
+
+    # Returns True if the request is expected to return JSON (AJAX, JSON content, or JSON accept).
+    expectsJson()
+        return self.isAjax() || self.contentIs("json") || self.wantsJson()
+    end
+
+    # Extracts the Bearer token from the Authorization header.
+    bearerToken()
+        let auth = self.header("authorization")
+        if auth.startsWith("Bearer ") || auth.startsWith("bearer ")
+            return auth.slice(7).strip()
+        end
+        return Null
+    end
+
+    # Returns the request Host header.
+    host()
+        return self.header("host")
+    end
+
+    # Returns the User-Agent header.
+    userAgent()
+        return self.header("user-agent")
+    end
+
+    # Returns the Referer header.
+    referer()
+        let ref = self.header("referer")
+        if ref == ""
+            ref = self.header("referrer")
+        end
+        return ref
+    end
+
+    # Returns True if the request was made over HTTPS.
+    isSecure()
+        let proto = self.header("x-forwarded-proto")
+        if proto != ""
+            return proto == "https"
+        end
+        return False
+    end
+
+    # Returns the protocol used (http or https).
+    protocol()
+        return if self.isSecure() ? "https" else "http"
+    end
 end
