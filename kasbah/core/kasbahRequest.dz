@@ -159,8 +159,8 @@ class kasbahRequest
         return False
     end
 
-    # Merges and returns all input data (URL params + query params + request body).
-    inputs()
+    # Returns all input data (body, query, route params) combined, similar to Laravel's all().
+    all()
         let result = {}
         for k, v in self.params
             result[k] = v
@@ -176,7 +176,8 @@ class kasbahRequest
         return result
     end
 
-    # Gets a specific input value from params, query, or body (in order of priority).
+    # Returns the value of a specific input parameter, similar to Laravel's input().
+    # Checks route params, query string, and body in order of priority.
     input(name, fallback = Null)
         if self.params.has(name)
             return self.params[name]
@@ -190,28 +191,36 @@ class kasbahRequest
         return fallback
     end
 
-    # Returns a map containing only the specified input keys.
+    # Alias for param(name), matches Laravel's route() method for retrieving route parameters.
+    route(name, fallback = Null)
+        return self.param(name, fallback)
+    end
+
+    # Returns a map containing only the specified keys, similar to Laravel's only().
     only(keys)
-        let all = self.inputs()
         let result = {}
+        let allInputs = self.all()
         for k in keys
-            if all.has(k)
-                result[k] = all[k]
+            if allInputs.has(k)
+                result[k] = allInputs[k]
             end
         end
         return result
     end
 
-    # Returns a map containing all input keys except the specified ones.
+    # Returns a map containing all inputs except the specified keys, similar to Laravel's except().
     except(keys)
-        let all = self.inputs()
-        let skip = {}
-        for k in keys
-            skip[k] = True
-        end
         let result = {}
-        for k, v in all
-            if !skip.has(k)
+        let allInputs = self.all()
+        for k, v in allInputs
+            let exclude = False
+            for excludeKey in keys
+                if k == excludeKey
+                    exclude = True
+                    break
+                end
+            end
+            if !exclude
                 result[k] = v
             end
         end
@@ -219,7 +228,7 @@ class kasbahRequest
     end
 
     # Returns True if the request was made via AJAX (X-Requested-With: XMLHttpRequest).
-    isAjax()
+    ajax()
         return self.httpObj.header("x-requested-with") == "XMLHttpRequest"
     end
 
@@ -248,7 +257,7 @@ class kasbahRequest
 
     # Returns True if the request is expected to return JSON (AJAX, JSON content, or JSON accept).
     expectsJson()
-        return self.isAjax() || self.contentIs("json") || self.wantsJson()
+        return self.ajax() || self.contentIs("json") || self.wantsJson()
     end
 
     # Extracts the Bearer token from the Authorization header.
@@ -280,7 +289,7 @@ class kasbahRequest
     end
 
     # Returns True if the request was made over HTTPS.
-    isSecure()
+    secure()
         let proto = self.header("x-forwarded-proto")
         if proto != ""
             return proto == "https"
@@ -290,6 +299,6 @@ class kasbahRequest
 
     # Returns the protocol used (http or https).
     protocol()
-        return if self.isSecure() ? "https" else "http"
+        return if self.secure() ? "https" else "http"
     end
 end
