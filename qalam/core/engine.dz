@@ -188,10 +188,58 @@ class view
         return nodes
     end
 
-    # Evaluates a template variable expression with dot-notation on the data context.
-    # Supports negation prefix `!` and nested dot paths like `user.profile.name`.
+    # Evaluates a literal (string, number, boolean, null) or delegates to evalExpr.
     #
-    # @param expr {String} Expression string (e.g. "user.profile.name" or "!item.active")
+    # @param token {String} Literal string or variable name
+    # @param data  {Map}    Variable context map
+    # @return      {Any}    Evaluated value
+    evalLiteral(token, data)
+        let s = token.strip()
+        if (s.startsWith("\"") and s.endsWith("\"")) or (s.startsWith("'") and s.endsWith("'"))
+            if s.length() >= 2
+                return s.slice(1, s.length() - 1)
+            end
+            return ""
+        end
+        if s == "True" or s == "true"
+            return True
+        end
+        if s == "False" or s == "false"
+            return False
+        end
+        if s == "Null" or s == "null" or s == "nil"
+            return Null
+        end
+        let isNum = True
+        let dotCount = 0
+        let i = 0
+        while i < s.length()
+            let c = s[i]
+            if c == "."
+                dotCount += 1
+                if dotCount > 1
+                    isNum = False
+                    break
+                end
+            elif c == "-" and i == 0
+                # leading negative sign is allowed
+            elif c < "0" or c > "9"
+                isNum = False
+                break
+            end
+            i += 1
+        end
+        if isNum and s.length() > 0 and s != "-" and s != "."
+            return if dotCount > 0 ? float(s) else int(s)
+        end
+        return self.evalExpr(s, data)
+    end
+
+    # Evaluates a template variable expression with dot-notation on the data context.
+    # Supports comparison operators (`==`, `!=`, `>=`, `<=`, `>`, `<`), negation prefix `!`,
+    # and nested dot paths like `user.profile.name`.
+    #
+    # @param expr {String} Expression string (e.g. "user.name" or "activeNav == 'dashboard'")
     # @param data {Map}    Variable context map
     # @return     {Any}    Evaluated value
     evalExpr(expr, data)
@@ -200,6 +248,63 @@ class view
         if expr.startsWith("!")
             isNegated = True
             expr = expr.slice(1).strip()
+        end
+
+        # Binary comparison operators
+        if expr.contains(" == ")
+            let p = expr.split(" == ")
+            let l = self.evalLiteral(p[0], data)
+            let r = self.evalLiteral(p[1], data)
+            let res = (str(l) == str(r))
+            if isNegated
+                return not res
+            end
+            return res
+        elif expr.contains(" != ")
+            let p = expr.split(" != ")
+            let l = self.evalLiteral(p[0], data)
+            let r = self.evalLiteral(p[1], data)
+            let res = (str(l) != str(r))
+            if isNegated
+                return not res
+            end
+            return res
+        elif expr.contains(" >= ")
+            let p = expr.split(" >= ")
+            let l = float(self.evalLiteral(p[0], data))
+            let r = float(self.evalLiteral(p[1], data))
+            let res = (l >= r)
+            if isNegated
+                return not res
+            end
+            return res
+        elif expr.contains(" <= ")
+            let p = expr.split(" <= ")
+            let l = float(self.evalLiteral(p[0], data))
+            let r = float(self.evalLiteral(p[1], data))
+            let res = (l <= r)
+            if isNegated
+                return not res
+            end
+            return res
+        elif expr.contains(" > ")
+            let p = expr.split(" > ")
+            let l = float(self.evalLiteral(p[0], data))
+            let r = float(self.evalLiteral(p[1], data))
+            let res = (l > r)
+            if isNegated
+                return not res
+            end
+            return res
+        elif expr.contains(" < ")
+            let p = expr.split(" < ")
+            let l = float(self.evalLiteral(p[0], data))
+            let r = float(self.evalLiteral(p[1], data))
+            let res = (l < r)
+            if isNegated
+                return not res
+            end
+            return res
         end
 
         let parts = expr.split(".")
