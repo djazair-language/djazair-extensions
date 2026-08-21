@@ -93,6 +93,19 @@ test("TRIM: tag whitespace strip",
     qalam.renderString("Start\n  {%- if True -%}  \nMiddle\n  {%- endif -%}  \nEnd", {}),
     "StartMiddleEnd")
 
+# ── 6. Djazair Native 'end' Tag Syntax ─────────────────────────────────────────
+test("END: if with end",
+    qalam.renderString("{% if True %}YES{% end %}", {}),
+    "YES")
+
+test("END: if/elif/else with end",
+    qalam.renderString("{% if status == 1 %}ONE{% elif status == 2 %}TWO{% else %}OTHER{% end %}", {"status": 2}),
+    "TWO")
+
+test("END: for with end",
+    qalam.renderString("{% for n in nums %}{{ n }}{% end %}", {"nums": [1, 2, 3]}),
+    "123")
+
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n══════════════════════════════════════")
 print("Qalam Conditions & Loops Tests")

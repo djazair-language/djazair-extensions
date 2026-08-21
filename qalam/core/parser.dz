@@ -100,7 +100,7 @@ class Parser
                         elif lastTag == "else"
                             let elseBody = self.parse(tokens, state)
                             branches.append({"cond": Null, "body": elseBody})
-                        elif lastTag == "endif" or lastTag.startsWith("endif ")
+                        elif lastTag == "endif" or lastTag.startsWith("endif ") or lastTag == "end" or lastTag == "end if" or lastTag.startsWith("end if ")
                             break
                         else
                             break
@@ -123,7 +123,7 @@ class Parser
                         "line": tokenLine
                     })
 
-                elif tagCommand == "elif" or tagCommand == "else" or tagCommand == "endif"
+                elif tagCommand == "elif" or tagCommand == "else" or tagCommand == "else if" or tagCommand == "endif" or tagCommand == "end" or tagCommand == "endfor" or tagCommand == "endblock"
                     return nodes
 
                 elif tagCommand == "for"
@@ -153,7 +153,7 @@ class Parser
                         "line": tokenLine
                     })
 
-                elif tagCommand == "endfor"
+                elif tagCommand == "endfor" or tagCommand == "end" or tagCommand == "end for"
                     return nodes
 
                 elif tagCommand == "include"
@@ -182,7 +182,7 @@ class Parser
                         "line": tokenLine
                     })
 
-                elif tagCommand == "endblock"
+                elif tagCommand == "endblock" or tagCommand == "end" or tagCommand == "end block"
                     return nodes
 
                 else
