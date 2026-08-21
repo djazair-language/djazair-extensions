@@ -10,6 +10,7 @@ use file
 use dir
 use bytes
 import "../helpers/utils.dz" as *
+import "logger.dz" as loggerMod
 
 # Parses JSON payload into `req.body` map or array.
 #
@@ -22,7 +23,7 @@ fn parseJson(req, res)
     try
         req.body = decode(req.body)
     catch err
-        print("[Kasbah BodyParser Error] Failed to parse JSON request body: ${err}")
+        loggerMod.logWarn("Failed to parse JSON request body: ${err}")
         res.status(400).json({"error": "Invalid JSON body"})
         return
     end

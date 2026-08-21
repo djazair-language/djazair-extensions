@@ -13,6 +13,7 @@ use bytes
 import "../helpers/cookie.dz" as *
 import "../helpers/utils.dz" as *
 import "view.dz" as viewMod
+import "../middleware/logger.dz" as loggerMod
 
 class response
     # ── 1. Constructor: Properties & Initialization ───────────────────────────
@@ -181,7 +182,7 @@ class response
             let content = v.render(templateName, data)
             return self.html(content)
         catch err
-            print("[Kasbah View Error] Failed to render template '${templateName}': ${err}")
+            loggerMod.logError("Failed to render template '${templateName}': ${err}")
             if str(err).startsWith("Template not found") or str(err).startsWith("View not found")
                 self.status(404).send("View not found: ${templateName}")
             else

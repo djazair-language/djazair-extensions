@@ -1,15 +1,66 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# logger.dz — Request Logging Middleware
+# logger.dz — Production-Grade Request & Error Logging Middleware
 # ═══════════════════════════════════════════════════════════════════════════════
-# Formats HTTP access logs (method, path, status, latency in ms) and runtime errors.
+# Implements international logging standards (RFC 5424 severity levels & ISO 8601
+# timestamps). Provides structured HTTP access telemetry, latency tracking in ms,
+# and centralized exception formatting across the entire framework.
 
 use datetime
 import "../helpers/utils.dz" as *
 
+# Generates an ISO 8601 formatted timestamp string: `YYYY-MM-DD HH:mm:ss`.
+#
+# @return {String} Normalized ISO 8601 date-time string
+fn formatTimestamp()
+    let d = datetime.now()
+    let yr = str(d.year())
+    let mo = str(d.month())
+    let da = str(d.day())
+    let h  = str(d.hour())
+    let m  = str(d.minute())
+    let s  = str(d.second())
+
+    if mo.length() < 2 mo = "0${mo}" end
+    if da.length() < 2 da = "0${da}" end
+    if h.length() < 2  h = "0${h}" end
+    if m.length() < 2  m = "0${m}" end
+    if s.length() < 2  s = "0${s}" end
+
+    return "${yr}-${mo}-${da} ${h}:${m}:${s}"
+end
+
+# Standardized global logging helper for informational messages.
+#
+# @param msg {String} Log message
+fn logInfo(msg)
+    print("${formatTimestamp()} [INFO] [Kasbah] ${msg}")
+end
+
+# Standardized global logging helper for warning messages.
+#
+# @param msg {String} Log message
+fn logWarn(msg)
+    print("${formatTimestamp()} [WARN] [Kasbah] ${msg}")
+end
+
+# Standardized global logging helper for error messages.
+#
+# @param msg {String} Log message
+fn logError(msg)
+    print("${formatTimestamp()} [ERROR] [Kasbah] ${msg}")
+end
+
+# Standardized global logging helper for fatal server exceptions.
+#
+# @param msg {String} Log message
+fn logFatal(msg)
+    print("${formatTimestamp()} [FATAL] [Kasbah] ${msg}")
+end
+
 class kasbahLogger
     # Initializes a logger instance with formatting options and minimum log level.
     #
-    # @param options {Map} Options ("level": "info"|"debug"|"warn"|"error"|"none", "format": "dev"|"combined")
+    # @param options {Map} Options ("level": "debug"|"info"|"warn"|"error"|"none", "format": "dev"|"combined")
     init(options = {})
         let defaults = {
             "level":  "info",
@@ -21,6 +72,7 @@ class kasbahLogger
             "info":  20,
             "warn":  30,
             "error": 40,
+            "fatal": 50,
             "none":  100
         }
         let levelName = self.configMap["level"].lower()
@@ -30,34 +82,23 @@ class kasbahLogger
         self.currentLevel = self.levelsMap[levelName]
     end
 
-    # Returns formatted timestamp string `[HH:MM:SS]`.
+    # Returns formatted ISO 8601 timestamp string.
     #
     # @return {String} Formatted timestamp
     timestampStr()
-        let d = datetime.now()
-        let h = str(d.hour())
-        let m = str(d.minute())
-        let s = str(d.second())
-        if h.length() < 2
-            h = "0${h}"
-        end
-        if m.length() < 2
-            m = "0${m}"
-        end
-        if s.length() < 2
-            s = "0${s}"
-        end
-        return "[${h}:${m}:${s}]"
+        return formatTimestamp()
     end
 
-    # Core log message dispatcher.
+    # Core log message dispatcher conforming to RFC 5424 log levels.
     #
-    # @param levelName  {String} Level identifier ("INFO", "ERROR")
+    # @param levelName  {String} Level identifier ("INFO", "WARN", "ERROR", "FATAL", "DEBUG")
     # @param levelValue {Number} Numeric severity
     # @param msg        {String} Log message text
     logMsg(levelName, levelValue, msg)
         if levelValue >= self.currentLevel
-            print("${self.timestampStr()} [${levelName.upper()}] ${msg}")
+            let lvl = levelName.upper()
+            let ts = self.timestampStr()
+            print("${ts} [${lvl}] [Kasbah] ${msg}")
         end
     end
 
@@ -79,6 +120,11 @@ class kasbahLogger
     # Logs an error message.
     error(msg)
         self.logMsg("error", self.levelsMap["error"], msg)
+    end
+
+    # Logs a fatal server error message.
+    fatal(msg)
+        self.logMsg("fatal", self.levelsMap["fatal"], msg)
     end
 
     # Lifecycle hook: called at start of HTTP request.
@@ -108,9 +154,9 @@ class kasbahLogger
         let msg = ""
         if self.configMap["format"] == "combined"
             let ip = req.get("logIp")
-            msg = "${ip} ${method} ${url} ${status} ${elapsed}ms"
+            msg = "${ip} - \"${method} ${url}\" ${status} (${elapsed} ms)"
         else
-            msg = "${method} ${url} ${status} ${elapsed}ms"
+            msg = "\"${method} ${url}\" ${status} (${elapsed} ms)"
         end
 
         self.logMsg("info", 20, msg)
@@ -118,24 +164,15 @@ class kasbahLogger
 
     # Lifecycle hook: called on runtime error.
     onError(req, err)
-        let method = req.get("logMethod")
-        if isNull(method)
-            method = req.method
-        end
-        let url = req.get("logPath")
-        if isNull(url)
-            url = req.path
-        end
-        
+        let method = if not isNull(req) and not isNull(req.get("logMethod")) ? req.get("logMethod") else (if not isNull(req) ? req.method else "UNKNOWN")
+        let url    = if not isNull(req) and not isNull(req.get("logPath")) ? req.get("logPath") else (if not isNull(req) ? req.path else "/")
+        let ip     = if not isNull(req) and not isNull(req.get("logIp")) ? req.get("logIp") else (if not isNull(req) ? req.ip else "127.0.0.1")
+
         let msg = ""
         if self.configMap["format"] == "combined"
-            let ip = req.get("logIp")
-            if isNull(ip)
-                ip = req.ip
-            end
-            msg = "${ip} ${method} ${url} -> ${str(err)}"
+            msg = "${ip} - \"${method} ${url}\" -> ${str(err)}"
         else
-            msg = "${method} ${url} -> ${str(err)}"
+            msg = "\"${method} ${url}\" -> ${str(err)}"
         end
 
         self.logMsg("error", 40, msg)

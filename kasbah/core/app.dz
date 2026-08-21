@@ -313,7 +313,7 @@ class app
         let host = self.appConfig["host"]
         let portNum = self.appConfig["port"]
         if not quiet
-            print("Kasbah server starting on ${host}:${portNum}")
+            logInfo("Kasbah server starting on ${host}:${portNum}")
         end
 
         let maxBodyBytes = if self.appConfig["maxBodySize"] > 1024 ? self.appConfig["maxBodySize"] else self.appConfig["maxBodySize"] * 1024 * 1024
@@ -327,7 +327,7 @@ class app
         try
             self.serverInstance.listen(portNum)
         catch err
-            print("Error: Failed to start server on port ${portNum} - ${err}")
+            logFatal("Failed to start server on port ${portNum} - ${err}")
             process.exit(1)
         end
     end
@@ -378,20 +378,26 @@ class app
 
     # Central application error dispatcher.
     handleError(err, req, res)
+        let reqMethod = if not isNull(req) ? req.method else "UNKNOWN"
+        let reqPath   = if not isNull(req) ? req.path else "/"
+        let reqIp     = if not isNull(req) and not isNull(req.ip) ? req.ip else "127.0.0.1"
+
         if not isNull(self.loggerInstance)
             self.loggerInstance.onError(req, err)
+        else
+            logError("Unhandled exception on \"${reqMethod} ${reqPath}\" (IP: ${reqIp}) -> ${err}")
         end
-
-        let reqMethod = if not isNull(req) ? req.method else "UNKNOWN"
-        let reqPath = if not isNull(req) ? req.path else "/"
-        print("[Kasbah Error] Unhandled exception on ${reqMethod} ${reqPath} -> ${err}")
 
         try
             if not isNull(self.errorHandler)
                 self.errorHandler(err, req, res)
             else
                 if not res.sentFlag
-                    let errorBody = {"error": "Internal Server Error"}
+                    let errorBody = {
+                        "error":      "Internal Server Error",
+                        "statusCode": 500,
+                        "timestamp":  formatTimestamp()
+                    }
                     if self.appConfig["exposeErrors"]
                         errorBody["message"] = str(err)
                     end
@@ -399,7 +405,7 @@ class app
                 end
             end
         catch handlerErr
-            print("[Kasbah Error] Error inside custom onError handler: ${handlerErr}")
+            logFatal("Exception inside custom onError handler: ${handlerErr}")
             if not res.sentFlag
                 res.status(500).text("Internal Server Error")
             end
@@ -428,7 +434,7 @@ class app
                 end
             catch err
                 if isNull(res)
-                    print("[Kasbah Fatal Error] Failed before response initialization: ${err}")
+                    logFatal("Fatal exception before response initialization: ${err}")
                     httpRes.status(500).send("Internal Server Error")
                 else
                     self.handleError(err, req, res)
@@ -445,7 +451,7 @@ class app
                     self.loggerInstance.onComplete(req, res)
                 end
             catch postErr
-                print("[Kasbah Error] Post-request processing error: ${postErr}")
+                logError("Post-request processing error: ${postErr}")
                 if not isNull(self.loggerInstance) and not isNull(req)
                     self.loggerInstance.onError(req, "Post-request error: ${postErr}")
                 end
