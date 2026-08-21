@@ -36,8 +36,8 @@ class mockReq
         self.body       = body
         self.queryMap   = query
         self.params     = {}
-        self.cookies    = {}
-        self.session    = {}
+        self.cookies    = new kasbah.cookieJar({"theme": "dark", "session_test": "abc"}, Null)
+        self.session    = new kasbah.sessionManager({"visits": 5}, "test_session_id_32_chars_minimum__", False)
         self.ip         = "127.0.0.1"
         self.files      = {}
         self.stateMap   = {}
@@ -68,6 +68,12 @@ class mockReq
 
     isSecure()
         return self.header("x-forwarded-proto") == "https"
+    end
+
+    secure() return self.isSecure() end
+
+    protocol()
+        return if self.isSecure() ? "https" else "http"
     end
 
     param(name, fallback = Null)
@@ -140,6 +146,8 @@ class mockReq
         return ct.contains(type)
     end
 
+    contentIs(type) return self.isType(type) end
+
     token()
         let a = self.header("authorization")
         if a.startsWith("Bearer ") or a.startsWith("bearer ")
@@ -148,13 +156,34 @@ class mockReq
         return Null
     end
 
+    bearerToken() return self.token() end
+
     userAgent() return self.header("user-agent") end
     referer() return self.header("referer") end
     host() return self.header("host") end
 
+    cookie(name)
+        return self.cookies.get(name)
+    end
+
+    hasFile(name)
+        return self.files.has(name)
+    end
+
+    file(name)
+        if self.files.has(name) return self.files[name] end
+        return Null
+    end
+
+    uploader(options = {})
+        return new kasbah.fileManager(self, options)
+    end
+
     validate(data = Null)
         let d = data
-        if isNull(d) d = if isMap(self.body) ? self.body else {} end
+        if isNull(d)
+            d = if isMap(self.body) ? self.body else {}
+        end
         return new kasbah.validator(d)
     end
 end
@@ -189,6 +218,15 @@ class mockRes
 
     type(t)
         self.header("Content-Type", t)
+        return self
+    end
+
+    links(linkMap)
+        let parts = []
+        for rel, url in linkMap
+            parts.append("<" + url + ">; rel=\"" + rel + "\"")
+        end
+        self.header("Link", parts.join(", "))
         return self
     end
 
@@ -227,6 +265,10 @@ class mockRes
 
     clearCookie(name)
         return self.cookie(name, "", {"maxAge": 0})
+    end
+
+    deleteCookie(name)
+        return self.clearCookie(name)
     end
 
     redirect(url, code = 302)
@@ -408,7 +450,8 @@ let mockR = new mockReq("GET", "/test", {
     "x-requested-with": "XMLHttpRequest",
     "user-agent": "DjazairClient/1.0",
     "referer": "https://example.com/home",
-    "host": "localhost:8080"
+    "host": "localhost:8080",
+    "cookie": "theme=dark; session_test=abc"
 }, {"name": "Alice", "password": "secret", "age": 30}, {"page": "2"})
 
 mockR.params = {"id": "42"}
@@ -424,10 +467,14 @@ test("req.isJson() is True", mockR.isJson() == True)
 test("req.isAjax() is True", mockR.isAjax() == True)
 test("req.isMethod('get') is True", mockR.isMethod("get") == True)
 test("req.isType('json') is True", mockR.isType("json") == True)
+test("req.contentIs('json') alias works", mockR.contentIs("json") == True)
 test("req.token() extracts token12345", mockR.token() == "token12345")
+test("req.bearerToken() alias works", mockR.bearerToken() == "token12345")
 test("req.userAgent() works", mockR.userAgent() == "DjazairClient/1.0")
 test("req.referer() works", mockR.referer() == "https://example.com/home")
 test("req.host() works", mockR.host() == "localhost:8080")
+test("req.protocol() returns http", mockR.protocol() == "http")
+test("req.cookie() reads cookie via CookieJar", mockR.cookie("theme") == "dark")
 
 mockR.set("currentUser", {"id": 1})
 test("req.set/get state works", mockR.get("currentUser")["id"] == 1)
@@ -451,6 +498,13 @@ test("res.cookie records cookie", mockS.cookies.length() > 0 and mockS.cookies[0
 
 mockS.clearCookie("theme")
 test("res.clearCookie records clear", mockS.cookies.length() > 1 and mockS.cookies[1]["options"]["maxAge"] == 0)
+
+mockS.deleteCookie("theme")
+test("res.deleteCookie alias works", mockS.cookies.length() > 2)
+
+# Web Linking RFC 5988
+mockS.links({"next": "/trades?page=3", "prev": "/trades?page=1"})
+test("res.links sets Link header", mockS.header("Link").contains("rel=\"next\"") and mockS.header("Link").contains("rel=\"prev\""))
 
 # Semantic helpers
 let r200 = new mockRes().ok({"msg": "ok"})
@@ -481,7 +535,7 @@ let r500 = new mockRes().serverError("Internal Error")
 test("res.serverError sends 500", r500.statusCode == 500)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Built-in Security Middleware Snippets (CORS & Helmet)
+# 6. Security Middleware Snippets (CORS & Helmet)
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n--- 6. Security Middleware Snippets ---")
 
@@ -538,9 +592,36 @@ test("Doc snippet custom Helmet sets Referrer-Policy", rHelm2.header("Referrer-P
 test("Doc snippet custom Helmet sets CSP", rHelm2.header("Content-Security-Policy").contains("default-src 'self'"))
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Validator Engine Snippet
+# 7. Sessions & CookieJar Snippets (Including Session Fixation Defense)
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- 7. Validator Engine Snippet ---")
+print("\n--- 7. Session & CookieJar Snippets ---")
+
+let sess = new kasbah.sessionManager({"user": "Alice", "visits": 3}, "old_session_id_at_least_32_chars__", False)
+test("Session get visits is 3", sess.get("visits") == 3)
+test("Session has user", sess.has("user") == True)
+test("Session all has user and visits", sess.all().has("user") and sess.all().has("visits"))
+
+# Regenerate session ID for login
+let oldSid = sess.id()
+let newSid = sess.regenerate()
+test("Session regenerate changes session ID", newSid != oldSid and newSid.length() >= 32)
+test("Session preserves data after regenerate", sess.get("user") == "Alice")
+
+# CookieJar tests
+let resTarget = new mockRes()
+let jar = new kasbah.cookieJar({"theme": "dark", "lang": "en"}, resTarget)
+test("CookieJar get theme", jar.get("theme") == "dark")
+test("CookieJar has lang", jar.has("lang") == True)
+test("CookieJar all returns 2 items", jar.all().keys().length() == 2)
+jar.set("user_token", "abc123xyz")
+test("CookieJar set queues cookie on response", resTarget.cookies.length() > 0 and resTarget.cookies[0]["name"] == "user_token")
+jar.delete("lang")
+test("CookieJar delete queues clear cookie on response", resTarget.cookies.length() > 1 and resTarget.cookies[1]["name"] == "lang")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. Validator Engine Snippet
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- 8. Validator Engine Snippet ---")
 
 let payloadValid = {
     "username": "riadh_h",
@@ -586,11 +667,28 @@ v2.field("agreement").required().boolean()
 
 test("Doc snippet validator fails invalid payload", v2.fails() == True)
 test("Doc snippet validator has 5 errors", v2.errors().keys().length() == 5)
+test("Doc snippet validator firstError returns message", not isNull(v2.firstError()))
+test("Doc snippet validator errorFor returns array", v2.errorFor("username").length() > 0)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Full REST App Example Snippet Verification
+# 9. Framework Utilities & Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- 8. Full REST App Snippet ---")
+print("\n--- 9. Framework Utilities Snippet ---")
+
+let genId = kasbah.generateId(32)
+test("kasbah.generateId generates 32 hex chars", not isNull(genId) and genId.length() == 32)
+
+let encName = kasbah.urlEncodeFilename("تقرير_البيانات.pdf")
+test("kasbah.urlEncodeFilename encodes unicode", not isNull(encName) and encName.contains("%"))
+
+kasbah.setServerConfig({"port": 8080, "trustProxy": True})
+kasbah.setClientConfig({"timeout": 15})
+test("kasbah.setServerConfig and setClientConfig execute cleanly", True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Full REST App Example Snippet Verification
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n--- 10. Full REST App Snippet ---")
 
 let appRest = new kasbah.app({
     "port":          8080,
