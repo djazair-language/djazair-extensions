@@ -12,7 +12,8 @@ let suites = [
     "tests/test_conditions_loops.dz",
     "tests/test_filters.dz",
     "tests/test_inheritance.dz",
-    "tests/test_docs_snippets.dz"
+    "tests/test_docs_snippets.dz",
+    "tests/test_djazair_compat.dz"
 ]
 
 print("═══════════════════════════════════════════════════════════════")

@@ -2,8 +2,15 @@
 # evaluator.dz — AST Execution & Expression Evaluator
 # ═══════════════════════════════════════════════════════════════════════════════
 # Traverses and executes AST node hierarchies against runtime data contexts.
-# Supports dot/bracket variable paths, filters (piping), comparison operators,
-# logical operators (`and`, `or`, `not`), template inheritance, and loop metadata.
+# Fully compatible with Djazair language syntax, operators, truthiness, and filters:
+# - Logical operators: `and`, `&&`, `or`, `||`, `not`, `!`
+# - Comparison operators: `==`, `!=`, `<`, `<=`, `>`, `>=`
+# - Membership operators: `in`, `not in`
+# - Identity operators: `is`, `is not`
+# - Ternary operators: `if cond ? a else b` and `cond ? a : b`
+# - Arithmetic & string concatenation: `+`, `-`, `*`, `/`, `%`
+# - Dot paths and bracket indexing: `user.profile.name`, `items[0]`
+# - Filter piping: `value | filter1 | filter2(args)`
 
 import "constants.dz" as consts
 import "escaper.dz" as escaperMod
@@ -25,8 +32,8 @@ class Evaluator
         self.viewEngine = engine
     end
 
-    # Determines truthiness of any value according to template engine conventions.
-    # Falsy values: Null, False, 0, "", empty array `[]`, empty map `{}`.
+    # Determines truthiness of any value according to Djazair language conventions.
+    # Falsy values: Null, False, 0, 0.0, "", empty array `[]`, empty map `{}`.
     #
     # @param val {Any} Value to test
     # @return    {Boolean} True if truthy, False if falsy
@@ -52,36 +59,176 @@ class Evaluator
         return True
     end
 
-    # Evaluates literal constants (strings, numbers, booleans, null) or delegates to resolvePath.
+    # Finds the index of an operator in an expression, respecting quotes and parentheses.
+    # Returns -1 if not found at parenDepth == 0.
     #
-    # @param tokenStr {String} Literal string or variable identifier
+    # @param expr {String} Expression string
+    # @param op   {String} Operator to locate
+    # @return     {Number} Character index or -1
+    findOp(expr, op)
+        let inQuote = False
+        let quoteChar = ""
+        let parenDepth = 0
+        let opLen = op.length()
+        let exprLen = expr.length()
+        let i = 0
+
+        while i <= exprLen - opLen
+            let c = expr[i]
+            if (c == "\"" or c == "'")
+                if not inQuote
+                    inQuote = True
+                    quoteChar = c
+                elif c == quoteChar
+                    inQuote = False
+                end
+            elif not inQuote
+                if c == "("
+                    parenDepth += 1
+                elif c == ")"
+                    if parenDepth > 0
+                        parenDepth -= 1
+                    end
+                elif parenDepth == 0
+                    if expr.slice(i, i + opLen) == op
+                        return i
+                    end
+                end
+            end
+            i += 1
+        end
+        return -1
+    end
+
+    # Evaluates literal constants (strings, numbers, booleans, null, arrays) or paths/arithmetic.
+    #
+    # @param tokenStr {String} Literal string, identifier, or arithmetic expression
     # @param data     {Map}    Variable context map
     # @return         {Any}    Resolved runtime value
     evalLiteral(tokenStr, data)
         let s = tokenStr.strip()
+        if s.length() == 0
+            return Null
+        end
+
+        # Parenthesized expression unwrap: `(expr)`
+        if s.startsWith("(") and s.endsWith(")")
+            # Verify the opening paren matches the closing paren at end
+            let depth = 0
+            let isOuterMatch = True
+            let i = 0
+            let slen = s.length()
+            while i < slen - 1
+                let c = s[i]
+                if c == "(" depth += 1
+                elif c == ")"
+                    depth -= 1
+                    if depth == 0
+                        isOuterMatch = False
+                        break
+                    end
+                end
+                i += 1
+            end
+            if isOuterMatch
+                return self.evalExpression(s.slice(1, slen - 1), data)
+            end
+        end
+
+        # Djazair Ternary Expression: `if cond ? a else b`
+        if s.startsWith("if ") and s.contains(" ? ") and s.contains(" else ")
+            let qIdx = self.findOp(s, " ? ")
+            let elseIdx = self.findOp(s, " else ")
+            if qIdx > 3 and elseIdx > qIdx
+                let condStr = s.slice(3, qIdx).strip()
+                let thenStr = s.slice(qIdx + 3, elseIdx).strip()
+                let elseStr = s.slice(elseIdx + 6).strip()
+                let condVal = self.evalCondition(condStr, data)
+                return if self.isTruthy(condVal) ? self.evalExpression(thenStr, data) else self.evalExpression(elseStr, data)
+            end
+        end
+
+        # Standard Ternary Expression: `cond ? a : b`
+        let ternaryQ = self.findOp(s, " ? ")
+        let ternaryColon = self.findOp(s, " : ")
+        if ternaryQ > 0 and ternaryColon > ternaryQ
+            let condStr = s.slice(0, ternaryQ).strip()
+            let thenStr = s.slice(ternaryQ + 3, ternaryColon).strip()
+            let elseStr = s.slice(ternaryColon + 3).strip()
+            let condVal = self.evalCondition(condStr, data)
+            return if self.isTruthy(condVal) ? self.evalExpression(thenStr, data) else self.evalExpression(elseStr, data)
+        end
+
+        # String literals: "..." or '...'
         if (s.startsWith("\"") and s.endsWith("\"")) or (s.startsWith("'") and s.endsWith("'"))
             if s.length() >= 2
                 return s.slice(1, s.length() - 1)
             end
             return ""
         end
+
+        # Boolean literals
         if s == "True" or s == "true"
             return True
         end
         if s == "False" or s == "false"
             return False
         end
+
+        # Null literals
         if s == "Null" or s == "null" or s == "nil"
             return Null
         end
 
-        # Inline Array Literal check: [a, b, c]
+        # Inline Array Literal: [a, b, c]
         if s.startsWith("[") and s.endsWith("]")
             let inner = s.slice(1, s.length() - 1).strip()
             if inner.length() == 0
                 return []
             end
             return self.parseArgs(inner, data)
+        end
+
+        # Additive & Subtractive operators: ` + `, ` - `
+        let plusIdx = self.findOp(s, " + ")
+        if plusIdx > 0
+            let leftVal = self.evalLiteral(s.slice(0, plusIdx), data)
+            let rightVal = self.evalLiteral(s.slice(plusIdx + 3), data)
+            if isString(leftVal) or isString(rightVal)
+                return str(if isNull(leftVal) ? "" else leftVal) + str(if isNull(rightVal) ? "" else rightVal)
+            end
+            return num(leftVal) + num(rightVal)
+        end
+
+        let minusIdx = self.findOp(s, " - ")
+        if minusIdx > 0
+            let leftVal = self.evalLiteral(s.slice(0, minusIdx), data)
+            let rightVal = self.evalLiteral(s.slice(minusIdx + 3), data)
+            return num(leftVal) - num(rightVal)
+        end
+
+        # Multiplicative operators: ` * `, ` / `, ` % `
+        let mulIdx = self.findOp(s, " * ")
+        if mulIdx > 0
+            let leftVal = self.evalLiteral(s.slice(0, mulIdx), data)
+            let rightVal = self.evalLiteral(s.slice(mulIdx + 3), data)
+            return num(leftVal) * num(rightVal)
+        end
+
+        let divIdx = self.findOp(s, " / ")
+        if divIdx > 0
+            let leftVal = self.evalLiteral(s.slice(0, divIdx), data)
+            let rightVal = self.evalLiteral(s.slice(divIdx + 3), data)
+            let rNum = num(rightVal)
+            return if rNum != 0 ? num(leftVal) / rNum else 0
+        end
+
+        let modIdx = self.findOp(s, " % ")
+        if modIdx > 0
+            let leftVal = self.evalLiteral(s.slice(0, modIdx), data)
+            let rightVal = self.evalLiteral(s.slice(modIdx + 3), data)
+            let rNum = int(rightVal)
+            return if rNum != 0 ? int(leftVal) % rNum else 0
         end
 
         # Numeric literal check
@@ -224,7 +371,8 @@ class Evaluator
         return current
     end
 
-    # Evaluates a comparison or logical sub-expression.
+    # Evaluates a condition or boolean sub-expression.
+    # Supports `or`, `||`, `and`, `&&`, `not`, `!`, comparisons, `in`, `not in`, `is`, `is not`.
     #
     # @param expr {String} Expression string
     # @param data {Map}    Variable context map
@@ -235,29 +383,54 @@ class Evaluator
             return False
         end
 
-        # Logical OR operator
-        if expr.contains(" or ")
-            let parts = expr.split(" or ")
-            for p in parts
-                if self.isTruthy(self.evalCondition(p, data))
-                    return True
+        # Unparenthesize if wrapped in `( ... )`
+        if expr.startsWith("(") and expr.endsWith(")")
+            let depth = 0
+            let isOuterMatch = True
+            let i = 0
+            let elen = expr.length()
+            while i < elen - 1
+                let c = expr[i]
+                if c == "(" depth += 1
+                elif c == ")"
+                    depth -= 1
+                    if depth == 0
+                        isOuterMatch = False
+                        break
+                    end
                 end
+                i += 1
             end
-            return False
+            if isOuterMatch
+                return self.evalCondition(expr.slice(1, elen - 1), data)
+            end
         end
 
-        # Logical AND operator
-        if expr.contains(" and ")
-            let parts = expr.split(" and ")
-            for p in parts
-                if not self.isTruthy(self.evalCondition(p, data))
-                    return False
-                end
-            end
-            return True
+        # ── 1. Logical OR / || ──
+        let orIdx = self.findOp(expr, " or ")
+        if orIdx == -1
+            orIdx = self.findOp(expr, " || ")
+        end
+        if orIdx > 0
+            let opLen = if expr.slice(orIdx, orIdx + 4) == " or " ? 4 else 4
+            let leftPart = expr.slice(0, orIdx).strip()
+            let rightPart = expr.slice(orIdx + opLen).strip()
+            return self.isTruthy(self.evalCondition(leftPart, data)) or self.isTruthy(self.evalCondition(rightPart, data))
         end
 
-        # Negation operator `not ` or `!`
+        # ── 2. Logical AND / && ──
+        let andIdx = self.findOp(expr, " and ")
+        if andIdx == -1
+            andIdx = self.findOp(expr, " && ")
+        end
+        if andIdx > 0
+            let opLen = if expr.slice(andIdx, andIdx + 5) == " and " ? 5 else 4
+            let leftPart = expr.slice(0, andIdx).strip()
+            let rightPart = expr.slice(andIdx + opLen).strip()
+            return self.isTruthy(self.evalCondition(leftPart, data)) and self.isTruthy(self.evalCondition(rightPart, data))
+        end
+
+        # ── 3. Unary Negation `not ` or `!` ──
         if expr.startsWith("not ")
             return not self.isTruthy(self.evalCondition(expr.slice(4), data))
         end
@@ -265,48 +438,104 @@ class Evaluator
             return not self.isTruthy(self.evalCondition(expr.slice(1), data))
         end
 
-        # Binary comparison operators
-        if expr.contains(" == ")
-            let p = expr.split(" == ")
-            let leftVal = self.evalLiteral(p[0], data)
-            let rightVal = self.evalLiteral(p[1], data)
-            return leftVal == rightVal
-        elif expr.contains(" != ")
-            let p = expr.split(" != ")
-            let leftVal = self.evalLiteral(p[0], data)
-            let rightVal = self.evalLiteral(p[1], data)
+        # ── 4. Membership: `not in` and `in` ──
+        let notInIdx = self.findOp(expr, " not in ")
+        if notInIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, notInIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(notInIdx + 8), data)
+            return not self.checkContains(rightVal, leftVal)
+        end
+
+        let inIdx = self.findOp(expr, " in ")
+        if inIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, inIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(inIdx + 4), data)
+            return self.checkContains(rightVal, leftVal)
+        end
+
+        # ── 5. Identity: `is not` and `is` ──
+        let isNotIdx = self.findOp(expr, " is not ")
+        if isNotIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, isNotIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(isNotIdx + 8), data)
             return leftVal != rightVal
-        elif expr.contains(" >= ")
-            let p = expr.split(" >= ")
-            let leftVal = num(self.evalLiteral(p[0], data))
-            let rightVal = num(self.evalLiteral(p[1], data))
+        end
+
+        let isIdx = self.findOp(expr, " is ")
+        if isIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, isIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(isIdx + 4), data)
+            return leftVal == rightVal
+        end
+
+        # ── 6. Binary Comparisons ──
+        let eqIdx = self.findOp(expr, " == ")
+        if eqIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, eqIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(eqIdx + 4), data)
+            return leftVal == rightVal
+        end
+
+        let neqIdx = self.findOp(expr, " != ")
+        if neqIdx > 0
+            let leftVal = self.evalLiteral(expr.slice(0, neqIdx), data)
+            let rightVal = self.evalLiteral(expr.slice(neqIdx + 4), data)
+            return leftVal != rightVal
+        end
+
+        let gteIdx = self.findOp(expr, " >= ")
+        if gteIdx > 0
+            let leftVal = num(self.evalLiteral(expr.slice(0, gteIdx), data))
+            let rightVal = num(self.evalLiteral(expr.slice(gteIdx + 4), data))
             return leftVal >= rightVal
-        elif expr.contains(" <= ")
-            let p = expr.split(" <= ")
-            let leftVal = num(self.evalLiteral(p[0], data))
-            let rightVal = num(self.evalLiteral(p[1], data))
+        end
+
+        let lteIdx = self.findOp(expr, " <= ")
+        if lteIdx > 0
+            let leftVal = num(self.evalLiteral(expr.slice(0, lteIdx), data))
+            let rightVal = num(self.evalLiteral(expr.slice(lteIdx + 4), data))
             return leftVal <= rightVal
-        elif expr.contains(" > ")
-            let p = expr.split(" > ")
-            let leftVal = num(self.evalLiteral(p[0], data))
-            let rightVal = num(self.evalLiteral(p[1], data))
+        end
+
+        let gtIdx = self.findOp(expr, " > ")
+        if gtIdx > 0
+            let leftVal = num(self.evalLiteral(expr.slice(0, gtIdx), data))
+            let rightVal = num(self.evalLiteral(expr.slice(gtIdx + 3), data))
             return leftVal > rightVal
-        elif expr.contains(" < ")
-            let p = expr.split(" < ")
-            let leftVal = num(self.evalLiteral(p[0], data))
-            let rightVal = num(self.evalLiteral(p[1], data))
+        end
+
+        let ltIdx = self.findOp(expr, " < ")
+        if ltIdx > 0
+            let leftVal = num(self.evalLiteral(expr.slice(0, ltIdx), data))
+            let rightVal = num(self.evalLiteral(expr.slice(ltIdx + 3), data))
             return leftVal < rightVal
         end
 
         return self.evalLiteral(expr, data)
     end
 
-    # Evaluates an expression with support for filters/pipes (e.g. `name | upper | default('Guest')`).
+    # Helper to check if a collection or string contains a target item (for `in` operator).
     #
-    # @param expr {String} Expression string
-    # @param data {Map}    Variable context map
-    # @return     {Any}    Evaluated value
-    # Splits an expression by pipe `|` while respecting quotation marks.
+    # @param haystack {Any} Collection, map, or string
+    # @param needle   {Any} Target to search for
+    # @return         {Boolean} True if contained
+    checkContains(haystack, needle)
+        if isNull(haystack)
+            return False
+        end
+        if isArray(haystack)
+            return haystack.contains(needle)
+        end
+        if isMap(haystack)
+            return haystack.has(str(needle))
+        end
+        if isString(haystack)
+            return str(haystack).contains(str(needle))
+        end
+        return False
+    end
+
+    # Splits an expression by pipe `|` while respecting quotation marks and parentheses.
     #
     # @param expr {String} Expression string
     # @return     {Array}  Pipe segments
@@ -315,6 +544,7 @@ class Evaluator
         let current = ""
         let inQuote = False
         let quoteChar = ""
+        let parenDepth = 0
 
         let i = 0
         let len = expr.length()
@@ -328,11 +558,21 @@ class Evaluator
                     inQuote = False
                 end
                 current += c
-            elif c == "|" and not inQuote
-                if current.strip().length() > 0
-                    parts.append(current.strip())
+            elif not inQuote
+                if c == "("
+                    parenDepth += 1
+                    current += c
+                elif c == ")"
+                    if parenDepth > 0 parenDepth -= 1 end
+                    current += c
+                elif c == "|" and parenDepth == 0
+                    if current.strip().length() > 0
+                        parts.append(current.strip())
+                    end
+                    current = ""
+                else
+                    current += c
                 end
-                current = ""
             else
                 current += c
             end
@@ -346,21 +586,22 @@ class Evaluator
         return parts
     end
 
-    # Parses comma-separated arguments while respecting quotes.
+    # Parses comma-separated arguments while respecting quotes and nested structures.
     #
-    # @param argsRaw {String} Raw argument list string (e.g. "'apple', ', '")
-    # @param data    {Map}    Variable context map
-    # @return        {Array}  List of evaluated arguments
-    parseArgs(argsRaw, data)
+    # @param argStr {String} Raw argument list
+    # @param data   {Map}    Variable context map
+    # @return       {Array}  Evaluated argument values
+    parseArgs(argStr, data)
         let args = []
-        let currentArg = ""
+        let current = ""
         let inQuote = False
         let quoteChar = ""
+        let bracketDepth = 0
 
         let i = 0
-        let len = argsRaw.length()
+        let len = argStr.length()
         while i < len
-            let c = argsRaw[i]
+            let c = argStr[i]
             if (c == "\"" or c == "'")
                 if not inQuote
                     inQuote = True
@@ -368,159 +609,174 @@ class Evaluator
                 elif c == quoteChar
                     inQuote = False
                 end
-                currentArg += c
-            elif c == "," and not inQuote
-                if currentArg.strip().length() > 0
-                    args.append(self.evalLiteral(currentArg.strip(), data))
+                current += c
+            elif not inQuote
+                if c == "["
+                    bracketDepth += 1
+                    current += c
+                elif c == "]"
+                    if bracketDepth > 0 bracketDepth -= 1 end
+                    current += c
+                elif c == "," and bracketDepth == 0
+                    if current.strip().length() > 0
+                        args.append(self.evalLiteral(current.strip(), data))
+                    end
+                    current = ""
+                else
+                    current += c
                 end
-                currentArg = ""
             else
-                currentArg += c
+                current += c
             end
             i += 1
         end
 
-        if currentArg.strip().length() > 0
-            args.append(self.evalLiteral(currentArg.strip(), data))
+        if current.strip().length() > 0
+            args.append(self.evalLiteral(current.strip(), data))
         end
 
         return args
     end
 
-    # Evaluates an expression with support for filters/pipes (e.g. `name | upper | default('Guest')`).
+    # Evaluates an expression with support for filter pipelines (e.g. `name | upper | default('Guest')`).
     #
     # @param expr {String} Expression string
     # @param data {Map}    Variable context map
     # @return     {Any}    Evaluated value
-    evalExpr(expr, data)
+    evalExpression(expr, data)
         expr = expr.strip()
         if expr.length() == 0
-            return Null
+            return ""
         end
 
-        # Check for filter piping (|)
-        if expr.contains("|")
-            let pipeParts = self.splitPipes(expr)
-            if pipeParts.length() > 1
-                let baseExpr = pipeParts[0]
-                let resultValue = self.evalCondition(baseExpr, data)
+        let pipes = self.splitPipes(expr)
+        if pipes.length() == 0
+            return ""
+        end
 
-                let pIdx = 1
-                while pIdx < pipeParts.length()
-                    let filterCall = pipeParts[pIdx]
-                    let filterName = filterCall
-                    let filterArgs = []
+        # Base value evaluation
+        let val = self.evalLiteral(pipes[0], data)
 
-                    if filterCall.contains("(") and filterCall.endsWith(")")
-                        let openParen = filterCall.index("(")
-                        filterName = filterCall.slice(0, openParen).strip()
-                        let argsRaw = filterCall.slice(openParen + 1, filterCall.length() - 1).strip()
-                        if argsRaw.length() > 0
-                            filterArgs = self.parseArgs(argsRaw, data)
-                        end
+        # Sequential filter applications
+        let pIdx = 1
+        let pipeCount = pipes.length()
+        while pIdx < pipeCount
+            let filterCall = pipes[pIdx].strip()
+            let filterName = filterCall
+            let args = []
+
+            # Check for arguments: `filterName(arg1, arg2)`
+            if filterCall.contains("(") and filterCall.endsWith(")")
+                let parenIdx = filterCall.index("(")
+                if parenIdx > 0
+                    filterName = filterCall.slice(0, parenIdx).strip()
+                    let rawArgs = filterCall.slice(parenIdx + 1, filterCall.length() - 1).strip()
+                    if rawArgs.length() > 0
+                        args = self.parseArgs(rawArgs, data)
                     end
-
-                    resultValue = self.filters.apply(filterName, resultValue, filterArgs)
-                    pIdx += 1
                 end
-
-                return resultValue
             end
+
+            val = self.filters.apply(filterName, val, args)
+            pIdx += 1
         end
 
-        return self.evalCondition(expr, data)
+        return val
     end
 
-    # Recursively evaluates an AST node tree and renders the resulting output string.
+    # Evaluates an AST node list recursively against context data and layout block definitions.
     #
     # @param nodes     {Array} AST node list
-    # @param data      {Map}   Runtime variable context
-    # @param blocksMap {Map}   Inherited block overrides map
-    # @return          {String} Rendered output HTML string
+    # @param data      {Map}   Variable context map
+    # @param blocksMap {Map}   Block overrides map
+    # @return          {String} Rendered HTML output
     evalNodes(nodes, data, blocksMap = {})
-        let output = ""
+        let out = ""
         for node in nodes
             let nodeType = node["type"]
 
+            # Literal Text Node
             if nodeType == consts.NODE_TEXT
-                output += node["val"]
+                out += node["val"]
 
+            # Variable Node (Auto-Escaped against XSS)
             elif nodeType == consts.NODE_VAR
-                let val = self.evalExpr(node["val"], data)
-                if not isNull(val)
-                    output += escaperMod.escapeHtml(val)
-                end
+                let evaluated = self.evalExpression(node["val"], data)
+                out += escaperMod.escapeHtml(evaluated)
 
+            # Raw Markup Node (Unescaped)
             elif nodeType == consts.NODE_RAW
-                let val = self.evalExpr(node["val"], data)
-                if not isNull(val)
-                    output += str(val)
-                end
+                let evaluated = self.evalExpression(node["val"], data)
+                out += if isNull(evaluated) ? "" else str(evaluated)
 
+            # Conditional Node (`if` / `elif` / `else`)
             elif nodeType == consts.NODE_IF
                 let matched = False
-                if node.has("branches") and isArray(node["branches"])
-                    for branch in node["branches"]
-                        let cond = branch["cond"]
-                        if isNull(cond) or self.isTruthy(self.evalExpr(cond, data))
-                            output += self.evalNodes(branch["body"], data, blocksMap)
-                            matched = True
-                            break
-                        end
-                    end
-                else
-                    # Fallback for simple if / else nodes
-                    let condVal = self.evalExpr(node["cond"], data)
-                    if self.isTruthy(condVal)
-                        output += self.evalNodes(node["trueNodes"], data, blocksMap)
-                    else
-                        output += self.evalNodes(node["falseNodes"], data, blocksMap)
+                for branch in node["branches"]
+                    let condExpr = branch["cond"]
+                    # `else` branch has null condition
+                    if isNull(condExpr) or self.isTruthy(self.evalCondition(condExpr, data))
+                        out += self.evalNodes(branch["body"], data, blocksMap)
+                        matched = True
+                        break
                     end
                 end
 
+            # Loop Node (`for` / `else`)
             elif nodeType == consts.NODE_FOR
-                let listVal = self.evalExpr(node["list"], data)
-                if isArray(listVal) and listVal.length() > 0
-                    let totalCount = listVal.length()
-                    let itemIdx = 0
-                    for item in listVal
-                        let localData = {}
-                        for k, v in data
-                            localData[k] = v
-                        end
-                        localData[node["var"]] = item
-                        localData["loop"] = {
-                            "index": itemIdx + 1,
-                            "index0": itemIdx,
-                            "first": (itemIdx == 0),
-                            "last": (itemIdx == totalCount - 1),
-                            "length": totalCount,
-                            "even": ((itemIdx + 1) % 2 == 0),
-                            "odd": ((itemIdx + 1) % 2 != 0)
+                let iterVar = if "var" in node ? node["var"] else node["iterVar"]
+                let listExpr = if "list" in node ? node["list"] else node["listExpr"]
+                let collection = self.evalExpression(listExpr, data)
+
+                if isArray(collection) and collection.length() > 0
+                    let totalLen = collection.length()
+                    let idx = 0
+                    while idx < totalLen
+                        let item = collection[idx]
+                        let loopContext = {
+                            "index":   idx + 1,
+                            "index0":  idx,
+                            "first":   idx == 0,
+                            "last":    idx == totalLen - 1,
+                            "length":  totalLen,
+                            "even":    (idx + 1) % 2 == 0,
+                            "odd":     (idx + 1) % 2 != 0
                         }
-                        output += self.evalNodes(node["body"], localData, blocksMap)
-                        itemIdx += 1
+
+                        # Inherit parent data and inject loop variables
+                        let itemData = data.copy()
+                        itemData[iterVar] = item
+                        itemData["loop"] = loopContext
+
+                        out += self.evalNodes(node["body"], itemData, blocksMap)
+                        idx += 1
                     end
                 else
-                    if node.has("elseBody") and isArray(node["elseBody"]) and node["elseBody"].length() > 0
-                        output += self.evalNodes(node["elseBody"], data, blocksMap)
+                    # Fallback for empty collections
+                    if "elseBody" in node and isArray(node["elseBody"]) and node["elseBody"].length() > 0
+                        out += self.evalNodes(node["elseBody"], data, blocksMap)
                     end
                 end
 
-            elif nodeType == consts.NODE_INCLUDE
-                if not isNull(self.viewEngine)
-                    output += self.viewEngine.render(node["val"], data)
-                end
-
+            # Template Block Node
             elif nodeType == consts.NODE_BLOCK
                 let blockName = node["name"]
-                if blocksMap.has(blockName)
-                    output += self.evalNodes(blocksMap[blockName], data, blocksMap)
+                if isMap(blocksMap) and blockName in blocksMap
+                    out += self.evalNodes(blocksMap[blockName], data, blocksMap)
                 else
-                    output += self.evalNodes(node["body"], data, blocksMap)
+                    out += self.evalNodes(node["body"], data, blocksMap)
+                end
+
+            # Partial Include Node
+            elif nodeType == consts.NODE_INCLUDE
+                let partialName = if "val" in node ? node["val"] else node["name"]
+                if not isNull(self.viewEngine)
+                    let partialAst = self.viewEngine.loader.loadAST(partialName, self.viewEngine.lexer, self.viewEngine.parser)
+                    out += self.evalNodes(partialAst, data, blocksMap)
                 end
             end
         end
-        return output
+
+        return out
     end
 end

@@ -12,7 +12,7 @@
   <a href="./dpm.json"><img src="https://img.shields.io/badge/version-0.2.0-blue.svg?style=flat-square" alt="Version 0.2.0"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License MIT"></a>
   <a href="https://github.com/djazair-language"><img src="https://img.shields.io/badge/language-Djazair-red.svg?style=flat-square" alt="Djazair Language"></a>
-  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-145%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
+  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-195%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
   <a href="./docs/index.html"><img src="https://img.shields.io/badge/docs-interactive%20html-cyan.svg?style=flat-square" alt="Documentation"></a>
 </p>
 
@@ -300,26 +300,40 @@ Control output conditionally using `{% if %}`, `{% elif %}` (or `{% else if %}`)
 
 ---
 
-### Logical & Comparison Operators
+### Logical, Comparison & Membership Operators
 
-Qalam supports complex logical expressions:
+Qalam supports all native Djazair language expressions and operators:
 
 | Operator | Syntax | Description |
 |---|---|---|
-| Equality | `a == b` | Exact value equality |
+| Equality | `a == b` | Exact value or deep structural equality |
 | Inequality | `a != b` | Inequality check |
 | Relational | `>`, `<`, `>=`, `<=` | Numeric comparisons |
-| Logical AND | `condA and condB` | True if both conditions are truthy |
-| Logical OR | `condA or condB` | True if at least one condition is truthy |
-| Negation | `not cond` or `!cond` | Inverts condition truthiness |
+| Membership | `item in collection` | Checks if item exists in Array, Map key, or String |
+| Negated Membership | `item not in list` | True if item is NOT in collection |
+| Identity | `a is b` | Identity / equality check (e.g. `user is Null`, `flag is True`) |
+| Negated Identity | `a is not b` | True if not identical (e.g. `user is not Null`) |
+| Logical AND | `a and b` or `a && b` | True if both conditions are truthy |
+| Logical OR | `a or b` or `a \|\| b` | True if at least one condition is truthy |
+| Logical Negation | `not cond` or `!cond` | Inverts truthiness |
+| Parenthesized Grouping | `(a and b) or (c and d)` | Controls operator evaluation order |
+| String Concatenation | `strA + strB` | Concatenates strings inside expressions |
+| Arithmetic | `+`, `-`, `*`, `/`, `%` | Arithmetic operations inside expressions |
+| Djazair Ternary | `if cond ? a else b` | Djazair native inline ternary expression |
+| Standard Ternary | `cond ? a : b` | Inline conditional expression |
 
 ```html
-{% if user.isVerified and not user.isBanned %}
-    <button class="btn-primary">Proceed to Checkout</button>
+{% if 'admin' in user.roles and (user.isSuper or user.level >= 10) %}
+    <span class="badge badge-admin">Master Admin</span>
+{% elif user.token is not Null and user.status not in bannedStatuses %}
+    <span class="badge badge-user">Active: {{ user.firstName + ' ' + user.lastName }}</span>
 {% endif %}
+
+<p>Status: {{ if user.isAdmin ? 'Administrator' else 'Standard Member' }}</p>
+<p>Score: {{ score >= 50 ? 'Passed' : 'Failed' }}</p>
 ```
 
-#### Truthiness Rules
+#### Truthiness Rules (Djazair Native Semantics)
 - **Falsy values:** `Null`, `False`, `0`, `0.0`, `""` (empty string), `[]` (empty array), `{}` (empty map).
 - **Truthy values:** Any non-zero number, non-empty string, populated array, populated map, or `True`.
 
@@ -440,7 +454,9 @@ Hello   {{- user.name -}}   World
 
 ---
 
-## 🎨 Built-In Filter Catalog
+## 🎨 Built-In Filter Catalog (Djazair Standard Library Compatible)
+
+### 🔤 String Transformation Filters
 
 | Filter | Parameters | Description | Example Input | Result |
 |---|---|---|---|---|
@@ -448,22 +464,66 @@ Hello   {{- user.name -}}   World
 | `lower` | — | Converts string to lowercase | `{{ "RIAD" \| lower }}` | `"riad"` |
 | `capitalize` | — | Capitalizes the first character | `{{ "hello world" \| capitalize }}` | `"Hello world"` |
 | `title` | — | Capitalizes each word in title case | `{{ "hello world" \| title }}` | `"Hello World"` |
-| `trim` | — | Strips surrounding whitespace | `{{ "  hi  " \| trim }}` | `"hi"` |
-| `ltrim` | — | Strips leading whitespace | `{{ "  hi" \| ltrim }}` | `"hi"` |
-| `rtrim` | — | Strips trailing whitespace | `{{ "hi  " \| rtrim }}` | `"hi"` |
-| `length` / `len` | — | Returns length of string, array, or map | `{{ [1,2,3] \| length }}` | `3` |
-| `reverse` | — | Reverses a string or array | `{{ "abc" \| reverse }}` | `"cba"` |
+| `swapcase` / `swapCase` | — | Swaps uppercase to lowercase and vice versa | `{{ "Hello" \| swapcase }}` | `"hELLO"` |
+| `trim` / `strip` | — | Strips surrounding whitespace | `{{ "  hi  " \| strip }}` | `"hi"` |
+| `ltrim` / `lstrip` | — | Strips leading whitespace | `{{ "  hi" \| lstrip }}` | `"hi"` |
+| `rtrim` / `rstrip` | — | Strips trailing whitespace | `{{ "hi  " \| rstrip }}` | `"hi"` |
+| `split` | `sep = " "` | Splits string into array | `{{ "a,b,c" \| split(",") }}` | `["a", "b", "c"]` |
+| `slice` | `start, end` | Slices string or array | `{{ "Djazair" \| slice(0, 3) }}` | `"Dja"` |
+| `substr` / `subStr` | `start, len` | Extracts substring of length `len` | `{{ "Djazair" \| substr(3, 4) }}` | `"zair"` |
+| `replace` | `old, new` | Replaces occurrences of substring | `{{ "a-b" \| replace("-", "/") }}`| `"a/b"` |
+| `repeat` | `count = 1` | Repeats string `count` times | `{{ "*" \| repeat(5) }}` | `"*****"` |
+| `count` | `sub` | Counts occurrences of substring/item | `{{ "banana" \| count("a") }}` | `3` |
+| `contains` | `needle` | Checks if string/collection contains needle | `{{ "hello" \| contains("ell") }}` | `True` |
+| `startswith` / `startsWith` | `prefix` | Checks if string starts with prefix | `{{ "test.dz" \| startswith("test") }}` | `True` |
+| `endswith` / `endsWith` | `suffix` | Checks if string ends with suffix | `{{ "test.dz" \| endswith(".dz") }}` | `True` |
+
+### 📦 Collection & Array Filters
+
+| Filter | Parameters | Description | Example Input | Result |
+|---|---|---|---|---|
+| `length` / `len` | — | Returns length of array, string, or map | `{{ [1,2,3] \| length }}` | `3` |
 | `first` | — | Returns first item of collection or char | `{{ ["a","b"] \| first }}` | `"a"` |
 | `last` | — | Returns last item of collection or char | `{{ ["a","b"] \| last }}` | `"b"` |
+| `reverse` / `reversed` | — | Reverses a string or array | `{{ [1, 2] \| reverse }}` | `[2, 1]` |
+| `sort` / `sorted` | — | Sorts array elements in ascending order | `{{ [3, 1, 2] \| sort }}` | `[1, 2, 3]` |
+| `unique` | — | Returns array with duplicate elements removed | `{{ [1, 2, 2, 3] \| unique }}` | `[1, 2, 3]` |
+| `flatten` | — | Flattens nested arrays one level | `{{ [[1, 2], [3]] \| flatten }}` | `[1, 2, 3]` |
 | `join` | `delimiter = ", "` | Joins array elements with a separator | `{{ ["a","b"] \| join(" • ") }}` | `"a • b"` |
-| `default` | `fallback` | Returns fallback if value is empty/null/false | `{{ "" \| default("N/A") }}` | `"N/A"` |
-| `json` | — | Serializes object into JSON format | `{{{ user \| json }}}` | `{"name":"Ali"}` |
-| `replace` | `old, new` | Replaces occurrences of substring | `{{ "a-b" \| replace("-", "/") }}`| `"a/b"` |
+| `sum` | — | Sums numerical elements in array | `{{ [10, 20, 30] \| sum }}` | `60` |
+| `max` | — | Returns maximum value in array | `{{ [10, 50, 20] \| max }}` | `50` |
+| `min` | — | Returns minimum value in array | `{{ [10, 50, 20] \| min }}` | `10` |
+
+### 🗺️ Map / Hash Filters
+
+| Filter | Parameters | Description | Example Input | Result |
+|---|---|---|---|---|
+| `keys` | — | Returns array of map keys | `{{ user \| keys }}` | `["name", "role"]` |
+| `values` | — | Returns array of map values | `{{ user \| values }}` | `["Riad", "admin"]` |
+| `has` | `key` | Checks if map has key | `{{ user \| has("email") }}` | `False` |
+| `get` | `key, fallback = Null` | Gets value by key with optional fallback | `{{ user \| get("age", 18) }}` | `18` |
+
+### 🔢 Math, Formatting & Type Filters
+
+| Filter | Parameters | Description | Example Input | Result |
+|---|---|---|---|---|
 | `abs` | — | Returns absolute numerical value | `{{ -15 \| abs }}` | `15` |
 | `round` | `digits = 0` | Rounds number to decimal precision | `{{ 3.14159 \| round(2) }}` | `3.14` |
+| `floor` | — | Rounds number down (floor) | `{{ 3.9 \| floor }}` | `3` |
+| `ceil` | — | Rounds number up (ceil) | `{{ 3.1 \| ceil }}` | `4` |
+| `sqrt` | — | Returns square root of number | `{{ 16 \| sqrt }}` | `4` |
+| `default` | `fallback` | Returns fallback if value is empty/null/false | `{{ "" \| default("N/A") }}` | `"N/A"` |
+| `json` | — | Serializes object into JSON format | `{{{ user \| json }}}` | `{"name":"Ali"}` |
 | `int` | — | Casts value to integer | `{{ "42" \| int }}` | `42` |
 | `float` | — | Casts value to floating-point number | `{{ "3.14" \| float }}` | `3.14` |
 | `str` | — | Casts value to string | `{{ 123 \| str }}` | `"123"` |
+| `bool` | — | Casts value to boolean | `{{ 1 \| bool }}` | `True` |
+| `type` | — | Returns type name of value | `{{ 123 \| type }}` | `"number"` |
+| `isNull` | — | True if value is Null | `{{ val \| isNull }}` | `True` |
+| `isString` | — | True if value is String | `{{ val \| isString }}` | `True` |
+| `isNumber` | — | True if value is Number | `{{ val \| isNumber }}` | `True` |
+| `isArray` | — | True if value is Array | `{{ val \| isArray }}` | `True` |
+| `isMap` | — | True if value is Map | `{{ val \| isMap }}` | `True` |
 
 ---
 

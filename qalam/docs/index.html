@@ -665,7 +665,7 @@
         </p>
         <div class="hero-badges">
           <span class="badge blue"><i class="fa-solid fa-feather"></i> Qalam v0.2.0</span>
-          <span class="badge green"><i class="fa-solid fa-check"></i> 145/145 Tests Passed</span>
+          <span class="badge green"><i class="fa-solid fa-check"></i> 195/195 Tests Passed</span>
           <span class="badge purple"><i class="fa-solid fa-shield-halved"></i> Auto XSS Escaped</span>
           <span class="badge blue"><i class="fa-solid fa-bolt"></i> AST Caching</span>
         </div>
@@ -871,27 +871,34 @@
 
       <!-- Section: Conditionals -->
       <section id="conditionals">
-        <h2><i class="fa-solid fa-code-branch"></i> Conditionals & Logical Operators</h2>
+        <h2><i class="fa-solid fa-code-branch"></i> Conditionals & Native Djazair Operators</h2>
         <p>
-          Qalam supports multi-branch conditionals with <code>{% if %}</code>, <code>{% elif %}</code> (or <code>{% else if %}</code>), and <code>{% else %}</code>, along with logical operators (<code>and</code>, <code>or</code>, <code>not</code>, <code>!</code>):
+          Qalam is fully compatible with Djazair language operators, including logical operators (<code>and</code>, <code>&&</code>, <code>or</code>, <code>||</code>, <code>not</code>, <code>!</code>), comparison operators (<code>==</code>, <code>!=</code>, <code><</code>, <code><=</code>, <code>></code>, <code>>=</code>), membership (<code>in</code>, <code>not in</code>), identity (<code>is</code>, <code>is not</code>), and inline ternary expressions:
         </p>
         <div class="code-wrapper">
           <div class="code-header">
             <span class="lang-badge"><i class="fa-solid fa-file-code"></i> conditionals.html</span>
             <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
           </div>
-          <pre><code>{% if user.role == 'admin' and user.isActive %}
-    &lt;span class="badge badge-admin"&gt;Active Administrator&lt;/span&gt;
-{% elif user.role == 'editor' or user.role == 'moderator' %}
-    &lt;span class="badge badge-editor"&gt;Staff Member&lt;/span&gt;
+          <pre><code><span class="cmt">&lt;!-- Multi-branch conditionals with membership and identity --&gt;</span>
+{% if 'admin' in user.roles and (user.isStaff or user.isSuper) %}
+    &lt;span class="badge badge-admin"&gt;Master Administrator&lt;/span&gt;
+{% elif user.token is not Null and user.status not in bannedStatuses %}
+    &lt;span class="badge badge-editor"&gt;Active Member: {{ user.firstName + ' ' + user.lastName }}&lt;/span&gt;
 {% elif not user.isVerified %}
     &lt;span class="badge badge-warning"&gt;Pending Verification&lt;/span&gt;
 {% else %}
-    &lt;span class="badge badge-user"&gt;Standard User&lt;/span&gt;
-{% endif %}</code></pre>
+    &lt;span class="badge badge-user"&gt;Standard Guest&lt;/span&gt;
+{% endif %}
+
+<span class="cmt">&lt;!-- Native Djazair Ternary: if cond ? a else b --&gt;</span>
+&lt;p&gt;Status: {{ if user.isAdmin ? 'Administrator' else 'Member' }}&lt;/p&gt;
+
+<span class="cmt">&lt;!-- Standard Ternary: cond ? a : b --&gt;</span>
+&lt;p&gt;Score: {{ score &gt;= 50 ? 'Passed' : 'Failed' }}&lt;/p&gt;</code></pre>
         </div>
 
-        <h3>Truthiness Evaluation Rules</h3>
+        <h3>Truthiness Evaluation Rules (Djazair Native Semantics)</h3>
         <div class="table-container">
           <table>
             <thead>
@@ -906,7 +913,7 @@
               <tr><td>Numbers</td><td><code>0</code>, <code>0.0</code></td><td>Any non-zero positive or negative number</td></tr>
               <tr><td>Strings</td><td><code>""</code> (empty string)</td><td>Any non-empty string</td></tr>
               <tr><td>Arrays</td><td><code>[]</code> (empty array)</td><td>Populated array with elements</td></tr>
-              <tr><td>Maps / Objects</td><td><code>{}</code> (empty hash map)</td><td>Populated dictionary with keys</td></tr>
+              <tr><td>Maps / Hashes</td><td><code>{}</code> (empty hash map)</td><td>Populated dictionary with keys</td></tr>
               <tr><td>Null</td><td><code>Null</code></td><td>—</td></tr>
             </tbody>
           </table>
@@ -1044,9 +1051,9 @@ Hello   {{- user.name -}}   World
 
       <!-- Section: Built-in Filter Catalog -->
       <section id="builtin-filters">
-        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Built-in Filter Catalog</h2>
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Built-in Filter Catalog (Djazair Standard Compatible)</h2>
         <p>
-          Qalam includes 18+ high-performance transformation filters out of the box:
+          Qalam includes 40+ high-performance transformation filters compatible with Djazair standard library methods:
         </p>
 
         <div class="table-container">
@@ -1064,22 +1071,37 @@ Hello   {{- user.name -}}   World
               <tr><td><code>lower</code></td><td>—</td><td>Converts string to lowercase</td><td><code>{{ 'RIAD' \| lower }}</code> → <code>riad</code></td></tr>
               <tr><td><code>capitalize</code></td><td>—</td><td>Capitalizes first letter</td><td><code>{{ 'hello world' \| capitalize }}</code> → <code>Hello world</code></td></tr>
               <tr><td><code>title</code></td><td>—</td><td>Converts string to title case</td><td><code>{{ 'hello world' \| title }}</code> → <code>Hello World</code></td></tr>
-              <tr><td><code>trim</code></td><td>—</td><td>Strips surrounding whitespace</td><td><code>{{ '  hi  ' \| trim }}</code> → <code>hi</code></td></tr>
-              <tr><td><code>ltrim</code></td><td>—</td><td>Strips leading whitespace</td><td><code>{{ '  hi' \| ltrim }}</code> → <code>hi</code></td></tr>
-              <tr><td><code>rtrim</code></td><td>—</td><td>Strips trailing whitespace</td><td><code>{{ 'hi  ' \| rtrim }}</code> → <code>hi</code></td></tr>
-              <tr><td><code>length</code> / <code>len</code></td><td>—</td><td>Returns length of string, array, or map</td><td><code>{{ [1,2,3] \| length }}</code> → <code>3</code></td></tr>
-              <tr><td><code>reverse</code></td><td>—</td><td>Reverses string or array</td><td><code>{{ 'abc' \| reverse }}</code> → <code>cba</code></td></tr>
-              <tr><td><code>first</code></td><td>—</td><td>First item of array or char</td><td><code>{{ ['a','b'] \| first }}</code> → <code>a</code></td></tr>
-              <tr><td><code>last</code></td><td>—</td><td>Last item of array or char</td><td><code>{{ ['a','b'] \| last }}</code> → <code>b</code></td></tr>
+              <tr><td><code>swapcase</code></td><td>—</td><td>Swaps character cases</td><td><code>{{ 'Hello' \| swapcase }}</code> → <code>hELLO</code></td></tr>
+              <tr><td><code>trim</code> / <code>strip</code></td><td>—</td><td>Strips surrounding whitespace</td><td><code>{{ '  hi  ' \| strip }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>ltrim</code> / <code>lstrip</code></td><td>—</td><td>Strips leading whitespace</td><td><code>{{ '  hi' \| lstrip }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>rtrim</code> / <code>rstrip</code></td><td>—</td><td>Strips trailing whitespace</td><td><code>{{ 'hi  ' \| rstrip }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>split</code></td><td><code>sep = " "</code></td><td>Splits string into array</td><td><code>{{ 'a,b' \| split(',') }}</code></td></tr>
+              <tr><td><code>slice</code></td><td><code>start, end</code></td><td>Slices string or array</td><td><code>{{ 'Djazair' \| slice(0, 3) }}</code> → <code>Dja</code></td></tr>
+              <tr><td><code>substr</code></td><td><code>start, len</code></td><td>Extracts substring of length</td><td><code>{{ 'Djazair' \| substr(3, 4) }}</code> → <code>zair</code></td></tr>
+              <tr><td><code>replace</code></td><td><code>old, new</code></td><td>Replaces substring</td><td><code>{{ 'a-b' \| replace('-', '/') }}</code> → <code>a/b</code></td></tr>
+              <tr><td><code>repeat</code></td><td><code>count = 1</code></td><td>Repeats string N times</td><td><code>{{ '*' \| repeat(5) }}</code> → <code>*****</code></td></tr>
+              <tr><td><code>contains</code></td><td><code>needle</code></td><td>Checks if string/array contains needle</td><td><code>{{ 'hello' \| contains('ell') }}</code> → <code>True</code></td></tr>
+              <tr><td><code>startswith</code></td><td><code>prefix</code></td><td>Checks string prefix</td><td><code>{{ 'test.dz' \| startswith('test') }}</code> → <code>True</code></td></tr>
+              <tr><td><code>endswith</code></td><td><code>suffix</code></td><td>Checks string suffix</td><td><code>{{ 'test.dz' \| endswith('.dz') }}</code> → <code>True</code></td></tr>
+              <tr><td><code>count</code></td><td><code>sub</code></td><td>Counts substring occurrences</td><td><code>{{ 'banana' \| count('a') }}</code> → <code>3</code></td></tr>
+              <tr><td><code>length</code> / <code>len</code></td><td>—</td><td>Returns length of array, string, or map</td><td><code>{{ [1,2,3] \| length }}</code> → <code>3</code></td></tr>
+              <tr><td><code>reverse</code> / <code>reversed</code></td><td>—</td><td>Reverses string or array</td><td><code>{{ [1, 2] \| reverse }}</code> → <code>[2, 1]</code></td></tr>
+              <tr><td><code>sort</code> / <code>sorted</code></td><td>—</td><td>Sorts array elements</td><td><code>{{ [3, 1, 2] \| sort }}</code> → <code>[1, 2, 3]</code></td></tr>
+              <tr><td><code>unique</code></td><td>—</td><td>Removes duplicate array elements</td><td><code>{{ [1, 2, 2] \| unique }}</code> → <code>[1, 2]</code></td></tr>
+              <tr><td><code>flatten</code></td><td>—</td><td>Flattens nested arrays</td><td><code>{{ [[1, 2], [3]] \| flatten }}</code></td></tr>
+              <tr><td><code>first</code> / <code>last</code></td><td>—</td><td>First or last item of collection</td><td><code>{{ [1, 2] \| first }}</code> → <code>1</code></td></tr>
               <tr><td><code>join</code></td><td><code>delimiter</code></td><td>Joins array with separator</td><td><code>{{ items \| join(' • ') }}</code></td></tr>
-              <tr><td><code>default</code></td><td><code>fallback</code></td><td>Fallback value if empty/null/false</td><td><code>{{ bio \| default('N/A') }}</code></td></tr>
-              <tr><td><code>json</code></td><td>—</td><td>Serializes data to JSON string</td><td><code>{{{ data \| json }}}</code></td></tr>
-              <tr><td><code>replace</code></td><td><code>old, new</code></td><td>Replaces occurrences of substring</td><td><code>{{ 'a-b' \| replace('-', '/') }}</code> → <code>a/b</code></td></tr>
+              <tr><td><code>sum</code> / <code>max</code> / <code>min</code></td><td>—</td><td>Calculates sum, max, or min in array</td><td><code>{{ [10, 20] \| sum }}</code> → <code>30</code></td></tr>
+              <tr><td><code>keys</code> / <code>values</code></td><td>—</td><td>Returns array of keys or values from map</td><td><code>{{ map \| keys }}</code></td></tr>
+              <tr><td><code>has</code></td><td><code>key</code></td><td>Checks if map has key</td><td><code>{{ user \| has('email') }}</code></td></tr>
+              <tr><td><code>get</code></td><td><code>key, default</code></td><td>Gets map value with default fallback</td><td><code>{{ user \| get('age', 18) }}</code></td></tr>
               <tr><td><code>abs</code></td><td>—</td><td>Absolute numerical value</td><td><code>{{ -10 \| abs }}</code> → <code>10</code></td></tr>
               <tr><td><code>round</code></td><td><code>digits</code></td><td>Rounds number to decimal places</td><td><code>{{ 3.14159 \| round(2) }}</code> → <code>3.14</code></td></tr>
-              <tr><td><code>int</code></td><td>—</td><td>Casts value to integer</td><td><code>{{ '42' \| int }}</code> → <code>42</code></td></tr>
-              <tr><td><code>float</code></td><td>—</td><td>Casts value to float</td><td><code>{{ '3.14' \| float }}</code> → <code>3.14</code></td></tr>
-              <tr><td><code>str</code></td><td>—</td><td>Casts value to string</td><td><code>{{ 100 \| str }}</code> → <code>"100"</code></td></tr>
+              <tr><td><code>floor</code> / <code>ceil</code> / <code>sqrt</code></td><td>—</td><td>Math floor, ceil, or square root</td><td><code>{{ 16 \| sqrt }}</code> → <code>4</code></td></tr>
+              <tr><td><code>default</code></td><td><code>fallback</code></td><td>Fallback value if empty/null/false</td><td><code>{{ bio \| default('N/A') }}</code></td></tr>
+              <tr><td><code>json</code></td><td>—</td><td>Serializes data to JSON string</td><td><code>{{{ data \| json }}}</code></td></tr>
+              <tr><td><code>int</code> / <code>float</code> / <code>str</code> / <code>bool</code></td><td>—</td><td>Type casting functions</td><td><code>{{ '42' \| int }}</code> → <code>42</code></td></tr>
+              <tr><td><code>isNull</code> / <code>isString</code> / <code>isNumber</code> / <code>isArray</code> / <code>isMap</code></td><td>—</td><td>Type inspection predicates</td><td><code>{{ val \| isNull }}</code></td></tr>
             </tbody>
           </table>
         </div>
