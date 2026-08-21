@@ -43,6 +43,7 @@ class app
     #                     - bodyParser {Boolean} Enable multipart/url/json body parser
     #                     - maxBodySize {Number} Max body size in MB (default: 10)
     #                     - static {String} Static directory path
+    #                     - views {String} Views directory path (default: "views")
     #                     - logger {Boolean|Map} Enable request logging
     #                     - session {Boolean|Map} Enable session support
     init(config = {})
@@ -62,6 +63,7 @@ class app
             "trustProxy":        False,
             "exposeErrors":      False,
             "static":            "",
+            "views":             "",
             "keepAlive":             False,
             "keepAliveTimeout":      30,
             "maxKeepAliveRequests":  100
@@ -114,6 +116,10 @@ class app
 
         if self.appConfig["static"] != ""
             self.appConfig["static"] = path.resolve(self.appConfig["static"])
+        end
+
+        if self.appConfig["views"] != ""
+            self.appConfig["views"] = path.resolve(self.appConfig["views"])
         end
 
         # Standalone router instance

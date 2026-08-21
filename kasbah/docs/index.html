@@ -1116,28 +1116,28 @@ res.<span class="fn">back</span>() <span class="cmt"># Redirect back to Referer 
 
       <!-- Section: Templating -->
       <section id="templating">
-        <h2><i class="fa-solid fa-code"></i> HTML Templating (Optional with Qalam)</h2>
+        <h2><i class="fa-solid fa-code"></i> Views & Templating (Powered by Qalam)</h2>
         <p>
-          Kasbah is lightweight and modular. If your application needs an advanced AST-based HTML template engine (layouts, partials, loops, conditionals, and auto-XSS escaping), pair Kasbah with the standalone <strong>Qalam</strong> library:
+          Similar to how <strong>Laravel</strong> integrates <strong>Blade</strong>, Kasbah provides an official View adapter powered by <strong>Qalam</strong>. Configure your template directory and render templates directly via <code>res.view()</code>:
         </p>
 
         <div class="code-wrapper">
           <div class="code-header">
-            <span class="lang-badge"><i class="fa-solid fa-code"></i> controller.dz</span>
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> app.dz</span>
             <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
           </div>
           <pre><code><span class="kwd">use</span> kasbah
-<span class="kwd">use</span> qalam
 
-<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({<span class="str">"port"</span>: <span class="num">3000</span>})
-<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">view</span>({<span class="str">"views"</span>: <span class="str">"views"</span>})
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
+    <span class="str">"port"</span>: <span class="num">3000</span>,
+    <span class="str">"views"</span>: <span class="str">"./views"</span>
+})
 
 app.<span class="fn">get</span>(<span class="str">"/trades"</span>, <span class="kwd">fn</span>(req, res)
-    <span class="kwd">let</span> html = view.<span class="fn">render</span>(<span class="str">"trades/list"</span>, {
-        <span class="str">"user"</span>: {<span class="str">"name"</span>: <span class="str">"Alice"</span>},
+    res.<span class="fn">view</span>(<span class="str">"trades/list"</span>, {
+        <span class="str">"title"</span>: <span class="str">"My Trades"</span>,
         <span class="str">"trades"</span>: tradeList
     })
-    res.<span class="fn">html</span>(html)
 <span class="kwd">end</span>)
 
 app.<span class="fn">listen</span>()</code></pre>

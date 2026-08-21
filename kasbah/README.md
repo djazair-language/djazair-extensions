@@ -12,6 +12,7 @@ Kasbah is a modern, modular, fast, and secure web framework designed natively fo
 - **Expressive Routing**: Standalone modular routers, route groups, and sub-router mounting (`app.mount("/api", subRouter)`).
 - **Core Body Parser**: Automatic parsing for JSON, URL-encoded forms, and multipart uploads without extra configuration.
 - **Unified & Intuitive API**: Standard boolean checkers (`isJson()`, `isAjax()`, `isSecure()`, `isType()`) and fluent chained responses.
+- **Views & Templating**: Official template engine adapter powered by `Qalam` (similar to Laravel with Blade) via `res.view("name", data)`.
 - **Fluent Validation Engine**: Declarative schema validation (`required`, `email`, `number`, `min`, `max`, `oneOf`, `matches`, `custom`).
 - **Secure File Uploads**: Automated MIME verification, extension whitelist checking (`hasExt`), and temporary file lifecycle cleanup.
 - **Session & Cookie Jars**: Cryptographically signed cookies and persistent file-based sessions.
@@ -223,6 +224,7 @@ The `response` object provides a fluent, chainable API for building HTTP respons
 - `res.sendStatus(404)` — Send status code with standard HTTP status text.
 
 ### Sending Content
+- `res.view(templateName, data = {})` — Renders an HTML template view via Qalam (`views/` directory).
 - `res.json(data)` — Sends data serialized as JSON (`application/json; charset=utf-8`).
 - `res.html(content)` — Sends HTML string (`text/html; charset=utf-8`).
 - `res.text(content)` — Sends plain text string (`text/plain; charset=utf-8`).
@@ -454,25 +456,37 @@ app.listen()
 
 ---
 
-## HTML Templating (Optional)
+## 11. Views & Templating (Powered by Qalam)
 
-Kasbah keeps its core lightweight and focused on HTTP routing, middleware, sessions, and APIs.
-If your application needs an advanced HTML template engine (with template inheritance, layouts, partials, loops, and auto-XSS escaping), you can use the standalone [**Qalam**](../qalam) library:
+Similar to how **Laravel** integrates **Blade**, Kasbah provides an official View adapter powered by **Qalam** out of the box. You can configure your template directory in the application options and render views directly via `res.view()`:
 
 ```djazair
 use kasbah
-use qalam
 
-let app = new kasbah.app({"port": 3000})
-let view = new qalam.view({"views": "views"})
+let app = new kasbah.app({
+    "port":  3000,
+    "views": "./views"
+})
 
+# Renders views/trades/list.html with data context
 app.get("/trades", fn(req, res)
-    let htmlContent = view.render("trades/list", {"trades": tradeList})
-    res.html(htmlContent)
+    res.view("trades/list", {
+        "title":  "My Trades",
+        "trades": tradeList
+    })
 end)
 
 app.listen()
 ```
+
+### Template Syntax Overview (Qalam)
+- **Variables (Escaped)**: `{{ user.name }}` (automatic XSS prevention)
+- **Raw HTML**: `{{{ raw_html_content }}}`
+- **Conditionals**: `{% if status == 'Active' %} ... {% else %} ... {% endif %}`
+- **Loops**: `{% for item in items %} ... {% endfor %}`
+- **Layout Inheritance**: `{% extends "layouts/main" %}` and `{% block content %} ... {% endblock %}`
+- **Partials / Subviews**: `{% include "partials/nav" %}`
+- **Standalone View Engine**: `let v = new kasbah.view({"views": "./views"})`
 
 ---
 

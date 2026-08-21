@@ -10,6 +10,7 @@ import "core/app.dz" as appMod
 import "core/router.dz" as routerMod
 import "core/request.dz" as reqMod
 import "core/response.dz" as resMod
+import "core/view.dz" as viewMod
 import "core/cookieJar.dz" as cookieMod
 import "core/sessionManager.dz" as sessMgrMod
 import "core/validator.dz" as valMod
@@ -29,6 +30,7 @@ let request          = reqMod.request
 let kasbahRequest    = reqMod.request
 let response         = resMod.response
 let kasbahResponse   = resMod.response
+let view             = viewMod.view
 let cookieJar        = cookieMod.cookieJar
 let sessionManager   = sessMgrMod.sessionManager
 let validator        = valMod.validator
