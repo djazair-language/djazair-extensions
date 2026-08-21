@@ -15,10 +15,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passed = passed + 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failed = failed + 1
     end
 end
@@ -36,11 +36,11 @@ let app = new kasbah.kasbahApp({"logger": False})
 print("Registering 500 dynamic routes...")
 let t1 = datetime.ticks()
 for i in 1 .. 500
-    app.get("/api/v1/resource_" + str(i) + "/:id/details", fn(req, res) end)
+    app.get("/api/v1/resource_${i}/:id/details", fn(req, res) end)
 end
 app.get("/api/v1/target/:id/details", fn(req, res) end)
 let t2 = datetime.ticks()
-print("Registered 501 routes in " + str(t2 - t1) + " ms")
+print("Registered 501 routes in ${t2 - t1} ms")
 
 print("Matching routes 1,000 times...")
 let t3 = datetime.ticks()
@@ -48,7 +48,7 @@ for i in 1 .. 1000
     let matchedRoute = app.matchRoute("GET", "/api/v1/target/42/details")
 end
 let t4 = datetime.ticks()
-print("Matched 1,000 times in " + str(t4 - t3) + " ms")
+print("Matched 1,000 times in ${t4 - t3} ms")
 
 let matchTest = app.matchRoute("GET", "/api/v1/target/42/details")
 test("Matched correct route in deep list", not isNull(matchTest) and matchTest["params"]["id"] == "42")
@@ -61,7 +61,7 @@ print("--- 2. Validator Stress Test ---")
 
 let complexPayload = {}
 for i in 1 .. 50
-    complexPayload["field_" + str(i)] = i
+    complexPayload["field_${i}"] = i
 end
 complexPayload["email"] = "test@kasbah.dev"
 complexPayload["website"] = "https://djazair.dev"
@@ -70,7 +70,7 @@ let val = new kasbah.validator(complexPayload)
 val.field("email").required().email()
 val.field("website").required().url()
 for i in 1 .. 50
-    val.field("field_" + str(i)).required().number().min(1).max(100)
+    val.field("field_${i}").required().number().min(1).max(100)
 end
 
 print("Validating payload with 52 fields and constraints...")
@@ -79,7 +79,7 @@ for i in 1 .. 50
     val.passes()
 end
 let t8 = datetime.ticks()
-print("Validated 50 times in " + str(t8 - t7) + " ms")
+print("Validated 50 times in ${t8 - t7} ms")
 test("Complex validation passed", val.passes())
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ test("accepts() matches wildcards", reqMock.accepts("image/png"))
 # ─────────────────────────────────────────────────────────────────────────────
 let total = passed + failed
 print("")
-print("=== Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(total) + " total ===")
+print("=== Results: ${passed} passed, ${failed} failed / ${total} total ===")
 if failed > 0
     process.exit(1)
 end

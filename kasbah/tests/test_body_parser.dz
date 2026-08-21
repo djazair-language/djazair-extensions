@@ -10,10 +10,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passed = passed + 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failed = failed + 1
     end
 end
@@ -176,7 +176,7 @@ test("urlDecodePath decodes %20", utils.urlDecodePath("/hello%20world") == "/hel
 # ─────────────────────────────────────────────────────────────────────────────
 let total = passed + failed
 print("")
-print("=== Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(total) + " total ===")
+print("=== Results: ${passed} passed, ${failed} failed / ${total} total ===")
 if failed > 0
     process.exit(1)
 end

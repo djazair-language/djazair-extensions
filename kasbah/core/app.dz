@@ -313,7 +313,7 @@ class app
         let host = self.appConfig["host"]
         let portNum = self.appConfig["port"]
         if not quiet
-            print("Kasbah server starting on " + str(host) + ":" + str(portNum))
+            print("Kasbah server starting on ${host}:${portNum}")
         end
 
         let maxBodyBytes = if self.appConfig["maxBodySize"] > 1024 ? self.appConfig["maxBodySize"] else self.appConfig["maxBodySize"] * 1024 * 1024
@@ -327,7 +327,7 @@ class app
         try
             self.serverInstance.listen(portNum)
         catch err
-            print("Error: Failed to start server on port " + str(portNum) + " - " + str(err))
+            print("Error: Failed to start server on port ${portNum} - ${err}")
             process.exit(1)
         end
     end

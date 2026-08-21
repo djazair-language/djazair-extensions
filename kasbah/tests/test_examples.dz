@@ -13,10 +13,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passed = passed + 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failed = failed + 1
     end
 end
@@ -107,7 +107,7 @@ test("09_file_uploads.dz routes match", not isNull(app09.matchRoute("POST", "/up
 # SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n═══════════════════════════════════════════════════════════════════════════════")
-print("=== Examples Suite Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(passed + failed) + " total ===")
+print("=== Examples Suite Results: ${passed} passed, ${failed} failed / ${passed + failed} total ===")
 print("═══════════════════════════════════════════════════════════════════════════════")
 
 if failed > 0

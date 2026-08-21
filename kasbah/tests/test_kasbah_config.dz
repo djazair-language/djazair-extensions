@@ -13,10 +13,10 @@ let failedCount = 0
 
 fn test(name, passed)
     if passed
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passedCount += 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failedCount += 1
     end
 end

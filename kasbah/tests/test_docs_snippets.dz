@@ -15,10 +15,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passed = passed + 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failed = failed + 1
     end
 end
@@ -224,7 +224,7 @@ class mockRes
     links(linkMap)
         let parts = []
         for rel, url in linkMap
-            parts.append("<" + url + ">; rel=\"" + rel + "\"")
+            parts.append("<${url}>; rel=\"${rel}\"")
         end
         self.header("Link", parts.join(", "))
         return self
@@ -337,7 +337,7 @@ end)
 
 appQuick.get("/hello/:name", fn(req, res)
     res.ok({
-        "greeting": "Hello, " + req.param("name") + "!",
+        "greeting": "Hello, ${req.param(\"name\")}!",
         "isAjax":   req.isAjax()
     })
 end)
@@ -737,7 +737,7 @@ test("Full REST app matches POST /api/items", not isNull(appRest.matchRoute("POS
 # SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n═══════════════════════════════════════════════════════════════════════════════")
-print("=== Snippets Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(passed + failed) + " total ===")
+print("=== Snippets Results: ${passed} passed, ${failed} failed / ${passed + failed} total ===")
 print("═══════════════════════════════════════════════════════════════════════════════")
 
 if failed > 0

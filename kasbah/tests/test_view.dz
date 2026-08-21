@@ -10,10 +10,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: " + name)
+        print("  PASS: ${name}")
         passed += 1
     else
-        print("  FAIL: " + name)
+        print("  FAIL: ${name}")
         failed += 1
     end
 end
@@ -66,4 +66,4 @@ let res404 = new kasbah.response(mockHttp404, {"views": tmpDir})
 res404.view("nonexistent_view_file", {})
 test("res.view() sends 404 for missing template", res404.statusCode == 404)
 
-print("\n=== Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(passed + failed) + " total ===")
+print("\n=== Results: ${passed} passed, ${failed} failed / ${passed + failed} total ===")

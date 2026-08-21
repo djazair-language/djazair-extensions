@@ -102,7 +102,7 @@ class response
             return self.header("Content-Type", val)
         end
         if not val.startsWith(".")
-            val = "." + val
+            val = ".${val}"
         end
         return self.header("Content-Type", mimeType(val))
     end
@@ -182,7 +182,7 @@ class response
             return self.html(content)
         catch err
             if str(err).startsWith("Template not found") or str(err).startsWith("View not found")
-                self.status(404).send("View not found: " + templateName)
+                self.status(404).send("View not found: ${templateName}")
             else
                 self.status(500).send("Internal Server Error")
             end

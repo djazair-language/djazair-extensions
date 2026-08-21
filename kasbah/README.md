@@ -136,7 +136,7 @@ end)
 # 3. Dynamic route with URL parameter
 app.get("/hello/:name", fn(req, res)
     res.ok({
-        "greeting": "Hello, " + req.param("name") + "!",
+        "greeting": "Hello, ${req.param(\"name\")}!",
         "isAjax":   req.isAjax()
     })
 end)
@@ -801,7 +801,7 @@ end)
 ### Global 500 Exception Dispatcher
 ```djazair
 app.onError(fn(err, req, res)
-    print("[ERROR] " + req.method + " " + req.path + " -> " + str(err))
+    print("[ERROR] ${req.method} ${req.path} -> ${str(err)}")
     
     if res.sentFlag return end
 
