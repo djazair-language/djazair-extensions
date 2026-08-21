@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Kasbah Example 03 — Middleware, Static Files & AJAX Detection
+# Kasbah Example 03 — Middleware Pipeline, Static Files & AJAX Detection
 # ═══════════════════════════════════════════════════════════════════════════════
 # Demonstrates custom authentication middleware, request timing/metrics,
 # AJAX request inspection (`isAjax()`), and static directory exposure.
@@ -7,8 +7,8 @@
 # Usage:
 #   Run: djazair examples/03_middleware.dz
 #   Endpoints:
-#     GET /               -> Public endpoint accessible to all clients
-#     GET /admin          -> Protected: returns 401 without valid token
+#     GET /                   -> Public endpoint accessible to all clients
+#     GET /admin              -> Protected: returns 401 without valid token
 #     GET /admin?token=secret -> Authorized access, returns response timing
 #     GET /admin?token=secret (with X-Requested-With: XMLHttpRequest) -> Returns AJAX response
 
@@ -16,8 +16,8 @@ use kasbah
 use datetime
 
 # Initialize application instance with static directory configuration
-let app = new kasbah.kasbahApp({
-    "port": 8080,
+let app = new kasbah.app({
+    "port":   8080,
     "static": "./public"
 })
 
@@ -27,9 +27,7 @@ app.middleware(fn(req, res)
     if req.path.slice(0, 6) == "/admin"
         let token = req.query("token")
         if isNull(token) or token != "secret"
-            res.status(401).json({
-                "error": "Unauthorized — please provide ?token=secret"
-            })
+            res.unauthorized("Unauthorized access — please provide ?token=secret")
             return
         end
     end
@@ -45,19 +43,19 @@ app.get("/", fn(req, res)
     res.text("Public Home — everyone can see this!")
 end)
 
-# 4. Protected Admin Route with AJAX Detection
+# 4. Protected Admin Route with AJAX Inspection
 app.get("/admin", fn(req, res)
     let startTicks = req.get("startTime")
     let elapsedMs = if not isNull(startTicks) ? (datetime.ticks() - startTicks) / 1000 else 0
 
     if req.isAjax()
-        res.json({
+        res.ok({
             "isAjax":         True,
             "message":        "AJAX request detected",
             "responseTimeMs": elapsedMs
         })
     else
-        res.json({
+        res.ok({
             "isAjax":         False,
             "message":        "Welcome to the admin panel",
             "responseTimeMs": elapsedMs

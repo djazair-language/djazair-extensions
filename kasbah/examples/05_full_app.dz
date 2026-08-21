@@ -1,29 +1,36 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Kasbah Example 05 — Full-Featured REST Guestbook Application
+# Kasbah Example 05 — Full REST API with Validation, Security & Sessions
 # ═══════════════════════════════════════════════════════════════════════════════
-# Combines core framework capabilities: Routing, dynamic params, JSON body parsing,
-# input validation, session management, request logging, and middleware pipelines.
+# Combines core framework capabilities: Helmet security, CORS, Routing, dynamic params,
+# JSON body parsing, input validation DSL, session management, and structured logging.
 #
 # Usage:
 #   Run: djazair examples/05_full_app.dz
 #   Endpoints:
-#     GET  /              -> Application documentation and route map
+#     GET  /              -> Application documentation and route directory
 #     GET  /messages      -> List all guestbook messages
-#     POST /messages      -> Submit new message (JSON body: {"text": "...", "author": "..."})
-#     GET  /messages/:id  -> Get specific message by numeric index
-#     GET  /session       -> View active session metadata and visit count
+#     POST /messages      -> Submit new message (JSON: {"text": "...", "author": "..."})
+#     GET  /messages/:id  -> Get specific message by numeric ID
+#     GET  /session       -> Inspect session state and visit statistics
 
 use kasbah
 use datetime
 
 # Initialize application instance with complete middleware stack
-let app = new kasbah.kasbahApp({
+let app = new kasbah.app({
     "port":          8080,
     "bodyParser":    True,
     "logger":        True,
     "session":       True,
     "sessionSecret": "kasbah-guestbook-secret-key-32-chars-minimum!"
 })
+
+# Attach Global Security Stack
+app.middleware(kasbah.helmet())
+app.middleware(kasbah.cors({
+    "origin":      "*",
+    "credentials": True
+}))
 
 # In-memory messages collection
 let messages = []
@@ -35,13 +42,13 @@ end)
 
 # 1. API Documentation Index
 app.get("/", fn(req, res)
-    res.json({
-        "app":       "Kasbah Guestbook API",
+    res.ok({
+        "app":       "Kasbah Guestbook REST API",
         "version":   "0.2.0",
         "endpoints": {
             "GET  /":             "API documentation & route directory",
             "GET  /messages":     "List all guestbook entries",
-            "POST /messages":     "Create a new entry (JSON body: {\"text\": \"...\"})",
+            "POST /messages":     "Create a new entry with validation",
             "GET  /messages/:id": "Retrieve an entry by numeric ID",
             "GET  /session":      "Inspect session state and visit statistics"
         }
@@ -50,57 +57,56 @@ end)
 
 # 2. List All Messages
 app.get("/messages", fn(req, res)
-    res.json({
+    res.ok({
         "total":    messages.length(),
         "messages": messages
     })
 end)
 
-# 3. Create a Message
+# 3. Create a Message with Input Validation DSL
 app.post("/messages", fn(req, res)
-    let text = req.input("text")
-    let author = req.input("author")
+    let v = req.validate()
+    v.field("text").required().string().minLength(2).maxLength(500)
+    v.field("author").optional().string().maxLength(50)
 
-    if isNull(text) or str(text).strip() == ""
-        res.status(400).json({"error": "Field 'text' is required and cannot be empty"})
-        return
+    if v.fails()
+        return res.validationError(v.errors())
     end
 
-    if isNull(author) or str(author).strip() == ""
-        author = "Anonymous"
-    end
+    let validated = v.validated()
+    let authorName = if validated.has("author") and str(validated["author"]).strip() != "" ? str(validated["author"]).strip() else "Anonymous"
 
     let newMsg = {
-        "id":        messages.length(),
-        "text":      str(text).strip(),
-        "author":    str(author).strip(),
+        "id":        messages.length() + 1,
+        "text":      str(validated["text"]).strip(),
+        "author":    authorName,
         "timestamp": req.get("timestamp")
     }
     messages.append(newMsg)
 
-    res.status(201).json({
+    res.created({
         "message": "Message posted successfully",
-        "created": newMsg
+        "entry":   newMsg
     })
 end)
 
 # 4. Get Message by ID
 app.get("/messages/:id", fn(req, res)
     let rawId = req.param("id")
-    let idx = 0
+    let targetId = 0
     try
-        idx = int(rawId)
+        targetId = int(rawId)
     catch err
-        res.status(400).json({"error": "Parameter ':id' must be a valid integer"})
-        return
+        return res.badRequest("Parameter ':id' must be a valid integer")
     end
 
-    if idx < 0 or idx >= messages.length()
-        res.status(404).json({"error": "Message with ID ${idx} not found"})
-        return
+    for m in messages
+        if m["id"] == targetId
+            return res.ok(m)
+        end
     end
 
-    res.json(messages[idx])
+    res.notFound("Message with ID ${targetId} was not found")
 end)
 
 # 5. Session State & Statistics
@@ -108,7 +114,7 @@ app.get("/session", fn(req, res)
     let visits = req.session.get("visits", 0) + 1
     req.session.set("visits", visits)
 
-    res.json({
+    res.ok({
         "sessionId":      req.session.id(),
         "isNewSession":   req.session.isNew(),
         "visits":         visits,

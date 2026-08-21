@@ -1,9 +1,10 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Kasbah Example 06 — Global Error Handling (onError)
+# Kasbah Example 06 — Global Error Handling (onError) & Custom 404
 # ═══════════════════════════════════════════════════════════════════════════════
-# Demonstrates centralized application exception handling via `app.onError(handler)`:
+# Demonstrates centralized application exception handling via `app.onError(handler)`
+# and custom 404 handlers via `app.onNotFound(handler)`:
 # Any unhandled exception thrown in route handlers or middleware is safely caught,
-# logged, and formatted into a structured error response without crashing the server.
+# logged, and formatted into a structured JSON error response without crashing the server.
 #
 # Usage:
 #   Run: djazair examples/06_error_handler.dz
@@ -11,21 +12,29 @@
 #     GET /safe         -> Normal functional endpoint
 #     GET /crash        -> Triggers an explicit unhandled `throw`
 #     GET /divide       -> Triggers runtime division by zero
-#     GET /unknown      -> Triggers standard 404 response
+#     GET /unknown      -> Triggers custom 404 Not Found handler
 
 use kasbah
 use datetime
 
 # Initialize application instance with request logger
-let app = new kasbah.kasbahApp({
+let app = new kasbah.app({
     "port":   8080,
     "logger": True
 })
 
-# ── Global Error Handler ──────────────────────────────────────────────────────
+# ── Global 404 Not Found Handler ─────────────────────────────────────────────
+app.onNotFound(fn(req, res)
+    if req.isJson()
+        res.notFound("Resource '${req.path}' was not found on this server")
+    else
+        res.status(404).html("<h1>404 — Page Not Found</h1><p>Requested path: ${req.path}</p>")
+    end
+end)
+
+# ── Global 500 Error Handler ──────────────────────────────────────────────────
 # Executed automatically when any unhandled error occurs during request execution
 app.onError(fn(err, req, res)
-    # Log error message
     print("[ERROR] Unhandled exception on ${req.method} ${req.path} -> ${str(err)}")
 
     # Guard: do not re-send if response headers are already dispatched
@@ -45,7 +54,7 @@ end)
 
 # 1. Normal route
 app.get("/safe", fn(req, res)
-    res.json({
+    res.ok({
         "status":  "ok",
         "message": "This route operates safely without exceptions."
     })
@@ -61,12 +70,7 @@ app.get("/divide", fn(req, res)
     let dividend = 100
     let divisor = 0
     let quotient = dividend / divisor
-    res.json({"result": quotient})
-end)
-
-# 4. Explicit 404 handler
-app.get("/unknown", fn(req, res)
-    res.sendStatus(404)
+    res.ok({"result": quotient})
 end)
 
 # Start server listener

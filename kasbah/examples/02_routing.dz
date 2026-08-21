@@ -1,23 +1,23 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Kasbah Example 02 — Routing & Input Helpers
+# Kasbah Example 02 — Routing & Input Extraction
 # ═══════════════════════════════════════════════════════════════════════════════
 # Demonstrates route parameters (:param), query strings (?key=val), JSON/Form bodies,
-# and fluent input helper methods (`param`, `query`, `input`, `all`, `only`, `except`).
+# and fluent input extraction methods (`param`, `query`, `input`, `all`, `inputs`, `only`, `except`).
 #
 # Usage:
 #   Run: djazair examples/02_routing.dz
 #   Endpoints:
-#     GET  /users/5                 -> Extracts :id param ("5")
-#     GET  /users/5/posts/99        -> Extracts multi-params (:id, :postId)
+#     GET  /users/5                 -> Extracts dynamic :id route parameter
+#     GET  /users/5/posts/99        -> Extracts multi-level nested params (:id, :postId)
 #     GET  /search?q=kasbah         -> Accesses query string parameter
 #     GET  /inputs?name=john&age=25 -> Extracts unified inputs, only(), except()
-#     POST /users                   -> Receives JSON or URL-encoded form body
+#     POST /users                   -> Receives JSON or URL-encoded form payload
 
 use kasbah
 
 # Initialize application instance with body parser enabled
-let app = new kasbah.kasbahApp({
-    "port": 8080,
+let app = new kasbah.app({
+    "port":       8080,
     "bodyParser": True
 })
 
@@ -47,33 +47,33 @@ end)
 app.get("/search", fn(req, res)
     let q = req.input("q")
     if isNull(q)
-        res.status(400).json({"error": "Missing ?q= query parameter"})
+        res.badRequest("Missing ?q= query parameter")
     else
-        res.json({"query": q, "results": ["result1", "result2"]})
+        res.ok({"query": q, "results": ["result1", "result2"]})
     end
 end)
 
-# 5. Unified input helpers (`all`, `inputs`, `only`, `except`)
+# 5. Unified input extraction helpers (`all`, `inputs`, `only`, `except`)
 app.get("/inputs", fn(req, res)
     let allInputs = req.inputs()
-    res.json({
+    res.ok({
         "allInputs": allInputs,
         "only":      req.only(["name", "page"]),
         "except":    req.except(["token"])
     })
 end)
 
-# 6. POST body handling
+# 6. POST body handling with semantic responses
 app.post("/users", fn(req, res)
     let name = req.input("name")
-    if isNull(name) or name == ""
-        res.status(400).json({"error": "Field 'name' is required"})
-        return
+    if isNull(name) or str(name).strip() == ""
+        return res.badRequest("Field 'name' is required and cannot be empty")
     end
-    res.status(201).json({
+
+    res.created({
         "message": "User created successfully",
         "name":    name,
-        "data":    req.body
+        "payload": req.body
     })
 end)
 

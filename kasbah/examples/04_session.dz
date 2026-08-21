@@ -1,20 +1,21 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Kasbah Example 04 — Session State Management
+# Kasbah Example 04 — Cryptographic Session Management & Fixation Defense
 # ═══════════════════════════════════════════════════════════════════════════════
 # Demonstrates server-side file-backed sessions with cryptographically signed
-# HMAC SHA-256 session cookie tokens and fluent session getters/setters.
+# HMAC SHA-256 session cookie tokens, getters/setters, and ID regeneration.
 #
 # Usage:
 #   Run: djazair examples/04_session.dz
 #   Endpoints:
-#     GET /       -> First visit: "Visit #1", Reload: "Visit #2", increments visit count
-#     GET /clear  -> Clears all session keys for the current client
+#     GET /           -> First visit: "Visit #1", Reload: increments visit count
+#     GET /regenerate -> Demonstrates session fixation protection on login
+#     GET /clear      -> Clears all session keys for the current client
 
 use kasbah
 
 # Initialize application instance with session enabled
 # Note: sessionSecret MUST be at least 32 characters long for cryptographic security
-let app = new kasbah.kasbahApp({
+let app = new kasbah.app({
     "port":          8080,
     "session":       True,
     "sessionSecret": "kasbah-super-secure-session-secret-key-32-chars-minimum!"
@@ -22,21 +23,12 @@ let app = new kasbah.kasbahApp({
 
 # 1. Session Visit Counter Route
 app.get("/", fn(req, res)
-    let count = 0
-    if req.session.has("visits")
-        count = req.session.get("visits", 0)
-    end
-    count = count + 1
+    let count = req.session.get("visits", 0) + 1
     req.session.set("visits", count)
 
-    let msg = ""
-    if count == 1
-        msg = "Welcome! This is your first visit."
-    else
-        msg = "Welcome back! This is visit #${count}."
-    end
+    let msg = if count == 1 ? "Welcome! This is your first visit." else "Welcome back! Visit #${count}."
 
-    res.json({
+    res.ok({
         "message":        msg,
         "visitCount":     count,
         "sessionId":      req.session.id(),
@@ -45,10 +37,22 @@ app.get("/", fn(req, res)
     })
 end)
 
-# 2. Clear Session Route
+# 2. Session ID Regeneration (e.g. on user authentication)
+app.get("/regenerate", fn(req, res)
+    let oldId = req.session.id()
+    let newId = req.session.regenerate()
+
+    res.ok({
+        "message":       "Session ID regenerated (anti-fixation)",
+        "oldSessionId":  oldId,
+        "newSessionId":  newId
+    })
+end)
+
+# 3. Clear Session Route
 app.get("/clear", fn(req, res)
     req.session.clear()
-    res.json({
+    res.ok({
         "message": "Session data cleared successfully"
     })
 end)
