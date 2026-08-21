@@ -257,6 +257,35 @@ class Evaluator
             return if dotCount > 0 ? float(s) else int(s)
         end
 
+        # Direct function / method call invocation (e.g. `formatDate(user.createdAt, "YYYY-MM-DD")` or `greet(name)`)
+        if s.contains("(") and s.endsWith(")")
+            let parenIdx = s.index("(")
+            let funcPath = s.slice(0, parenIdx).strip()
+            let rawArgs = s.slice(parenIdx + 1, s.length() - 1).strip()
+            let funcObj = self.resolveValue(funcPath, data)
+            if not isNull(funcObj)
+                let args = if rawArgs.length() > 0 ? self.parseArgs(rawArgs, data) else []
+                let argc = args.length()
+                if argc == 0
+                    return funcObj()
+                elif argc == 1
+                    return funcObj(args[0])
+                elif argc == 2
+                    return funcObj(args[0], args[1])
+                elif argc == 3
+                    return funcObj(args[0], args[1], args[2])
+                elif argc == 4
+                    return funcObj(args[0], args[1], args[2], args[3])
+                elif argc == 5
+                    return funcObj(args[0], args[1], args[2], args[3], args[4])
+                elif argc == 6
+                    return funcObj(args[0], args[1], args[2], args[3], args[4], args[5])
+                else
+                    return funcObj(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+                end
+            end
+        end
+
         return self.resolveValue(s, data)
     end
 
@@ -340,7 +369,7 @@ class Evaluator
             end
 
             if isMap(current)
-                if current.has(cleanSeg)
+                if cleanSeg in current
                     current = current[cleanSeg]
                 else
                     return Null

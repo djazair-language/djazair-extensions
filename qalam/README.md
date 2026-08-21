@@ -12,7 +12,7 @@
   <a href="./dpm.json"><img src="https://img.shields.io/badge/version-0.2.0-blue.svg?style=flat-square" alt="Version 0.2.0"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License MIT"></a>
   <a href="https://github.com/djazair-language"><img src="https://img.shields.io/badge/language-Djazair-red.svg?style=flat-square" alt="Djazair Language"></a>
-  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-198%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
+  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-200%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
   <a href="./docs/index.html"><img src="https://img.shields.io/badge/docs-interactive%20html-cyan.svg?style=flat-square" alt="Documentation"></a>
 </p>
 

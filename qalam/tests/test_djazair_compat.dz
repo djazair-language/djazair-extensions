@@ -118,6 +118,19 @@ test("FILTER: isNumber", qalam.renderString("{{ val | isNumber }}", {"val": 42})
 test("FILTER: isArray", qalam.renderString("{{ val | isArray }}", {"val": [1, 2]}), "True")
 test("FILTER: isMap", qalam.renderString("{{ val | isMap }}", {"val": {"a": 1}}), "True")
 
+# ── 7. Direct Function Calls from Data Context ────────────────────────────────
+let fnData = {
+    "user": {"name": "Riad"},
+    "greet": fn(name)
+        return "Hello, " + str(name) + "!"
+    end,
+    "add": fn(a, b)
+        return int(a) + int(b)
+    end
+}
+test("DIRECT FN: single arg", qalam.renderString("{{ greet(user.name) }}", fnData), "Hello, Riad!")
+test("DIRECT FN: multi args", qalam.renderString("{{ add(10, 25) }}", fnData), "35")
+
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n═══════════════════════════════════════════════════════════════")
 print("Djazair Language Compatibility Tests")
