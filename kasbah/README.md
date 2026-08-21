@@ -1,13 +1,14 @@
 # Kasbah — Full-Featured Web Framework for Djazair
 
 <p align="center">
-  <strong>Fast, Modular, Expressive & Secure Web Framework for the Djazair Programming Language</strong>
+  <strong>Enterprise-Grade, Fast, Modular, Expressive & Secure Web Framework for the Djazair Programming Language</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.2.0-blue.svg?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/language-Djazair-green.svg?style=flat-square" alt="Language">
   <img src="https://img.shields.io/badge/type-Pure%20Djazair-purple.svg?style=flat-square" alt="Pure Djazair">
+  <img src="https://img.shields.io/badge/tests-235%20passed-brightgreen.svg?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/license-MIT-orange.svg?style=flat-square" alt="License">
 </p>
 
@@ -17,7 +18,7 @@
 
 **Kasbah** is a production-ready, full-stack web framework designed natively for the **Djazair** programming language. Built upon Djazair's standard `http` engine, Kasbah brings the architectural elegance, expressive ergonomics, and robustness of modern global standards (Express, Fastify, Laravel, FastAPI, Spring) into the Djazair ecosystem.
 
-Whether building high-performance RESTful microservices, secure JSON APIs, or dynamic server-rendered web applications with the `Qalam` template engine, Kasbah provides a unified and cohesive developer experience.
+Whether building high-performance RESTful microservices, secure JSON APIs, or dynamic server-rendered web applications with the `Qalam` template engine, Kasbah provides a unified, highly optimized, and cohesive developer experience.
 
 ---
 
@@ -25,12 +26,13 @@ Whether building high-performance RESTful microservices, secure JSON APIs, or dy
 
 - 🚀 **Zero Native Dependencies**: 100% Pure Djazair codebase — seamless portability across Windows, Linux, and macOS.
 - ⚡ **High-Performance Routing**: Ultra-fast static routing, parameterized dynamic segments (`:param`), route groups, and mountable sub-routers.
-- 🛡️ **Enterprise-Grade Security**: Native **CORS** middleware, **Helmet** security headers, strict cookie signing (HMAC-SHA256), CRLF protection, and path traversal guards.
-- 📦 **Automated Body Parsing**: Multi-format parsing for JSON, URL-encoded forms, and multipart file uploads out of the box.
+- 🛡️ **Enterprise-Grade Security**: Native **CORS** middleware, **Helmet** security headers, strict cookie signing (HMAC-SHA256), CRLF protection, session fixation defense, and path traversal guards.
+- 📦 **Automated Multi-Format Body Parsing**: Multi-format parsing for JSON, URL-encoded forms, and multipart file uploads without extra configuration.
 - 🧩 **Modular Middleware Pipeline**: Onion-model request/response interceptors, route-level middleware, and scoped group pipelines.
-- 🖋️ **Qalam Template Integration**: Official View adapter enabling full MVC server-side rendering with template inheritance (`res.view()`).
-- ✨ **Fluent Validation DSL**: Declarative input sanitization and validation schema with rich constraint rules.
+- 🖋️ **Universal Qalam Template Integration**: Official View adapter enabling full MVC server-side rendering with template inheritance (`res.view()`), compatible with all Qalam versions.
+- ✨ **Fluent Validation DSL**: Declarative input sanitization and validation schema with rich constraint rules (`required`, `email`, `url`, `matches`, `min`, `max`, `oneOf`, `custom`).
 - 📂 **Streaming File Uploads & Downloads**: Robust file manager with automatic temp cleanup, MIME type validation, and RFC 5987 Unicode filename support.
+- 🍪 **CookieJar & Session State**: Secure RFC 6265 cookie jars and server-side file-backed sessions with ID regeneration.
 
 ---
 
@@ -41,21 +43,55 @@ Whether building high-performance RESTful microservices, secure JSON APIs, or dy
 3. [Architecture & Request Lifecycle](#3-architecture--request-lifecycle)
 4. [Application Configuration](#4-application-configuration)
 5. [Routing & Sub-Routers](#5-routing--sub-routers)
+   - [HTTP Methods](#http-methods)
+   - [Dynamic Route Parameters](#dynamic-route-parameters)
+   - [Route-Level Middleware](#route-level-middleware)
+   - [Route Groups & Scoped Middleware](#route-groups--scoped-middleware)
+   - [Standalone Routers & Mounting](#standalone-routers--mounting)
 6. [Request Interface (`req`)](#6-request-interface-req)
+   - [Properties](#request-properties)
+   - [Input Extraction & Normalization](#input-extraction--normalization)
+   - [Boolean Predicates](#boolean-predicates)
+   - [Headers, Auth & Cookies](#headers-auth--cookies)
+   - [Middleware State Management](#middleware-state-management)
 7. [Response Interface (`res`)](#7-response-interface-res)
+   - [Status & Headers](#status--headers)
+   - [Content Senders](#content-senders)
+   - [File Streaming & Downloads](#file-streaming--downloads)
+   - [Cookie Management & Redirects](#cookie-management--redirects)
+   - [Semantic Status Helpers](#semantic-status-helpers)
+   - [Web Linking (RFC 5988)](#web-linking-rfc-5988)
 8. [Built-in Security Middleware](#8-built-in-security-middleware)
    - [CORS Middleware (`kasbah.cors`)](#cors-middleware-kasbahcors)
    - [Helmet Security Headers (`kasbah.helmet`)](#helmet-security-headers-kasbahhelmet)
    - [Static File Serving (`kasbah.serveStatic`)](#static-file-serving-kasbahservestatic)
    - [Structured Logging (`kasbah.logger`)](#structured-logging-kasbahlogger)
+   - [Body Parser (`kasbah.bodyParser`)](#body-parser-kasbahbodyparser)
 9. [Session & Cookie Management](#9-session--cookie-management)
+   - [Session Configuration](#session-configuration)
+   - [Session Manager API](#session-manager-api)
+   - [Session Fixation Defense (`regenerate`)](#session-fixation-defense-regenerate)
+   - [CookieJar Interface](#cookiejar-interface)
 10. [Input Validation Engine (`kasbah.validator`)](#10-input-validation-engine-kasbahvalidator)
+    - [Validation Rules Reference](#validation-rules-reference)
+    - [Validator API & Error Format](#validator-api--error-format)
+    - [Custom Rule Closures](#custom-rule-closures)
 11. [File Uploads & File Manager](#11-file-uploads--file-manager)
+    - [Single File Upload via `req.file()`](#single-file-upload-via-reqfile)
+    - [UploadedFile Interface](#uploadedfile-interface)
+    - [Advanced Multi-File Processing (`req.uploader()`)](#advanced-multi-file-processing-requploader)
+    - [FileManager API](#filemanager-api)
 12. [Template Engine Integration (`Qalam`)](#12-template-engine-integration-qalam)
+    - [Configuring Views](#configuring-views)
+    - [Rendering Templates](#rendering-templates)
+    - [In-Memory String Rendering](#in-memory-string-rendering)
 13. [Centralized Error Handling](#13-centralized-error-handling)
-14. [Full REST Application Example](#14-full-rest-application-example)
-15. [Running Tests](#15-running-tests)
-16. [License](#16-license)
+    - [404 Not Found Handling](#404-not-found-handling)
+    - [Global 500 Exception Dispatcher](#global-500-exception-dispatcher)
+14. [Framework Utilities & Helpers](#14-framework-utilities--helpers)
+15. [Full REST Application Example](#15-full-rest-application-example)
+16. [Running Tests](#16-running-tests)
+17. [License](#17-license)
 
 ---
 
@@ -82,22 +118,22 @@ Create an entry file `server.dz`:
 ```djazair
 use kasbah
 
-# Initialize application
+# 1. Initialize application
 let app = new kasbah.app({
     "port":   8080,
     "static": "public"
 })
 
-# Basic JSON endpoint
+# 2. Basic JSON endpoint
 app.get("/", fn(req, res)
     res.json({
         "framework": "Kasbah",
-        "version":   "0.1.0",
+        "version":   "0.2.0",
         "status":    "running"
     })
 end)
 
-# Dynamic Route Parameter
+# 3. Dynamic route with URL parameter
 app.get("/hello/:name", fn(req, res)
     res.ok({
         "greeting": "Hello, " + req.param("name") + "!",
@@ -105,7 +141,7 @@ app.get("/hello/:name", fn(req, res)
     })
 end)
 
-# Start web server
+# 4. Start web server listener
 app.listen()
 ```
 
@@ -127,7 +163,7 @@ Kasbah executes incoming HTTP requests through a structured, linear pipeline:
           ▼
 ┌────────────────────────────────────────┐
 │ 1. Request Preparation                 │
-│    • IP Resolution (Proxy / Remote)    │
+│    • Client IP Resolution              │
 │    • Path Decoding & Traversal Guard   │
 │    • CookieJar Initialization          │
 └────────────────────────────────────────┘
@@ -136,28 +172,28 @@ Kasbah executes incoming HTTP requests through a structured, linear pipeline:
 ┌────────────────────────────────────────┐
 │ 2. Core Middleware Pipeline            │
 │    • BodyParser (JSON / Form / Multi)  │
-│    • Session Initialization            │
-│    • ServeStatic Assets Handler        │
-│    • User Middleware (CORS / Helmet)   │
+│    • Session State Binding             │
+│    • ServeStatic Assets Interceptor    │
+│    • Security Middlewares (CORS/Helmet)│
 └────────────────────────────────────────┘
           │
           ▼
 ┌────────────────────────────────────────┐
 │ 3. Router & Route Middlewares          │
-│    • Path & Verb Matching              │
+│    • Verb & Path Matching              │
 │    • Parameter Extraction (:param)     │
-│    • Scoped Route Middlewares          │
-│    • Route Handler Invocation          │
+│    • Scoped Route-Level Middlewares    │
+│    • Handler Execution                 │
 └────────────────────────────────────────┘
           │
           ▼
 ┌────────────────────────────────────────┐
 │ 4. Response Dispatch & Teardown        │
 │    • Byte-accurate Content-Length      │
-│    • Cookie Injection (RFC 6265)       │
+│    • Cookie Header Serialization       │
 │    • Session Writeback & Persistence   │
 │    • Temporary Upload Files Cleanup    │
-│    • Access Log Latency Reporting      │
+│    • Structured Access Latency Log     │
 └────────────────────────────────────────┘
           │
           ▼
@@ -207,7 +243,9 @@ let app = new kasbah.app({
 
 ## 5. Routing & Sub-Routers
 
-### Standard HTTP Methods
+### HTTP Methods
+
+Kasbah supports all standard HTTP verbs:
 
 ```djazair
 app.get("/items", handler)
@@ -217,12 +255,12 @@ app.delete("/items/:id", handler)
 app.patch("/items/:id", handler)
 app.head("/items", handler)
 app.options("/items", handler)
-app.all("/any-method", handler)
+app.all("/any-method", handler) # Matches GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
 ```
 
-### Dynamic URL Parameters
+### Dynamic Route Parameters
 
-Parameters prefixed with `:` are automatically extracted into `req.params` and accessible via `req.param(name)`:
+Parameters prefixed with `:` are extracted into `req.params` and accessible via `req.param(name)`:
 
 ```djazair
 app.get("/users/:userId/orders/:orderId", fn(req, res)
@@ -248,7 +286,7 @@ app.post("/admin/settings", [authGuard, adminOnly], fn(req, res)
 end)
 ```
 
-### Route Groups
+### Route Groups & Scoped Middleware
 
 Organize routes sharing common prefixes and middleware pipelines:
 
@@ -258,6 +296,7 @@ app.group("/api/v1", [authMiddleware], fn(g)
         res.json({"profile": "data"})
     end)
 
+    # Nested sub-group (/api/v1/admin/stats)
     g.group("/admin", [adminOnly], fn(adminGroup)
         adminGroup.get("/stats", fn(req, res)
             res.json({"stats": []})
@@ -266,7 +305,7 @@ app.group("/api/v1", [authMiddleware], fn(g)
 end)
 ```
 
-### Standalone Sub-Routers & Mounting
+### Standalone Routers & Mounting
 
 Modularize large codebases into standalone routers and mount them on prefixes:
 
@@ -295,52 +334,63 @@ app.mount("/api/trades", tradesRoutes.router)
 
 The `request` object wraps incoming client data with safe, fluent accessors:
 
-### Properties
+### Request Properties
 | Property | Type | Description |
 |:---|:---|:---|
 | `req.method` | `String` | HTTP verb (`"GET"`, `"POST"`, `"PUT"`, etc.) |
 | `req.path` | `String` | URL path without query string (`"/trades/42"`) |
-| `req.ip` | `String` | Client IP address (considers `trustProxy`) |
-| `req.body` | `Map\|String` | Parsed request payload (JSON / Form map) |
+| `req.ip` | `String` | Client IP address (considers `trustProxy` / `X-Forwarded-For`) |
+| `req.body` | `Map\|String` | Parsed request payload (JSON / Form map / raw body) |
 | `req.files` | `Map` | Uploaded multipart files descriptor dictionary |
-| `req.cookies` | `Object` | CookieJar instance for request cookies |
-| `req.session` | `Object` | SessionManager instance for active session |
+| `req.cookies` | `CookieJar` | CookieJar instance for reading and managing cookies |
+| `req.session` | `SessionManager` | SessionManager instance for active session state |
+| `req.rawHeaders` | `Map` | Dictionary of raw incoming HTTP headers |
 
-### Input Extraction Methods
+### Input Extraction & Normalization
 ```djazair
 # 1. Individual getters
-let id   = req.param("id", "default_id") # Route param (:id)
-let page = req.query("page", "1")        # Query string (?page=1)
-let data = req.input("email")            # Looks up param -> query -> body in order
+let id   = req.param("id", "default_id") # Route parameter (:id)
+let page = req.query("page", "1")        # Query parameter (?page=1)
+let data = req.input("email")            # Lookup across params -> query -> body in order
 
 # 2. Bulk input dictionaries
-let allInputs = req.all()                # Merges params + query + body
-let allInputs = req.inputs()             # Alias for req.all()
-let filtered  = req.only(["name", "age"])# Returns map with only allowed keys
-let omitted   = req.except(["password"]) # Returns map excluding omitted keys
+let allInputs = req.all()                # Merges params + query + body into unified dictionary
+let allInputs = req.inputs()             # Direct alias for req.all()
+let filtered  = req.only(["name", "age"])# Returns map with only specified keys
+let omitted   = req.except(["password"]) # Returns map excluding specified keys
 ```
 
-### Inspection Predicates
+### Boolean Predicates
 ```djazair
-req.isJson()       # True if client expects or sends JSON
-req.isAjax()       # True if X-Requested-With: XMLHttpRequest
-req.isSecure()     # True if connection is HTTPS
-req.isMethod("GET")# Case-insensitive HTTP verb match
-req.isType("json") # Matches Content-Type ("json", "form", "multipart")
-req.hasFile("doc") # True if uploaded file exists on disk
-req.accepts("html")# True if client accepts requested MIME type
+req.isJson()         # True if client expects or sends JSON (Accept, Content-Type, AJAX)
+req.isAjax()         # True if X-Requested-With: XMLHttpRequest
+req.isSecure()       # True if connection is HTTPS or TLS termination proxy
+req.secure()         # Alias for req.isSecure()
+req.isMethod("GET")  # Case-insensitive HTTP verb match
+req.isType("json")   # Matches Content-Type category ("json", "form", "multipart")
+req.contentIs("json")# Alias for req.isType()
+req.hasFile("avatar")# True if uploaded file exists and is saved on disk
+req.accepts("html")  # True if client accepts requested MIME type (supports wildcards)
 ```
 
-### Headers, Auth & State
+### Headers, Auth & Cookies
 ```djazair
 let auth    = req.header("authorization") # Case-insensitive header lookup
-let token   = req.token()                 # Extracts Bearer token
-let ua      = req.userAgent()             # Client User-Agent string
-let referer = req.referer()               # Client Referer / Referrer URL
+let token   = req.token()                 # Extracts Bearer token string (or Null)
+let token   = req.bearerToken()           # Alias for req.token()
+let cookie  = req.cookie("theme")         # Returns cookie value by name
+let ua      = req.userAgent()             # Client User-Agent header
+let ref     = req.referer()               # Client Referer / Referrer URL
 let host    = req.host()                  # Client Host header
+let proto   = req.protocol()              # Protocol scheme ("http" or "https")
+```
 
-# Middleware state sharing
-req.set("currentUser", userObject)
+### Middleware State Management
+```djazair
+# Store custom attribute in request state
+req.set("currentUser", userRecord)
+
+# Retrieve custom attribute
 let user = req.get("currentUser")
 ```
 
@@ -350,59 +400,76 @@ let user = req.get("currentUser")
 
 The `response` object provides a fluent, chainable API for crafting HTTP responses:
 
+### Status & Headers
+```djazair
+res.status(201)                                # Sets numeric HTTP status
+res.header("X-Custom", "Value")                # Sets response header
+let h = res.header("X-Custom")                 # Gets response header
+res.removeHeader("X-Powered-By")               # Removes queued response header
+res.type("json")                               # Sets Content-Type by extension or MIME type
+res.sendStatus(404)                            # Sends status code with standard reason phrase
+```
+
 ### Content Senders
 ```djazair
-res.json({"status": "ok"})          # application/json; charset=utf-8
-res.html("<h1>Hello</h1>")          # text/html; charset=utf-8
-res.text("Plain text")              # text/plain; charset=utf-8
-res.xml("<root></root>")            # application/xml; charset=utf-8
-res.view("home", {"name": "Riyadh"})# Renders Qalam template views/home.html
-res.send(rawContent)                # Raw string body
+res.json({"status": "ok"})                     # application/json; charset=utf-8
+res.html("<h1>Hello</h1>")                     # text/html; charset=utf-8
+res.text("Plain text")                         # text/plain; charset=utf-8
+res.xml("<root></root>")                       # application/xml; charset=utf-8
+res.view("home", {"name": "Riyadh"})           # Renders Qalam template views/home.html
+res.send(rawContent)                           # Sends raw string body
 ```
 
 ### File Streaming & Downloads
 ```djazair
-# Streams binary/text file with accurate MIME type & Content-Length
+# Streams binary or text file with accurate byte Content-Length and MIME type
 res.file("assets/report.pdf")
 
 # Triggers browser download dialog with RFC 5987 Unicode filename
 res.download("assets/document.pdf", "تقرير_السنوي.pdf")
 ```
 
-### Semantic Status Helpers
+### Cookie Management & Redirects
 ```djazair
-res.ok(data)               # 200 OK (JSON or empty)
-res.created(data)          # 201 Created (JSON or empty)
-res.noContent()            # 204 No Content
-res.badRequest("Invalid")  # 400 Bad Request
-res.unauthorized("Auth")   # 401 Unauthorized
-res.forbidden("Forbidden") # 403 Forbidden
-res.notFound("Not Found")  # 404 Not Found
-res.validationError(errors)# 422 Unprocessable Entity
-res.serverError("Error")   # 500 Internal Server Error
-```
-
-### Headers & Cookies
-```djazair
-res.status(201)
-res.header("X-Custom-Header", "Value")
-res.removeHeader("X-Powered-By")
-res.type("json") # Sets Content-Type: application/json
-
 # Set cookie with RFC 6265 directives
 res.cookie("theme", "dark", {
-    "maxAge":   86400 * 30,
+    "maxAge":   86400 * 30, # 30 days
     "httpOnly": True,
     "secure":   True,
-    "sameSite": "Lax"
+    "sameSite": "Lax",
+    "path":     "/"
 })
 
-# Delete cookie
+# Delete / clear cookie on client
 res.clearCookie("theme")
+res.deleteCookie("theme") # Alias for clearCookie
 
 # Redirects
-res.redirect("/login")
-res.back("/fallback")
+res.redirect("/login", 302)
+res.back("/fallback")     # Redirects to client's Referer URL with fallback
+```
+
+### Semantic Status Helpers
+| Method | Status Code | Default Payload | Description |
+|:---|:---:|:---|:---|
+| `res.ok(data)` | `200 OK` | `""` or JSON | Successful request |
+| `res.created(data)` | `201 Created` | `""` or JSON | Successful resource creation |
+| `res.noContent()` | `204 No Content` | `""` | Empty success response |
+| `res.badRequest(msg)` | `400 Bad Request` | `{"error": msg}` | Client input error |
+| `res.unauthorized(msg)` | `401 Unauthorized` | `{"error": msg}` | Authentication required |
+| `res.forbidden(msg)` | `403 Forbidden` | `{"error": msg}` | Access denied |
+| `res.notFound(msg)` | `404 Not Found` | `{"error": msg}` | Resource not found |
+| `res.validationError(errors)` | `422 Unprocessable` | `{"errors": errors}` | Schema validation failure |
+| `res.serverError(msg)` | `500 Internal Error` | `{"error": msg}` | Server runtime exception |
+
+### Web Linking (RFC 5988)
+```djazair
+res.links({
+    "next": "/trades?page=3",
+    "prev": "/trades?page=1",
+    "last": "/trades?page=10"
+})
+# Emits Header: Link: <https://...>; rel="next", <https://...>; rel="prev"
 ```
 
 ---
@@ -428,8 +495,8 @@ app.middleware(kasbah.cors({
     "allowedHeaders":    ["Content-Type", "Authorization", "X-Requested-With"],
     "exposedHeaders":    ["Content-Range", "X-Total-Count"],
     "credentials":       True,
-    "maxAge":            86400, # Cache preflight for 24h
-    "preflightContinue": False
+    "maxAge":            86400, # Cache preflight for 24 hours
+    "preflightContinue": False  # Automatically ends OPTIONS requests with 204
 }))
 ```
 
@@ -448,7 +515,7 @@ use kasbah
 let app = new kasbah.app()
 
 # 1. Default Security Stack
-# Applies X-Frame-Options: SAMEORIGIN, X-Content-Type-Options: nosniff,
+# Injects X-Frame-Options: SAMEORIGIN, X-Content-Type-Options: nosniff,
 # X-XSS-Protection, HSTS (on HTTPS), Referrer-Policy, and removes X-Powered-By.
 app.middleware(kasbah.helmet())
 
@@ -488,31 +555,48 @@ Outputs formatted request timing, status codes, and latency in milliseconds:
 
 ```djazair
 app.middleware(kasbah.logger({
-    "level":  "info", # "debug" | "info" | "warn" | "error" | "none"
+    "level":  "info",    # "debug" | "info" | "warn" | "error" | "none"
     "format": "combined" # "dev" | "combined"
 }))
 ```
 
 ---
 
+### Body Parser (`kasbah.bodyParser`)
+
+Enabled by default in Kasbah applications, automatically parsing incoming JSON, URL-encoded forms, and multipart data:
+
+```djazair
+# Custom max body size (in MB)
+app.middleware(kasbah.bodyParser(20)) # 20 MB limit
+```
+
+---
+
 ## 9. Session & Cookie Management
 
-Kasbah provides secure server-side file-backed sessions with signed HMAC-SHA256 tokens:
-
+### Session Configuration
 ```djazair
 let app = new kasbah.app({
     "session": {
-        "secret":   "my-ultra-secure-cryptographic-key-32-chars-long!",
+        "secret":   "my-ultra-secure-cryptographic-key-32-chars-long!", # Required (>= 32 chars)
+        "name":     "kasbah.sid",
         "maxAge":   86400,
-        "sameSite": "Lax"
+        "sameSite": "Lax",
+        "secure":   False
     }
 })
+```
 
+### Session Manager API
+```djazair
 app.get("/visit", fn(req, res)
-    # Session API
     let visits = req.session.get("visits", 0) + 1
     req.session.set("visits", visits)
     req.session.set("user", {"name": "Riad"})
+
+    let hasUser = req.session.has("user") # True
+    let allData = req.session.all()        # Shallow copy map of all session data
 
     res.json({
         "sessionId":    req.session.id(),
@@ -520,19 +604,55 @@ app.get("/visit", fn(req, res)
         "visits":       visits
     })
 end)
+```
 
-app.get("/logout", fn(req, res)
-    req.session.clear() # Destroys session data on server
-    res.noContent()
+### Session Fixation Defense (`regenerate`)
+Prevent session fixation attacks upon login by regenerating the session ID and issuing a new signed cookie:
+```djazair
+app.post("/login", fn(req, res)
+    # Authenticate user...
+    let newSessionId = req.session.regenerate()
+    req.session.set("userId", 42)
+    res.ok({"message": "Logged in", "sid": newSessionId})
 end)
+```
+
+### CookieJar Interface
+Access raw cookies on `req.cookies` and `res.cookies`:
+```djazair
+let theme = req.cookies.get("theme", "light")
+let exists = req.cookies.has("theme")
+let allCookies = req.cookies.all()
+
+req.cookies.set("theme", "dark", {"maxAge": 86400})
+req.cookies.delete("theme")
+req.cookies.clear() # Clears all incoming and queues deletion headers
 ```
 
 ---
 
 ## 10. Input Validation Engine (`kasbah.validator`)
 
-Fluent, declarative schema validation with constraint chaining:
+### Validation Rules Reference
+| Rule Method | Description |
+|:---|:---|
+| `.required()` | Field must be present and non-empty |
+| `.optional()` | Skips further checks if value is missing / empty |
+| `.string()` | Value must be of String type |
+| `.number()` | Value must be a numeric type (Integer or Float) |
+| `.boolean()` | Value must be a Boolean (`True` or `False`) |
+| `.array()` | Value must be an Array |
+| `.email()` | Validates standard RFC email address format |
+| `.url()` | Validates `http://` or `https://` URL format |
+| `.matches(regex)` | Validates string against regular expression |
+| `.min(n)` | Numeric minimum bound (inclusive) |
+| `.max(n)` | Numeric maximum bound (inclusive) |
+| `.minLength(n)` | String or array minimum length |
+| `.maxLength(n)` | String or array maximum length |
+| `.oneOf(allowed)` | Value must be one of allowed array items |
+| `.custom(fn)` | Custom validator closure `fn(val)` returning `True` or error message |
 
+### Validator API & Error Format
 ```djazair
 app.post("/api/register", fn(req, res)
     let v = req.validate()
@@ -551,10 +671,12 @@ app.post("/api/register", fn(req, res)
     end)
 
     if v.fails()
-        return res.validationError(v.errors())
+        let firstErr = v.firstError()        # "must be a valid email address"
+        let emailErrs = v.errorFor("email")   # ["must be a valid email address"]
+        return res.validationError(v.errors())# Emits 422 with {"errors": {...}}
     end
 
-    let cleanData = v.validated()
+    let cleanData = v.validated() # Map containing only valid fields
     res.created({"status": "registered", "user": cleanData})
 end)
 ```
@@ -564,7 +686,6 @@ end)
 ## 11. File Uploads & File Manager
 
 ### Single File Upload via `req.file()`
-
 ```djazair
 app.post("/upload/avatar", fn(req, res)
     if not req.hasFile("avatar")
@@ -584,17 +705,35 @@ app.post("/upload/avatar", fn(req, res)
 end)
 ```
 
-### Advanced Multi-File Upload via `uploader()`
+### UploadedFile Interface
+| Method | Return Type | Description |
+|:---|:---:|:---|
+| `file.isValid()` | `Boolean` | True if temporary file exists on disk |
+| `file.getName()` | `String` | Form field name |
+| `file.getFilename()` | `String` | Original client filename |
+| `file.getTempPath()` | `String` | Path to temporary file on disk |
+| `file.getSize()` | `Number` | File size in bytes |
+| `file.getMimeType()` | `String` | MIME media type |
+| `file.getExt()` | `String` | Lowercased file extension without leading dot |
+| `file.hasExt(list)` | `Boolean` | True if extension matches allowed list |
+| `file.isImage()` | `Boolean` | True if MIME type or extension is an image |
+| `file.saveTo(dir, newName)` | `String` | Moves temporary file to target directory |
+| `file.readBytes()` | `Array` | Reads file content as raw byte array |
+| `file.readText()` | `String` | Reads file content as UTF-8 string |
+| `file.delete()` | `Boolean` | Deletes temporary file immediately |
 
+### Advanced Multi-File Processing (`req.uploader()`)
 ```djazair
 app.post("/upload/gallery", fn(req, res)
     let uploader = req.uploader({
-        "dest":         "./storage/gallery",
-        "maxSize":      5, # Max 5 MB per file
-        "allowedTypes": ["image/jpeg", "image/png", "image/webp"],
-        "prefix":       "gallery_"
+        "dest":              "./storage/gallery",
+        "maxSize":           5, # Max 5 MB per file
+        "allowedTypes":      ["image/jpeg", "image/png", "image/webp"],
+        "keepOriginalName":  False,
+        "prefix":            "gallery_"
     })
 
+    # Save up to 10 files from "photos" field
     let result = uploader.multiple("photos", 10)
     if not result["ok"]
         return res.badRequest(result["errors"])
@@ -648,10 +787,8 @@ end)
 
 ## 13. Centralized Error Handling
 
-Global unhandled exception dispatcher:
-
+### 404 Not Found Handling
 ```djazair
-# 1. Custom 404 Not Found Handler
 app.onNotFound(fn(req, res)
     if req.isJson()
         res.notFound("The requested resource was not found on this server.")
@@ -659,8 +796,10 @@ app.onNotFound(fn(req, res)
         res.status(404).html("<h1>404 — Page Not Found</h1>")
     end
 end)
+```
 
-# 2. Global Exception Handler (500)
+### Global 500 Exception Dispatcher
+```djazair
 app.onError(fn(err, req, res)
     print("[ERROR] " + req.method + " " + req.path + " -> " + str(err))
     
@@ -675,7 +814,25 @@ end)
 
 ---
 
-## 14. Full REST Application Example
+## 14. Framework Utilities & Helpers
+
+Kasbah exports essential utilities directly from `init.dz` or `helpers/utils.dz`:
+
+```djazair
+# 1. Cryptographically Secure ID Generator
+let sid = kasbah.generateId(32) # Generates 32-character random hex string
+
+# 2. RFC 5987 Unicode Filename Encoder
+let encoded = kasbah.urlEncodeFilename("تقرير_البيانات.pdf")
+
+# 3. Global Server and Client Configuration Defaults
+kasbah.setServerConfig({"port": 8080, "trustProxy": True})
+kasbah.setClientConfig({"timeout": 15})
+```
+
+---
+
+## 15. Full REST Application Example
 
 ```djazair
 use kasbah
@@ -729,9 +886,9 @@ app.listen()
 
 ---
 
-## 15. Running Tests
+## 16. Running Tests
 
-Kasbah contains a 100% passing automated test suite covering all modules:
+Kasbah contains an automated test suite covering all modules:
 
 ```bash
 djazair tests/test_routing.dz
@@ -743,12 +900,13 @@ djazair tests/test_helmet.dz
 djazair tests/test_kasbah_security.dz
 djazair tests/test_kasbah_config.dz
 djazair tests/test_view.dz
+djazair tests/test_docs_snippets.dz
 djazair tests/test_extreme_stress.dz
 ```
 
 ---
 
-## 16. License
+## 17. License
 
 Kasbah is open-source software licensed under the **MIT License**.  
 Developed and maintained by **Harizi Riyadh** (<hariziriyadh@gmail.com>).

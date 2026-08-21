@@ -25,7 +25,7 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --code-bg: #0f172a;
-      --sidebar-width: 280px;
+      --sidebar-width: 290px;
     }
 
     * {
@@ -116,7 +116,7 @@
 
     .search-box {
       position: relative;
-      width: 260px;
+      width: 270px;
     }
 
     .search-box input {
@@ -585,7 +585,7 @@
         <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="searchInput" placeholder="Search functions, CORS, Helmet...">
       </div>
-      <a href="https://github.com" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
+      <a href="https://github.com/djazair-language/djazair-extensions" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
         <i class="fa-brands fa-github"></i>
       </a>
     </div>
@@ -641,6 +641,13 @@
       </div>
 
       <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-screwdriver-wrench"></i> Utilities & Helpers</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#utilities"><i class="fa-solid fa-wand-magic-sparkles"></i> Helpers & Utils</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
         <div class="menu-title"><i class="fa-solid fa-laptop-code"></i> Code Examples</div>
         <ul class="menu-list">
           <li class="menu-item"><a href="#full-example"><i class="fa-solid fa-rocket"></i> Full REST Example</a></li>
@@ -655,11 +662,11 @@
       <div class="hero">
         <h1 class="hero-title">Kasbah Web Framework for Djazair</h1>
         <p class="hero-subtitle">
-          A modular, high-performance, and secure web framework built natively for the <strong>Djazair</strong> programming language. Designed around modern global standards (Express, Fastify, Laravel, FastAPI).
+          An enterprise-grade, modular, high-performance, and secure web framework built natively for the <strong>Djazair</strong> programming language. Designed around modern global standards (Express, Fastify, Laravel, FastAPI, Spring).
         </p>
 
         <div class="hero-badges">
-          <span class="badge green"><i class="fa-solid fa-check-double"></i> 100% Test Pass Rate (175/175)</span>
+          <span class="badge green"><i class="fa-solid fa-check-double"></i> 100% Test Pass Rate (235 Tests)</span>
           <span class="badge blue"><i class="fa-solid fa-shield"></i> CORS & Helmet Protected</span>
           <span class="badge purple"><i class="fa-solid fa-feather"></i> 100% Pure Djazair</span>
         </div>
@@ -689,7 +696,7 @@
 
           <div class="card">
             <div class="card-icon"><i class="fa-solid fa-cubes"></i></div>
-            <div class="card-title">Intrinsic Core Body Parser</div>
+            <div class="card-title">Intrinsic Multi-Format Body Parser</div>
             <p>Automatic parsing for JSON, URL-encoded forms, and multipart uploads without requiring manual middleware registration.</p>
           </div>
 
@@ -734,7 +741,7 @@ app.<span class="fn">get</span>(<span class="str">"/api/hello/:name"</span>, <sp
     res.<span class="fn">json</span>({
         <span class="str">"message"</span>: <span class="str">"Hello, "</span> + req.<span class="fn">param</span>(<span class="str">"name"</span>),
         <span class="str">"isAjax"</span>: req.<span class="fn">isAjax</span>(),
-        <span class="str">"year"</span>: <span class="num">2026</span>
+        <span class="str">"version"</span>: <span class="str">"0.2.0"</span>
     })
 <span class="kwd">end</span>)
 
@@ -942,6 +949,11 @@ app.<span class="fn">group</span>(<span class="str">"/admin"</span>, [authMiddle
                 <td>Parsed body (JSON dictionary or form-urlencoded fields).</td>
               </tr>
               <tr>
+                <td><code>req.params</code></td>
+                <td><code>Map</code></td>
+                <td>Dictionary of route URL parameters (e.g. <code>{"id": "42"}</code>).</td>
+              </tr>
+              <tr>
                 <td><code>req.param(name, fallback)</code></td>
                 <td><code>Any</code></td>
                 <td>Retrieves route URL parameter (e.g. from <code>/trades/:id</code>).</td>
@@ -982,17 +994,17 @@ app.<span class="fn">group</span>(<span class="str">"/admin"</span>, [authMiddle
                 <td>Checks if request was sent with <code>X-Requested-With: XMLHttpRequest</code>.</td>
               </tr>
               <tr>
-                <td><code>req.isSecure()</code></td>
+                <td><code>req.isSecure()</code> / <code>secure()</code></td>
                 <td><code>Boolean</code></td>
                 <td>Checks if request was made via HTTPS or TLS termination proxy.</td>
               </tr>
               <tr>
-                <td><code>req.isType(category)</code></td>
+                <td><code>req.isType(cat)</code> / <code>contentIs(cat)</code></td>
                 <td><code>Boolean</code></td>
                 <td>Checks <code>Content-Type</code> (<code>"json"</code>, <code>"form"</code>, <code>"multipart"</code>).</td>
               </tr>
               <tr>
-                <td><code>req.token()</code></td>
+                <td><code>req.token()</code> / <code>bearerToken()</code></td>
                 <td><code>String / Null</code></td>
                 <td>Extracts Bearer token from <code>Authorization: Bearer &lt;token&gt;</code>.</td>
               </tr>
@@ -1015,6 +1027,16 @@ app.<span class="fn">group</span>(<span class="str">"/admin"</span>, [authMiddle
                 <td><code>req.hasFile(name)</code></td>
                 <td><code>Boolean</code></td>
                 <td>Verifies if an uploaded file exists and is saved on disk.</td>
+              </tr>
+              <tr>
+                <td><code>req.uploader(options)</code></td>
+                <td><code>fileManager</code></td>
+                <td>Creates configured file manager uploader instance.</td>
+              </tr>
+              <tr>
+                <td><code>req.validate(data)</code></td>
+                <td><code>validator</code></td>
+                <td>Creates validator instance bound to request body.</td>
               </tr>
               <tr>
                 <td><code>req.set(k, v)</code> / <code>get(k)</code></td>
@@ -1041,12 +1063,13 @@ app.<span class="fn">group</span>(<span class="str">"/admin"</span>, [authMiddle
           <pre><code><span class="cmt"># Status code and response headers</span>
 res.<span class="fn">status</span>(<span class="num">200</span>).<span class="fn">header</span>(<span class="str">"X-Powered-By"</span>, <span class="str">"Kasbah"</span>).<span class="fn">json</span>({<span class="str">"status"</span>: <span class="str">"success"</span>})
 
-<span class="cmt"># HTML, JSON, and Text sending</span>
+<span class="cmt"># HTML, JSON, Text, and XML sending</span>
 res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Custom HTML Page&lt;/h1&gt;"</span>)
 res.<span class="fn">text</span>(<span class="str">"Plain text content"</span>)
 res.<span class="fn">json</span>({<span class="str">"status"</span>: <span class="str">"ok"</span>})
+res.<span class="fn">xml</span>(<span class="str">"&lt;root&gt;&lt;item&gt;1&lt;/item&gt;&lt;/root&gt;"</span>)
 
-<span class="cmt"># File streaming and downloads</span>
+<span class="cmt"># File streaming and downloads with Unicode support</span>
 res.<span class="fn">file</span>(<span class="str">"public/reports/annual.pdf"</span>)
 res.<span class="fn">download</span>(<span class="str">"public/export.csv"</span>, <span class="str">"trades_report.csv"</span>)
 
@@ -1197,7 +1220,7 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>({
       <section id="session">
         <h2><i class="fa-solid fa-key"></i> Sessions & Cookie Management</h2>
         <p>
-          Secure cookie jars and persistent file-backed sessions with signed HMAC-SHA256 tokens:
+          Secure cookie jars and persistent file-backed sessions with signed HMAC-SHA256 tokens and session fixation prevention:
         </p>
 
         <div class="code-wrapper">
@@ -1215,6 +1238,13 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>({
         <span class="str">"isNewSession"</span>: req.session.<span class="fn">isNew</span>(),
         <span class="str">"visits"</span>:       visits
     })
+<span class="kwd">end</span>)
+
+<span class="cmt"># Session Fixation Defense on Login</span>
+app.<span class="fn">post</span>(<span class="str">"/login"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="kwd">let</span> newSid = req.session.<span class="fn">regenerate</span>()
+    req.session.<span class="fn">set</span>(<span class="str">"userId"</span>, <span class="num">42</span>)
+    res.<span class="fn">ok</span>({<span class="str">"status"</span>: <span class="str">"authenticated"</span>, <span class="str">"sid"</span>: newSid})
 <span class="kwd">end</span>)</code></pre>
         </div>
       </section>
@@ -1258,7 +1288,7 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>({
       <section id="templating">
         <h2><i class="fa-solid fa-code"></i> Views & Templating (Powered by Qalam)</h2>
         <p>
-          Similar to how <strong>Laravel</strong> integrates <strong>Blade</strong>, Kasbah provides an official View adapter powered by <strong>Qalam</strong>. Configure your template directory and render templates directly via <code>res.view()</code>:
+          Similar to how <strong>Laravel</strong> integrates <strong>Blade</strong>, Kasbah provides an official View adapter powered by <strong>Qalam</strong>. Compatible with all Qalam versions:
         </p>
 
         <div class="code-wrapper">
@@ -1348,6 +1378,31 @@ app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
         <span class="str">"message"</span>: <span class="fn">str</span>(err)
     })
 <span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Utilities -->
+      <section id="utilities">
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Framework Utilities & Helpers</h2>
+        <p>
+          Kasbah exports standalone helpers for secure cryptographic ID generation, Unicode filename encoding, and configuration management:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> utils_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="cmt"># 1. Cryptographically Secure Random Hex Generator</span>
+<span class="kwd">let</span> token = kasbah.<span class="fn">generateId</span>(<span class="num">32</span>)
+
+<span class="cmt"># 2. RFC 5987 Unicode Filename URL Encoder</span>
+<span class="kwd">let</span> safeHeader = kasbah.<span class="fn">urlEncodeFilename</span>(<span class="str">"مستند_التقرير.pdf"</span>)
+
+<span class="cmt"># 3. Global Default Configurations</span>
+kasbah.<span class="fn">setServerConfig</span>({<span class="str">"trustProxy"</span>: <span class="kwd">True</span>, <span class="str">"maxBodySize"</span>: <span class="num">20</span>})</code></pre>
         </div>
       </section>
 
