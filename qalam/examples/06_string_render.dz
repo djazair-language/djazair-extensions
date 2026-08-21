@@ -1,4 +1,4 @@
-﻿# ── Example 06: In-Memory String Rendering ────────────────────────────────────
+# ── Example 06: In-Memory String Rendering ────────────────────────────────────
 # Demonstrates renderString() — renders templates without any files on disk.
 # Useful for email bodies, generated code, API responses, and CLI tools.
 
@@ -32,5 +32,5 @@ let noAlert = qalam.renderString(
     "{% if error %}<div class='alert'>{{ error }}</div>{% endif %}",
     {"error": Null}
 )
-print("Alert when no error: '" + noAlert + "'")
+print("Alert when no error: '${noAlert}'")
 # → Alert when no error: ''

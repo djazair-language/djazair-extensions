@@ -1,4 +1,4 @@
-﻿# test_security.dz — Security tests for the Qalam template engine
+# test_security.dz — Security tests for the Qalam template engine
 
 use qalam
 use os
@@ -13,9 +13,9 @@ fn test(name, result, expected)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name)
-        print("  Expected: " + str(expected))
-        print("  Got:      " + str(result))
+        print("FAIL: ${name}")
+        print("  Expected: ${expected}")
+        print("  Got:      ${result}")
     end
 end
 
@@ -30,7 +30,7 @@ fn testThrows(name, fn_to_call)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name + " (expected exception, none thrown)")
+        print("FAIL: ${name} (expected exception, none thrown)")
     end
 end
 
@@ -94,7 +94,7 @@ test("NULL: null value -> empty string",
 let bigData = {"items": []}
 let i = 0
 while i < 1000
-    bigData["items"].append("item_" + str(i))
+    bigData["items"].append("item_${i}")
     i += 1
 end
 let bigResult = qalam.renderString("{% for x in items %}{{ x }},{% endfor %}", bigData)
@@ -105,8 +105,8 @@ test("ROBUST: 1000-item loop renders all",
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n══════════════════════════════════════")
 print("Qalam Security Tests")
-print("  Passed : " + str(passed))
-print("  Failed : " + str(failed))
+print("  Passed : ${passed}")
+print("  Failed : ${failed}")
 if failed == 0
     print("  Result : ALL PASSED")
 end

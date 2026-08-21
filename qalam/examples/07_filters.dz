@@ -29,7 +29,7 @@ print(qalam.renderString(tpl1, data1))
 let viewInstance = new qalam.View({})
 viewInstance.registerFilter("currency", fn(val, args = [])
     let symbol = if args.length() > 0 ? str(args[0]) else "DZD"
-    return str(val) + " " + symbol
+    return "${val} ${symbol}"
 end)
 
 let tpl2 = "<p>Total Amount: {{ total | currency('DZD') }}</p>"

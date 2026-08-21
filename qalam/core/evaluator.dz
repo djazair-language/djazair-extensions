@@ -195,7 +195,9 @@ class Evaluator
             let leftVal = self.evalLiteral(s.slice(0, plusIdx), data)
             let rightVal = self.evalLiteral(s.slice(plusIdx + 3), data)
             if isString(leftVal) or isString(rightVal)
-                return str(if isNull(leftVal) ? "" else leftVal) + str(if isNull(rightVal) ? "" else rightVal)
+                let lStr = if isNull(leftVal) ? "" else leftVal
+                let rStr = if isNull(rightVal) ? "" else rightVal
+                return "${lStr}${rStr}"
             end
             return num(leftVal) + num(rightVal)
         end

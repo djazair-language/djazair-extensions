@@ -17,9 +17,9 @@ fn test(name, result, expected)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name)
-        print("  Expected: " + str(expected))
-        print("  Got:      " + str(result))
+        print("FAIL: ${name}")
+        print("  Expected: ${expected}")
+        print("  Got:      ${result}")
     end
 end
 
@@ -28,9 +28,9 @@ fn testContains(name, result, expectedSubstring)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name)
-        print("  Expected to contain: " + str(expectedSubstring))
-        print("  Got:                 " + str(result))
+        print("FAIL: ${name}")
+        print("  Expected to contain: ${expectedSubstring}")
+        print("  Got:                 ${result}")
     end
 end
 
@@ -200,7 +200,7 @@ test("DOC: Comments stripped and whitespace trimmed", resComment, "HelloRiadWorl
 let vCustom = new qalam.View({})
 vCustom.registerFilter("currency", fn(val, args = [])
     let code = if args.length() > 0 ? str(args[0]) else "USD"
-    return str(val) + " " + code
+    return "${val} ${code}"
 end)
 
 vCustom.registerFilter("statusBadge", fn(status, args = [])
@@ -287,8 +287,8 @@ test("API: clearCache executed without error", True, True)
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n═══════════════════════════════════════════════════════════════")
 print("Documentation Snippets Tests")
-print("  Passed : " + str(passed))
-print("  Failed : " + str(failed))
+print("  Passed : ${passed}")
+print("  Failed : ${failed}")
 if failed == 0
     print("  Result : ALL DOCUMENTATION SNIPPETS VERIFIED 100% ✅")
 end

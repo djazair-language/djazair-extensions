@@ -14,9 +14,9 @@ fn test(name, result, expected)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name)
-        print("  Expected: " + str(expected))
-        print("  Got:      " + str(result))
+        print("FAIL: ${name}")
+        print("  Expected: ${expected}")
+        print("  Got:      ${result}")
     end
 end
 
@@ -109,8 +109,8 @@ test("END: for with end",
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n══════════════════════════════════════")
 print("Qalam Conditions & Loops Tests")
-print("  Passed : " + str(passed))
-print("  Failed : " + str(failed))
+print("  Passed : ${passed}")
+print("  Failed : ${failed}")
 if failed == 0
     print("  Result : ALL PASSED")
 end

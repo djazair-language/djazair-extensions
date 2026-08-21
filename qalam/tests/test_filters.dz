@@ -14,9 +14,9 @@ fn test(name, result, expected)
         passed += 1
     else
         failed += 1
-        print("FAIL: " + name)
-        print("  Expected: " + str(expected))
-        print("  Got:      " + str(result))
+        print("FAIL: ${name}")
+        print("  Expected: ${expected}")
+        print("  Got:      ${result}")
     end
 end
 
@@ -107,7 +107,7 @@ test("PIPING: array join | upper",
 # ── 5. Custom Registered Filters ──────────────────────────────────────────────
 let v = new qalam.View({})
 v.registerFilter("currency", fn(val, args = [])
-    return "$" + str(val) + ".00"
+    return "\$${val}.00"
 end)
 
 test("CUSTOM FILTER: currency registered on view",
@@ -117,8 +117,8 @@ test("CUSTOM FILTER: currency registered on view",
 # ── Report ────────────────────────────────────────────────────────────────────
 print("\n══════════════════════════════════════")
 print("Qalam Filters Tests")
-print("  Passed : " + str(passed))
-print("  Failed : " + str(failed))
+print("  Passed : ${passed}")
+print("  Failed : ${failed}")
 if failed == 0
     print("  Result : ALL PASSED")
 end
