@@ -1,14 +1,18 @@
-# Kasbah Helpers — Utility functions
-# Shared helpers used across the framework core, middleware, and response layer.
+# ═══════════════════════════════════════════════════════════════════════════════
+# utils.dz — Kasbah Shared Framework Utilities
+# ═══════════════════════════════════════════════════════════════════════════════
+# Provides MIME type mappings, HTTP status text dictionaries, cryptographically
+# secure ID generators, path traversal sanitization, URL decoding, and HTML escaping.
 
 use crypto
+use random
 use file
 use path
 use bytes
 
-# ── Module-level constants ─────────────────────────────────────────────────────
+# ── Module-level Constants ────────────────────────────────────────────────────
 
-# MIME_TYPES — maps file extensions to their IANA media types.
+# MIME_TYPES — maps common file extensions to their standard IANA media types.
 let MIME_TYPES = {
     ".html":  "text/html; charset=utf-8",
     ".css":   "text/css",
@@ -39,7 +43,7 @@ let MIME_TYPES = {
     ".otf":   "font/otf"
 }
 
-# HTTP_STATUS_TEXTS — maps numeric HTTP status codes to their reason phrases.
+# HTTP_STATUS_TEXTS — maps numeric HTTP status codes to standard reason phrases.
 let HTTP_STATUS_TEXTS = {
     100: "Continue",
     101: "Switching Protocols",
@@ -105,9 +109,11 @@ let HTTP_STATUS_TEXTS = {
     511: "Network Authentication Required"
 }
 
-# ── Map helpers ────────────────────────────────────────────────────────────────
-
-# Combines two maps, with keys in `b` overriding keys in `a`.
+# Combines two maps, where keys in `b` override keys in `a`.
+#
+# @param a {Map} Base map
+# @param b {Map} Overriding map
+# @return  {Map} Merged map
 fn merge(a, b)
     let result = {}
     for key, val in a
@@ -119,14 +125,14 @@ fn merge(a, b)
     return result
 end
 
-# ── ID generation ──────────────────────────────────────────────────────────────
-
-# Returns a cryptographically secure random hex string of `len` characters.
-# Uses crypto.randomBytes (OS entropy) for unpredictable session IDs and tokens.
+# Generates a cryptographically secure random hexadecimal ID string.
+#
+# @param len {Number} String character length (default: 32)
+# @return    {String} Random hex string
 fn generateId(len = 32)
     let hex = "0123456789abcdef"
     let byteCount = int(len / 2) + 1
-    let randomBytesArr = crypto.randomBytes(byteCount)
+    let randomBytesArr = random.bytes(byteCount)
     let result = ""
     let i = 0
     while result.length() < len
@@ -138,9 +144,10 @@ fn generateId(len = 32)
     return result.slice(0, len)
 end
 
-# ── MIME / Content-Type helpers ────────────────────────────────────────────────
-
-# Returns the IANA media type for the given file extension.
+# Returns the standard MIME media type for a given file extension.
+#
+# @param ext {String} File extension (e.g. ".json", ".html")
+# @return    {String} MIME type string
 fn mimeType(ext)
     if MIME_TYPES.has(ext)
         return MIME_TYPES[ext]
@@ -148,7 +155,10 @@ fn mimeType(ext)
     return "application/octet-stream"
 end
 
-# Returns the reason phrase for a numeric HTTP status code.
+# Returns the standard reason phrase for an HTTP status code.
+#
+# @param code {Number} Numeric status code (e.g. 200, 404)
+# @return     {String} Reason phrase
 fn httpStatusText(code)
     if HTTP_STATUS_TEXTS.has(code)
         return HTTP_STATUS_TEXTS[code]
@@ -156,9 +166,10 @@ fn httpStatusText(code)
     return "Unknown"
 end
 
-# Parses a Content-Type header value.
-# Example: "multipart/form-data; boundary=----WebKit"
-#       -> { "type": "multipart/form-data", "boundary": "----WebKit" }
+# Parses a Content-Type header value and extracts its boundary parameter.
+#
+# @param header {String} Raw Content-Type header string
+# @return       {Map}    {"type": "multipart/form-data", "boundary": "..."}
 fn parseContentType(header)
     let parts = header.split(";")
     let result = {"type": parts[0].strip(), "boundary": ""}
@@ -167,7 +178,7 @@ fn parseContentType(header)
         let trimmed = p.strip()
         if trimmed.slice(0, 9) == "boundary="
             let b = trimmed.slice(9)
-            if b.length() >= 2 && b[0] == "\"" && b[b.length() - 1] == "\""
+            if b.length() >= 2 and b[0] == "\"" and b[b.length() - 1] == "\""
                 b = b.slice(1, b.length() - 1)
             end
             result["boundary"] = b
@@ -177,7 +188,10 @@ fn parseContentType(header)
     return result
 end
 
-# Extracts "name" and "filename" from a Content-Disposition header.
+# Extracts "name" and "filename" attributes from a Content-Disposition header.
+#
+# @param header {String} Content-Disposition string
+# @return       {Map}    {"name": "field", "filename": "image.png"}
 fn parseContentDisposition(header)
     let parts = header.split(";")
     let result = {"name": "", "filename": ""}
@@ -188,7 +202,7 @@ fn parseContentDisposition(header)
         if eqIdx > 0
             let key = trimmed.slice(0, eqIdx).strip().lower()
             let val = trimmed.slice(eqIdx + 1).strip()
-            if val.length() >= 2 && val[0] == "\"" && val[val.length() - 1] == "\""
+            if val.length() >= 2 and val[0] == "\"" and val[val.length() - 1] == "\""
                 val = val.slice(1, val.length() - 1)
             end
             if key == "name"
@@ -202,9 +216,12 @@ fn parseContentDisposition(header)
     return result
 end
 
-# Strips path separators from a client-supplied filename to prevent path traversal attacks.
+# Strips directory paths and control characters from client-provided filenames.
+#
+# @param filename {String} Client filename
+# @return         {String} Sanitized basename
 fn sanitizeFilename(filename)
-    if isNull(filename) || filename == ""
+    if isNull(filename) or filename == ""
         return ""
     end
     let name = filename
@@ -216,21 +233,22 @@ fn sanitizeFilename(filename)
     if backSlashParts.length() > 0
         name = backSlashParts[backSlashParts.length() - 1]
     end
-    if name == "." || name == ".." || name.length() > 255
+    if name == "." or name == ".." or name.length() > 255
         return ""
     end
     let forbidden = "<>:\"|?*"
     for c in name
-        if ord(c) < 32 || forbidden.contains(c)
+        if ord(c) < 32 or forbidden.contains(c)
             return ""
         end
     end
     return name
 end
 
-# Decodes a URL path without treating '+' as a space or decoding separators.
-# Encoded '/' and '\\' must remain encoded until after routing so they cannot
-# change the number of path segments or bypass a static-file traversal check.
+# Decodes a URL path preserving directory separators and security encodings.
+#
+# @param pathVal {String} Raw URL path
+# @return        {String} Decoded safe path
 fn urlDecodePath(pathVal)
     if isNull(pathVal)
         return ""
@@ -241,21 +259,35 @@ fn urlDecodePath(pathVal)
     return urlDecode(protected)
 end
 
-# Validates if a string is a valid HTTP token (used for header names and cookie names).
+# Validates whether a string is a valid HTTP token (RFC 7230 §3.2.6).
+#
+# @param name {String} Token string
+# @return     {Boolean} True if valid
 fn isValidHttpToken(name)
-    if !isString(name) || name == ""
+    if not isString(name) or name == ""
         return False
     end
     let allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&'*+-.^_`|~"
     for c in name
-        if !allowed.contains(c)
+        if not allowed.contains(c)
             return False
         end
     end
     return True
 end
 
-# Decodes URL-encoded parameters (e.g. %20 -> space), with full multi-byte UTF-8 support.
+# HEX_MAP — maps hex digit characters to their numeric values (0–15).
+# Defined at module level so it is allocated once, not on every urlDecode call.
+let HEX_MAP = {
+    "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+    "a": 10, "b": 11, "c": 12, "d": 13, "e": 14, "f": 15,
+    "A": 10, "B": 11, "C": 12, "D": 13, "E": 14, "F": 15
+}
+
+# Decodes percent-encoded URL strings with full UTF-8 multi-byte support.
+#
+# @param strVal {String} URL encoded string
+# @return       {String} Decoded UTF-8 string
 fn urlDecode(strVal)
     if isNull(strVal)
         return ""
@@ -264,11 +296,6 @@ fn urlDecode(strVal)
     let byteSeq = []
     let i = 0
     let len = strVal.length()
-    let hexMap = {
-        "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
-        "a": 10, "b": 11, "c": 12, "d": 13, "e": 14, "f": 15,
-        "A": 10, "B": 11, "C": 12, "D": 13, "E": 14, "F": 15
-    }
 
     while i < len
         let c = strVal[i]
@@ -279,11 +306,11 @@ fn urlDecode(strVal)
             end
             res += " "
             i += 1
-        elif c == "%" && i + 2 < len
+        elif c == "%" and i + 2 < len
             let h1 = strVal[i + 1]
             let h2 = strVal[i + 2]
-            if !isNull(hexMap[h1]) && !isNull(hexMap[h2])
-                byteSeq.append(hexMap[h1] * 16 + hexMap[h2])
+            if not isNull(HEX_MAP[h1]) and not isNull(HEX_MAP[h2])
+                byteSeq.append(HEX_MAP[h1] * 16 + HEX_MAP[h2])
                 i += 3
             else
                 if byteSeq.length() > 0
@@ -310,7 +337,10 @@ fn urlDecode(strVal)
     return res
 end
 
-# Converts special characters to their HTML entities to prevent XSS attacks in rendered views.
+# Escapes special characters for HTML output to prevent XSS.
+#
+# @param strVal {String} Input string
+# @return       {String} Escaped HTML string
 fn escapeHtml(strVal)
     if isNull(strVal)
         return ""
@@ -323,12 +353,12 @@ fn escapeHtml(strVal)
     return res
 end
 
-# Percent-encodes a filename for use in RFC 5987 `filename*=UTF-8''` parameter.
-# Each character is encoded byte-by-byte in UTF-8, so Arabic, Chinese, and any
-# non-ASCII filename is handled correctly.
-# Safe chars (RFC 5987 attr-char) are passed through unchanged.
+# Percent-encodes a filename for RFC 5987 `filename*=UTF-8''` header parameter.
+#
+# @param filename {String} Unicode filename
+# @return         {String} Percent-encoded UTF-8 bytes string
 fn urlEncodeFilename(filename)
-    if isNull(filename) || filename == ""
+    if isNull(filename) or filename == ""
         return ""
     end
     let safe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$&+-.^_`|~"
@@ -341,7 +371,6 @@ fn urlEncodeFilename(filename)
         if safe.contains(c)
             result += c
         else
-            # Encode each UTF-8 byte of the character independently
             let charBytes = bytes.fromString(c)
             for b in charBytes
                 result += "%${hex[int(b / 16)]}${hex[b % 16]}"

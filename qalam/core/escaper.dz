@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# escaper.dz — HTML Output Escaping
+# ═══════════════════════════════════════════════════════════════════════════════
+# Provides HTML entity encoding to prevent XSS injection in template output.
+
+# Escapes special HTML characters to prevent XSS injection in rendered output.
+#
+# @param strVal {String} Raw input string
+# @return       {String} HTML-safe escaped string
+fn escapeHtml(strVal)
+    if isNull(strVal)
+        return ""
+    end
+    let res = strVal.replace("&", "&amp;")
+    res = res.replace("<", "&lt;")
+    res = res.replace(">", "&gt;")
+    res = res.replace("\"", "&quot;")
+    res = res.replace("'", "&#039;")
+    return res
+end

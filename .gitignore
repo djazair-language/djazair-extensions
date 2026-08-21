@@ -11,6 +11,7 @@
 .idea/
 *.swp
 *.swo
+*.db
 
 # OS
 .DS_Store

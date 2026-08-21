@@ -2,7 +2,7 @@
 
 import "../helpers/cookie.dz" as cookie
 import "../helpers/utils.dz" as utils
-import "../core/kasbahApp.dz" as appMod
+import "../core/app.dz" as appMod
 use process
 
 let passed = 0

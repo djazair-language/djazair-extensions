@@ -1,5 +1,8 @@
-# Kasbah Middleware — BodyParser
-# Parses JSON, URL-encoded, and multipart/form-data request bodies.
+# ═══════════════════════════════════════════════════════════════════════════════
+# bodyParser.dz — Request Body Parsing Middleware
+# ═══════════════════════════════════════════════════════════════════════════════
+# Supports automatic parsing of JSON, URL-encoded forms, and multipart/form-data
+# file uploads into `req.body` and `req.files`.
 
 use json as *
 use os
@@ -8,7 +11,10 @@ use dir
 use bytes
 import "../helpers/utils.dz" as *
 
-# Parses JSON payload into req.body map/array.
+# Parses JSON payload into `req.body` map or array.
+#
+# @param req {Object} Kasbah request instance
+# @param res {Object} Kasbah response instance
 fn parseJson(req, res)
     if req.body == ""
         return
@@ -21,7 +27,10 @@ fn parseJson(req, res)
     end
 end
 
-# Parses URL-encoded form data into req.body map.
+# Parses URL-encoded form data (`application/x-www-form-urlencoded`) into `req.body`.
+#
+# @param req {Object} Kasbah request instance
+# @param res {Object} Kasbah response instance
 fn parseUrlEncoded(req, res)
     let rawBody = req.body
     req.body = {}
@@ -38,16 +47,21 @@ fn parseUrlEncoded(req, res)
     end
 end
 
-# Parses multipart/form-data payload, extracting text fields and saving file uploads to temp storage.
+# Parses multipart/form-data payload, extracting text fields and streaming files to temp storage.
+#
+# @param req         {Object} Kasbah request instance
+# @param res         {Object} Kasbah response instance
+# @param boundary    {String} Multipart boundary marker
+# @param maxBodySize {Number} Maximum upload size limit in MB
 fn parseMultipart(req, res, boundary, maxBodySize = 10)
-    if boundary == "" || boundary.length() > 70 || boundary.contains("\r") || boundary.contains("\n")
+    if boundary == "" or boundary.length() > 70 or boundary.contains("\r") or boundary.contains("\n")
         res.status(400).json({"error": "Missing boundary in multipart/form-data"})
         return
     end
 
     let boundaryChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'()+_,-./:=? "
     for c in boundary
-        if !boundaryChars.contains(c)
+        if not boundaryChars.contains(c)
             res.status(400).json({"error": "Invalid multipart boundary"})
             return
         end
@@ -57,9 +71,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
     req.body = {}
 
     let boundaryPrefix = "--${boundary}"
-    # RFC 7578 delimiters begin at the body start or after CRLF.  Splitting on
-    # the bare boundary used to corrupt files that merely contained its text.
-    if !rawBody.startsWith(boundaryPrefix)
+    if not rawBody.startsWith(boundaryPrefix)
         res.status(400).json({"error": "Malformed multipart body"})
         return
     end
@@ -77,24 +89,23 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
 
     for part in parts
         let pLen = part.length()
-        if pLen == 0 || part == "--\r\n" || part == "--\n" || part == "--" || part == "\r\n" || part == "\n"
+        if pLen == 0 or part == "--\r\n" or part == "--\n" or part == "--" or part == "\r\n" or part == "\n"
             continue
         end
 
         let pStart = 0
-        if pLen >= 2 && part.slice(0, 2) == "\r\n"
+        if pLen >= 2 and part.slice(0, 2) == "\r\n"
             pStart = 2
-        elif pLen >= 1 && part.slice(0, 1) == "\n"
+        elif pLen >= 1 and part.slice(0, 1) == "\n"
             pStart = 1
         end
 
         let cleanPart = part.slice(pStart)
-
         let byteArrAll = bytes.fromString(cleanPart)
         let headerEnd = -1
         let contentOffset = 4
         for i in 0 .. byteArrAll.length() - 4
-            if byteArrAll[i] == 13 && byteArrAll[i+1] == 10 && byteArrAll[i+2] == 13 && byteArrAll[i+3] == 10
+            if byteArrAll[i] == 13 and byteArrAll[i+1] == 10 and byteArrAll[i+2] == 13 and byteArrAll[i+3] == 10
                 headerEnd = i
                 break
             end
@@ -102,7 +113,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         if headerEnd == -1
             contentOffset = 2
             for i in 0 .. byteArrAll.length() - 2
-                if byteArrAll[i] == 10 && byteArrAll[i+1] == 10
+                if byteArrAll[i] == 10 and byteArrAll[i+1] == 10
                     headerEnd = i
                     break
                 end
@@ -114,7 +125,6 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         end
 
         let headerSection = bytes.toString(byteArrAll.slice(0, headerEnd))
-        # Keep content as raw bytes to preserve binary files (PNG, PDF, etc.)
         let contentBytes = byteArrAll.slice(headerEnd + contentOffset)
 
         let cdHeader = ""
@@ -124,9 +134,9 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         for hLine in hLines
             let hClean = hLine.strip()
             let hLower = hClean.lower()
-            if hLower.length() >= 20 && hLower.slice(0, 20) == "content-disposition:"
+            if hLower.length() >= 20 and hLower.slice(0, 20) == "content-disposition:"
                 cdHeader = hClean.slice(20).strip()
-            elif hLower.length() >= 13 && hLower.slice(0, 13) == "content-type:"
+            elif hLower.length() >= 13 and hLower.slice(0, 13) == "content-type:"
                 ctHeader = hClean.slice(13).strip()
             end
         end
@@ -135,7 +145,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
         let name = disp["name"]
         let filename = sanitizeFilename(disp["filename"])
 
-        if name == "" || name.length() > 128 || name.contains("\r") || name.contains("\n")
+        if name == "" or name.length() > 128 or name.contains("\r") or name.contains("\n")
             continue
         end
 
@@ -151,7 +161,7 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
             end
 
             let tempDir = "${os.tmpDir()}/kasbah_uploads"
-            if !file.exists(tempDir)
+            if not file.exists(tempDir)
                 dir.createAll(tempDir)
             end
             let tempPath = "${tempDir}/${generateId(32)}"
@@ -181,20 +191,23 @@ fn parseMultipart(req, res, boundary, maxBodySize = 10)
                 req.files[name] = fileInfo
             end
         else
-            # Text fields: safe to decode bytes back to string
             req.body[name] = bytes.toString(contentBytes)
         end
     end
 end
 
-# Creates a body parser middleware function with configurable max size limit.
+# Creates a body parser middleware closure.
+#
+# @param maxBodySize {Number} Maximum permitted body size in MB
+# @return            {Function} Middleware function `fn(req, res)`
 fn bodyParser(maxBodySize = 10)
     return fn(req, res)
-        if req.method == "GET" || req.method == "HEAD" || req.method == "OPTIONS"
+        if req.method == "GET" or req.method == "HEAD" or req.method == "OPTIONS"
             return
         end
 
-        if bytes.fromString(req.body).length() > maxBodySize * 1024 * 1024
+        let byteLimit = if maxBodySize > 1024 ? maxBodySize else maxBodySize * 1024 * 1024
+        if bytes.fromString(req.body).length() > byteLimit
             res.status(413).text("Request body too large")
             return
         end

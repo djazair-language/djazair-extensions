@@ -1,10 +1,15 @@
-# Kasbah Middleware — Logger
-# A class-based logger that centralizes request logs, error logs, and level filtering.
+# ═══════════════════════════════════════════════════════════════════════════════
+# logger.dz — Request Logging Middleware
+# ═══════════════════════════════════════════════════════════════════════════════
+# Formats HTTP access logs (method, path, status, latency in ms) and runtime errors.
 
 use datetime
 import "../helpers/utils.dz" as *
 
 class kasbahLogger
+    # Initializes a logger instance with formatting options and minimum log level.
+    #
+    # @param options {Map} Options ("level": "info"|"debug"|"warn"|"error"|"none", "format": "dev"|"combined")
     init(options = {})
         let defaults = {
             "level":  "info",
@@ -19,13 +24,15 @@ class kasbahLogger
             "none":  100
         }
         let levelName = self.configMap["level"].lower()
-        if !self.levelsMap.has(levelName)
+        if not self.levelsMap.has(levelName)
             levelName = "info"
         end
         self.currentLevel = self.levelsMap[levelName]
     end
 
     # Returns formatted timestamp string `[HH:MM:SS]`.
+    #
+    # @return {String} Formatted timestamp
     timestampStr()
         let d = datetime.now()
         let h = str(d.hour())
@@ -43,34 +50,38 @@ class kasbahLogger
         return "[${h}:${m}:${s}]"
     end
 
-    # Core log dispatcher.
+    # Core log message dispatcher.
+    #
+    # @param levelName  {String} Level identifier ("INFO", "ERROR")
+    # @param levelValue {Number} Numeric severity
+    # @param msg        {String} Log message text
     logMsg(levelName, levelValue, msg)
         if levelValue >= self.currentLevel
             print("${self.timestampStr()} [${levelName.upper()}] ${msg}")
         end
     end
 
-    # Logs debug message.
+    # Logs a debug message.
     debug(msg)
         self.logMsg("debug", self.levelsMap["debug"], msg)
     end
 
-    # Logs info message.
+    # Logs an informational message.
     info(msg)
         self.logMsg("info", self.levelsMap["info"], msg)
     end
 
-    # Logs warn message.
+    # Logs a warning message.
     warn(msg)
         self.logMsg("warn", self.levelsMap["warn"], msg)
     end
 
-    # Logs error message.
+    # Logs an error message.
     error(msg)
         self.logMsg("error", self.levelsMap["error"], msg)
     end
 
-    # Lifecycle hook: called at request start to record timestamp and request metadata.
+    # Lifecycle hook: called at start of HTTP request.
     onRequest(req)
         req.set("logStart", datetime.ticks())
         req.set("logMethod", req.method)
@@ -78,7 +89,7 @@ class kasbahLogger
         req.set("logIp", req.ip)
     end
 
-    # Lifecycle hook: called at request completion to log HTTP method, path, status, and duration.
+    # Lifecycle hook: called after response completion.
     onComplete(req, res)
         if self.currentLevel > self.levelsMap["info"]
             return
@@ -105,7 +116,7 @@ class kasbahLogger
         self.logMsg("info", 20, msg)
     end
 
-    # Lifecycle hook: called when an error occurs during request processing.
+    # Lifecycle hook: called on runtime error.
     onError(req, err)
         let method = req.get("logMethod")
         if isNull(method)

@@ -1,5 +1,8 @@
-# Kasbah Middleware — Session
-# Server-side session management with file-based storage.
+# ═══════════════════════════════════════════════════════════════════════════════
+# session.dz — Session Middleware & File-Backed Storage
+# ═══════════════════════════════════════════════════════════════════════════════
+# Provides signed cookie session tokens (HMAC SHA-256), file-based session stores,
+# and session state binding to `req.session`.
 
 use os
 use file
@@ -12,17 +15,23 @@ import "../helpers/cookie.dz" as *
 import "../core/sessionManager.dz" as sm
 
 class fileStore
+    # Initializes a file-based session storage directory.
+    #
+    # @param dirPath {String} Storage directory path
     init(dirPath)
         self.storeDir = dirPath
-        if !file.exists(dirPath)
+        if not file.exists(dirPath)
             dir.createAll(dirPath)
         end
     end
 
-    # Reads session JSON data from disk for a session ID.
+    # Reads session JSON data from disk for a given session ID.
+    #
+    # @param sid {String} Session ID
+    # @return    {Map}    Session data dictionary
     read(sid)
         let spath = "${self.storeDir}/${sid}.json"
-        if !file.exists(spath)
+        if not file.exists(spath)
             return {}
         end
         try
@@ -33,7 +42,10 @@ class fileStore
         end
     end
 
-    # Writes session JSON data to disk for a session ID.
+    # Writes session data map to disk as JSON.
+    #
+    # @param sid  {String} Session ID
+    # @param data {Map}    Session dictionary
     write(sid, data)
         if data.keys().length() == 0
             self.destroy(sid)
@@ -46,7 +58,9 @@ class fileStore
         end
     end
 
-    # Deletes session JSON file from disk.
+    # Deletes session file from disk.
+    #
+    # @param sid {String} Session ID
     destroy(sid)
         let spath = "${self.storeDir}/${sid}.json"
         try
@@ -58,7 +72,16 @@ class fileStore
     end
 end
 
-# Creates a session middleware function with file-backed storage and cookie rotation support.
+# Creates a signed session middleware closure.
+#
+# @param options {Map} Session options:
+#                      - secret {String} HMAC signing secret (min 32 chars)
+#                      - name {String} Cookie name (default: "kasbah.sid")
+#                      - maxAge {Number} Expiry in seconds (default: 86400)
+#                      - secure {Boolean} HTTPS only flag
+#                      - sameSite {String} "Lax" or "Strict"
+#                      - dir {String} Storage directory
+# @return        {Function} Middleware function `fn(req, res)`
 fn session(options = {})
     let cookieName = "kasbah.sid"
     if options.has("name")
@@ -78,7 +101,7 @@ fn session(options = {})
     end
 
     let secret = if options.has("secret") ? options["secret"] else ""
-    if !isString(secret) || secret.length() < 32
+    if not isString(secret) or secret.length() < 32
         throw "kasbah.session(): 'secret' must contain at least 32 characters"
     end
 
@@ -86,14 +109,14 @@ fn session(options = {})
     let sameSite = if options.has("sameSite") ? options["sameSite"] else "Lax"
     let cookieAttributes = {
         "httpOnly": True,
-        "path": "/",
-        "maxAge": maxAge,
+        "path":     "/",
+        "maxAge":   maxAge,
         "sameSite": sameSite,
-        "secure": secure
+        "secure":   secure
     }
 
     fn validSessionToken(token)
-        if !isString(token)
+        if not isString(token)
             return ""
         end
         let pieces = token.split(".")
@@ -114,14 +137,13 @@ fn session(options = {})
 
     return fn(req, res)
         let sid = Null
-
         let rawSid = req.cookies.get(cookieName)
         sid = validSessionToken(rawSid)
 
         let sessData = {}
         let isNew    = False
 
-        if isNull(sid) || sid == ""
+        if isNull(sid) or sid == ""
             sid   = generateId(32)
             isNew = True
             let token = "${sid}.${crypto.sha256("${secret}:${sid}")}"
@@ -131,8 +153,8 @@ fn session(options = {})
         end
 
         let mgr = new sm.sessionManager(sessData, sid, isNew, store, res, {
-            "secret": secret,
-            "name": cookieName,
+            "secret":     secret,
+            "name":       cookieName,
             "attributes": cookieAttributes
         })
         req.session = mgr

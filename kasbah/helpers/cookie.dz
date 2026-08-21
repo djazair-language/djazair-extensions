@@ -1,15 +1,19 @@
-# Kasbah Helpers — Cookie parsing and serialization
-# Implements RFC 6265 cookie parsing and Set-Cookie header generation
+# ═══════════════════════════════════════════════════════════════════════════════
+# cookie.dz — RFC 6265 Cookie Parser & Serializer Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+# Handles parsing of HTTP Cookie headers and serialization of Set-Cookie directives.
 
 import "utils.dz" as *
 
-# Parse Cookie header string into a key-value map
-# "token=abc123; theme=dark" → {"token": "abc123", "theme": "dark"}
-# Handles values that contain '=' (e.g. base64 tokens) by splitting on the first '=' only
+# Parses an HTTP Cookie header string into a key-value dictionary.
+# Example: "token=abc123; theme=dark" -> {"token": "abc123", "theme": "dark"}
+#
+# @param header {String} Raw Cookie header string
+# @return       {Map}    Parsed cookies dictionary
 fn parseCookie(header)
     let cookies = {}
 
-    if isNull(header) || header == ""
+    if isNull(header) or header == ""
         return cookies
     end
 
@@ -28,9 +32,10 @@ fn parseCookie(header)
     return cookies
 end
 
-# Percent-encodes characters that are not safe in cookie names or values.
-# Encodes: space, comma, semicolon, backslash, double-quote, and control chars.
-# Safe characters (RFC 6265 §4.1.1) are passed through unchanged.
+# Percent-encodes characters that are unsafe inside cookie names or values.
+#
+# @param s {String} Raw value
+# @return  {String} Encoded safe string
 fn urlEncodeValue(s)
     if isNull(s)
         return ""
@@ -53,69 +58,77 @@ fn urlEncodeValue(s)
     return result
 end
 
+# Validates that a cookie attribute value contains no control characters or semicolons.
+#
+# @param value {String} Attribute string (e.g. domain or path)
+# @return      {Boolean} True if safe
 fn isSafeCookieAttribute(value)
-    if !isString(value) || value == "" || value.contains("\r") || value.contains("\n")
+    if not isString(value) or value == "" or value.contains("\r") or value.contains("\n")
         return False
     end
-    return !value.contains(";")
+    return not value.contains(";")
 end
 
-# Serialize a cookie into a Set-Cookie header string
-# Options: domain, path, expires, maxAge, httpOnly, secure, sameSite
+# Serializes a cookie name, value, and options into a valid Set-Cookie header string.
+#
+# @param name    {String} Cookie name
+# @param value   {String} Cookie value
+# @param options {Map}    Cookie attributes (domain, path, expires, maxAge, httpOnly, secure, sameSite)
+# @return        {String} Formatted Set-Cookie header directive
 fn serializeCookie(name, value, options = {})
     if isNull(options)
         options = {}
     end
-    if !isValidHttpToken(name)
+    if not isValidHttpToken(name)
         return ""
     end
-    if isString(value) && (value.contains("\r") || value.contains("\n"))
+    if isString(value) and (value.contains("\r") or value.contains("\n"))
         return ""
     end
     let encodedValue = urlEncodeValue(str(value))
     let parts = ["${name}=${encodedValue}"]
 
-    if options.has("domain") && options["domain"] != ""
-        if !isSafeCookieAttribute(options["domain"])
+    if options.has("domain") and options["domain"] != ""
+        if not isSafeCookieAttribute(options["domain"])
             return ""
         end
         parts.append("Domain=${options["domain"]}")
     end
 
-    if options.has("path") && options["path"] != ""
-        if !isSafeCookieAttribute(options["path"])
+    if options.has("path") and options["path"] != ""
+        if not isSafeCookieAttribute(options["path"])
             return ""
         end
         parts.append("Path=${options["path"]}")
     end
 
-    if options.has("expires") && options["expires"] != ""
-        if !isSafeCookieAttribute(options["expires"])
+    if options.has("expires") and options["expires"] != ""
+        if not isSafeCookieAttribute(options["expires"])
             return ""
         end
         parts.append("Expires=${options["expires"]}")
     end
 
-    if options.has("maxAge") && isNumber(options["maxAge"])
+    if options.has("maxAge") and isNumber(options["maxAge"])
         parts.append("Max-Age=${options["maxAge"]}")
     end
 
-    if options.has("httpOnly") && options["httpOnly"]
+    if options.has("httpOnly") and options["httpOnly"]
         parts.append("HttpOnly")
     end
 
-    if options.has("secure") && options["secure"]
+    if options.has("secure") and options["secure"]
         parts.append("Secure")
     end
 
-    if options.has("sameSite") && options["sameSite"] != ""
+    if options.has("sameSite") and options["sameSite"] != ""
         let sameSite = str(options["sameSite"]).lower()
         if sameSite == "lax"
             parts.append("SameSite=Lax")
         elif sameSite == "strict"
             parts.append("SameSite=Strict")
         elif sameSite == "none"
-            if !(options.has("secure") && options["secure"])
+            if not (options.has("secure") and options["secure"])
                 return ""
             end
             parts.append("SameSite=None")

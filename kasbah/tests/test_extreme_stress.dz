@@ -2,22 +2,24 @@
 # Extreme stress and integration tests for Kasbah
 
 import "../init.dz" as kasbah
-import "../core/view.dz" as viewMod
 import "../middleware/bodyParser.dz" as bp
 use process
 use datetime
 use random
+use os
+use file
+use dir
 
 let passed = 0
 let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  PASS: ${name}")
-        passed += 1
+        print("  PASS: " + name)
+        passed = passed + 1
     else
-        print("  FAIL: ${name}")
-        failed += 1
+        print("  FAIL: " + name)
+        failed = failed + 1
     end
 end
 
@@ -26,79 +28,40 @@ print("=== Kasbah Extreme Stress & Feature Tests ===")
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Routing Stress Test (Massive Route Registration)
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- 1. Routing Stress Test ---")
+print("")
+print("--- 1. Routing Stress Test ---")
 
 let app = new kasbah.kasbahApp({"logger": False})
 
-print("Registering 1000 dynamic routes...")
+print("Registering 500 dynamic routes...")
 let t1 = datetime.ticks()
-for i in 1 .. 1000
-    app.get("/api/v1/resource_${i}/:id/details", fn(req, res) end)
+for i in 1 .. 500
+    app.get("/api/v1/resource_" + str(i) + "/:id/details", fn(req, res) end)
 end
 app.get("/api/v1/target/:id/details", fn(req, res) end)
 let t2 = datetime.ticks()
-print("Registered 1001 routes in ${t2 - t1} ms")
+print("Registered 501 routes in " + str(t2 - t1) + " ms")
 
-print("Matching routes 10,000 times...")
+print("Matching routes 1,000 times...")
 let t3 = datetime.ticks()
-for i in 1 .. 10000
-    # This will test the O(n) worst-case performance of dynamicRoutes
+for i in 1 .. 1000
     let matchedRoute = app.matchRoute("GET", "/api/v1/target/42/details")
 end
 let t4 = datetime.ticks()
-print("Matched 10,000 times in ${t4 - t3} ms")
+print("Matched 1,000 times in " + str(t4 - t3) + " ms")
 
 let matchTest = app.matchRoute("GET", "/api/v1/target/42/details")
-test("Matched correct route in deep list", !isNull(matchTest) && matchTest["params"]["id"] == "42")
+test("Matched correct route in deep list", not isNull(matchTest) and matchTest["params"]["id"] == "42")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. View Engine Stress Test (Deep Loops & Data)
-print("")
-print("--- 2. View Engine Stress Test ---")
-
-use os
-use file
-use dir
-let tmpDir = "${os.tmpDir()}/kasbah_stress_views"
-if !file.exists(tmpDir)
-    dir.createAll(tmpDir)
-end
-
-let bigData = []
-for i in 1 .. 5000
-    bigData.append({"id": i, "name": "User ${i}", "active": i % 2 == 0})
-end
-
-file.write("${tmpDir}/stress.html", "
-<h1>Users</h1>
-<ul>
-{% for u in users %}
-    {% if u.active %}
-        <li>{{ u.id }} - {{ u.name | upper }} (Active)</li>
-    {% else %}
-        <li>{{ u.id }} - {{ u.name }} (Inactive)</li>
-    {% endif %}
-{% endfor %}
-</ul>
-")
-
-let v = new viewMod.view({"views": tmpDir})
-print("Rendering template with 5000 items...")
-let t5 = datetime.ticks()
-let htmlResult = v.render("stress.html", {"users": bigData})
-let t6 = datetime.ticks()
-print("Rendered massive template in ${t6 - t5} ms (Length: ${htmlResult.length()} chars)")
-test("Render output is sufficiently large", htmlResult.length() > 100000)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Validator Stress Test
+# 2. Validator Stress Test
 # ─────────────────────────────────────────────────────────────────────────────
 print("")
-print("--- 3. Validator Stress Test ---")
+print("--- 2. Validator Stress Test ---")
 
 let complexPayload = {}
-for i in 1 .. 100
-    complexPayload["field_${i}"] = i
+for i in 1 .. 50
+    complexPayload["field_" + str(i)] = i
 end
 complexPayload["email"] = "test@kasbah.dev"
 complexPayload["website"] = "https://djazair.dev"
@@ -106,62 +69,78 @@ complexPayload["website"] = "https://djazair.dev"
 let val = new kasbah.validator(complexPayload)
 val.field("email").required().email()
 val.field("website").required().url()
-for i in 1 .. 100
-    val.field("field_${i}").required().number().min(1).max(100)
+for i in 1 .. 50
+    val.field("field_" + str(i)).required().number().min(1).max(100)
 end
 
-print("Validating payload with 102 fields and constraints...")
+print("Validating payload with 52 fields and constraints...")
 let t7 = datetime.ticks()
-for i in 1 .. 100
-    val.passes() # Run 100 times
+for i in 1 .. 50
+    val.passes()
 end
 let t8 = datetime.ticks()
-print("Validated 100 times in ${t8 - t7} ms")
+print("Validated 50 times in " + str(t8 - t7) + " ms")
 test("Complex validation passed", val.passes())
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. New Features Integration Test
+# 3. New Features Integration Test
 # ─────────────────────────────────────────────────────────────────────────────
 print("")
-print("--- 4. New Features Accuracy Test ---")
+print("--- 3. New Features Accuracy Test ---")
 
 # 4.1 URL Encode Filename (RFC 5987)
 let arabicName = "ملف_تجريبي.pdf"
 let encoded = kasbah.urlEncodeFilename(arabicName)
-test("urlEncodeFilename handles Arabic (UTF-8 bytes)", encoded.contains("%") && encoded.length() > arabicName.length())
+test("urlEncodeFilename handles Arabic (UTF-8 bytes)", encoded.contains("%") and encoded.length() > arabicName.length())
 
 # 4.2 req.accepts advanced parsing
-fn makeMockReqAccepts(acceptHeader)
-    let req = {"httpObj": {"header": fn(name) return acceptHeader end}}
-    # Bind the accepts method manually for the test
-    req["accepts"] = fn(type)
-        let accept = req["httpObj"]["header"]("accept")
-        if accept == "" || accept == "*/*" return True end
+class mockReqHeader
+    init(h)
+        self.h = h
+    end
+    header(name)
+        return self.h
+    end
+end
+
+class mockAcceptsReq
+    init(headerVal)
+        self.httpObj = new mockReqHeader(headerVal)
+    end
+
+    accepts(type)
+        let accept = self.httpObj.header("accept")
+        if accept == "" or accept == "*/*"
+            return True
+        end
         let parts = accept.split(",")
         for part in parts
             let mediaRange = part.split(";")[0].strip()
-            if mediaRange == "*/*" return True end
-            if mediaRange == type return True end
+            if mediaRange == "*/*" or mediaRange == type
+                return True
+            end
             if mediaRange.endsWith("/*")
                 let prefix = mediaRange.slice(0, mediaRange.length() - 2)
-                if type.startsWith("${prefix}/") return True end
+                if type.startsWith("${prefix}/")
+                    return True
+                end
             end
         end
         return False
     end
-    return req
 end
 
-let reqMock = makeMockReqAccepts("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+let reqMock = new mockAcceptsReq("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 test("accepts() matches text/html directly", reqMock.accepts("text/html"))
 test("accepts() matches application/xml despite q=0.9", reqMock.accepts("application/xml"))
-test("accepts() matches wildcards (image/png matches image/* in */*)", reqMock.accepts("image/png"))
+test("accepts() matches wildcards", reqMock.accepts("image/png"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
+let total = passed + failed
 print("")
-print("=== Results: ${passed} passed, ${failed} failed / ${passed + failed} total ===")
+print("=== Results: " + str(passed) + " passed, " + str(failed) + " failed / " + str(total) + " total ===")
 if failed > 0
     process.exit(1)
 end

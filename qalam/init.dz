@@ -1,0 +1,25 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Qalam — AST-based HTML Template Engine for the Djazair Language
+# ═══════════════════════════════════════════════════════════════════════════════
+# Exports the view class for file-based rendering and the renderString helper
+# for in-memory template rendering without requiring files on disk.
+
+import "core/engine.dz" as engineMod
+import "core/escaper.dz" as escaperMod
+
+# ── Core Engine ───────────────────────────────────────────────────────────────
+let view       = engineMod.view
+let escapeHtml = escaperMod.escapeHtml
+
+# ── Convenience Helper ────────────────────────────────────────────────────────
+
+# Renders a template string in memory without requiring a file on disk.
+#
+# @param templateString {String} Raw template text (e.g. "Hello, {{ name }}!")
+# @param data           {Map}    Template context variables
+# @param blocksMap      {Map}    Optional block overrides for inheritance
+# @return               {String} Rendered HTML string
+fn renderString(templateString, data = {}, blocksMap = {})
+    let v = new engineMod.view({})
+    return v.renderString(templateString, data, blocksMap)
+end

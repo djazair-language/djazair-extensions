@@ -1,67 +1,93 @@
-# Kasbah Core — View class
-# Handles reading HTML templates, parsing AST, and evaluating Loops, Conditionals, and Layouts.
+# ═══════════════════════════════════════════════════════════════════════════════
+# engine.dz — Qalam AST Template Engine
+# ═══════════════════════════════════════════════════════════════════════════════
+# Features:
+# - Variable interpolation: `{{ var }}` (auto HTML escaped)
+# - Unescaped HTML: `{{{ raw }}}`
+# - Conditionals: `{% if cond %} ... {% else %} ... {% endif %}`
+# - Loops: `{% for item in items %} ... {% endfor %}`
+# - Template inheritance: `{% extends "layout" %}` and `{% block name %} ... {% endblock %}`
+# - Partials / sub-views: `{% include "partials/nav" %}`
+# - Security: Directory traversal prevention, XSS auto-escaping
 
 use file
 use path
 use regex
-import "../helpers/utils.dz" as *
+import "escaper.dz" as *
 
 class view
-    init(config)
+    # Initializes the template renderer with configuration options.
+    #
+    # @param config {Map} Configuration options:
+    #                     - "views" {String} Base directory for template files
+    init(config = {})
         self.configMap = config
     end
 
+    # Resolves and validates absolute filesystem path for a template file.
+    # Prevents directory traversal attacks (`../`).
+    #
+    # @param templateName {String} Template name/path (e.g. "trades/list")
+    # @return             {String} Absolute normalized filesystem path
     getSafePath(templateName)
         let viewsDir = ""
-        if self.configMap.has("views") && self.configMap["views"] != ""
+        if self.configMap.has("views") and self.configMap["views"] != ""
             viewsDir = path.normalize(self.configMap["views"])
         else
             viewsDir = path.resolve("views")
         end
 
-        if !templateName.contains(".")
+        if not templateName.contains(".")
             templateName = "${templateName}.html"
         end
 
         let safePath = path.normalize("${viewsDir}/${templateName}")
         let viewsDirLower = viewsDir.lower()
-        if !viewsDirLower.endsWith("/") && !viewsDirLower.endsWith("\\")
+        if not viewsDirLower.endsWith("/") and not viewsDirLower.endsWith("\\")
             let okSlash = safePath.lower().startsWith("${viewsDirLower}/")
             let okBackslash = safePath.lower().startsWith("${viewsDirLower}\\")
-            if !okSlash && !okBackslash
-                throw "Forbidden view path traversal: ${templateName}"
+            if not okSlash and not okBackslash
+                throw "Forbidden template path traversal: ${templateName}"
             end
         else
-            if !safePath.lower().startsWith(viewsDirLower)
-                throw "Forbidden view path traversal: ${templateName}"
+            if not safePath.lower().startsWith(viewsDirLower)
+                throw "Forbidden template path traversal: ${templateName}"
             end
         end
         return safePath
     end
 
+    # Reads template source file from disk.
+    #
+    # @param templateName {String} Template path
+    # @return             {String} Template file text content
     readFile(templateName)
         let safePath = self.getSafePath(templateName)
-        if !file.exists(safePath)
-            throw "View not found: ${templateName}"
+        if not file.exists(safePath)
+            throw "Template not found: ${templateName}"
         end
         let content = ""
         let fh = file.open(safePath, "r")
         try
             content = fh.read()
         catch err
-            throw "Error reading view file: ${templateName}"
+            throw "Error reading template file: ${templateName}"
         finally
             fh.close()
         end
         return content
     end
 
+    # Tokenizes template string into AST token objects (TEXT, ESC, RAW, TAG).
+    #
+    # @param templateString {String} Raw template text
+    # @return               {Array}  List of token maps
     tokenize(templateString)
-        let pat = regex.compile("(\\{\\{\\{[^\}]+\\}\\}\\}|\\{\\{[^\}]+\\}\\}|\\{%[^%]+%\\})")
+        let pat = regex.compile("(\\{\\{\\{[^\\}]+\\}\\}\\}|\\{\\{[^\\}]+\\}\\}|\\{%[^%]+%\\})")
         let tokens = []
         let i = 0
         let len = templateString.length()
-        
+
         while i < len
             let substr = templateString.slice(i)
             let m = pat.search(substr)
@@ -69,35 +95,47 @@ class view
                 tokens.append({"type": "TEXT", "val": substr})
                 break
             end
-            
+
             let startIdx = m.start(0)
-            let endIdx = m.endPos(0)
-            let tag = m.group(0)
-            
+            let endIdx   = m.endPos(0)
+            let tag      = m.group(0)
+
             if startIdx > 0
                 tokens.append({"type": "TEXT", "val": substr.slice(0, startIdx)})
             end
-            
+
             if tag.startsWith("{{{")
-                tokens.append({"type": "RAW", "val": tag.slice(3, tag.length()-3).strip()})
+                tokens.append({"type": "RAW", "val": tag.slice(3, tag.length() - 3).strip()})
             elif tag.startsWith("{{")
-                tokens.append({"type": "ESC", "val": tag.slice(2, tag.length()-2).strip()})
+                tokens.append({"type": "ESC", "val": tag.slice(2, tag.length() - 2).strip()})
             elif tag.startsWith("{%")
-                tokens.append({"type": "TAG", "val": tag.slice(2, tag.length()-2).strip()})
+                tokens.append({"type": "TAG", "val": tag.slice(2, tag.length() - 2).strip()})
             end
-            
+
             i = i + endIdx
         end
         return tokens
     end
 
+    # Strips surrounding double or single quotation marks from a string literal.
+    #
+    # @param strVal {String} String literal with quotes
+    # @return       {String} Clean string without surrounding quotes
     stripQuotes(strVal)
-        if (strVal.startsWith("'") and strVal.endsWith("'")) or (strVal.startsWith("\"") and strVal.endsWith("\""))
-            return strVal.slice(1, strVal.length()-1)
+        let s = str(strVal).strip()
+        if (s.startsWith("\"") and s.endsWith("\"")) or (s.startsWith("'") and s.endsWith("'"))
+            if s.length() >= 2
+                return s.slice(1, s.length() - 1)
+            end
         end
-        return strVal
+        return s
     end
 
+    # Parses flat token stream into a hierarchical AST node tree.
+    #
+    # @param tokens {Array} Token list from tokenize()
+    # @param state  {Map}   Mutable index state `{"i": currentIndex}`
+    # @return       {Array} AST node tree
     parseTokens(tokens, state)
         let nodes = []
         while state["i"] < tokens.length()
@@ -112,7 +150,7 @@ class view
                 if spaceIdx != -1
                     tag = val.slice(0, spaceIdx)
                 end
-                
+
                 if tag == "if"
                     let cond = val.slice(2).strip()
                     let trueNodes = self.parseTokens(tokens, state)
@@ -150,6 +188,12 @@ class view
         return nodes
     end
 
+    # Evaluates a template variable expression with dot-notation on the data context.
+    # Supports negation prefix `!` and nested dot paths like `user.profile.name`.
+    #
+    # @param expr {String} Expression string (e.g. "user.profile.name" or "!item.active")
+    # @param data {Map}    Variable context map
+    # @return     {Any}    Evaluated value
     evalExpr(expr, data)
         expr = expr.strip()
         let isNegated = False
@@ -157,7 +201,7 @@ class view
             isNegated = True
             expr = expr.slice(1).strip()
         end
-        
+
         let parts = expr.split(".")
         let current = data
         for p in parts
@@ -168,9 +212,12 @@ class view
                 break
             end
         end
-        
+
         if isNegated
-            if isNull(current) or current == False or current == 0 or current == "" or (isArray(current) and current.length() == 0)
+            if isNull(current) or current == False or current == 0 or current == ""
+                return True
+            end
+            if isArray(current) and current.length() == 0
                 return True
             end
             return False
@@ -178,6 +225,12 @@ class view
         return current
     end
 
+    # Evaluates an AST node list recursively and produces the output HTML string.
+    #
+    # @param nodes     {Array} AST node list
+    # @param data      {Map}   Template context variables
+    # @param blocksMap {Map}   Block overrides map for template inheritance
+    # @return          {String} Rendered HTML string
     evalNodes(nodes, data, blocksMap)
         let out = ""
         for n in nodes
@@ -185,23 +238,22 @@ class view
                 out += n["val"]
             elif n["type"] == "ESC"
                 let val = self.evalExpr(n["val"], data)
-                if !isNull(val)
+                if not isNull(val)
                     out += escapeHtml(str(val))
                 end
             elif n["type"] == "RAW"
                 let val = self.evalExpr(n["val"], data)
-                if !isNull(val)
+                if not isNull(val)
                     out += str(val)
                 end
             elif n["type"] == "IF"
                 let condVal = self.evalExpr(n["cond"], data)
                 let isTruthy = False
-                if !isNull(condVal) and condVal != False and condVal != 0 and condVal != ""
-                    if !isArray(condVal) or condVal.length() > 0
+                if not isNull(condVal) and condVal != False and condVal != 0 and condVal != ""
+                    if not isArray(condVal) or condVal.length() > 0
                         isTruthy = True
                     end
                 end
-                
                 if isTruthy
                     out += self.evalNodes(n["trueNodes"], data, blocksMap)
                 else
@@ -233,6 +285,10 @@ class view
         return out
     end
 
+    # Extracts named `{% block %}` definitions from a child template for layout inheritance.
+    #
+    # @param nodes     {Array} AST node list
+    # @param blocksMap {Map}   Target map to populate with block name to nodes
     extractBlocks(nodes, blocksMap)
         for n in nodes
             if n["type"] == "BLOCK"
@@ -241,12 +297,17 @@ class view
         end
     end
 
+    # Reads, parses, and renders a template file with a data context.
+    #
+    # @param templateName {String} Template path name (e.g. "home" or "trades/list")
+    # @param data         {Map}    Template variables
+    # @return             {String} Rendered HTML string
     render(templateName, data = {})
         let content = self.readFile(templateName)
         let tokens = self.tokenize(content)
         let state = {"i": 0}
         let nodes = self.parseTokens(tokens, state)
-        
+
         let extendsNode = Null
         for n in nodes
             if n["type"] == "EXTENDS"
@@ -254,8 +315,8 @@ class view
                 break
             end
         end
-        
-        if !isNull(extendsNode)
+
+        if not isNull(extendsNode)
             let blocksMap = {}
             self.extractBlocks(nodes, blocksMap)
             let parentContent = self.readFile(extendsNode["val"])
@@ -267,5 +328,19 @@ class view
             let emptyMap = {}
             return self.evalNodes(nodes, data, emptyMap)
         end
+    end
+
+    # Parses and renders an in-memory template string directly with a data context.
+    # Does not require a template file on disk.
+    #
+    # @param templateString {String} Raw template text
+    # @param data           {Map}    Template variables
+    # @param blocksMap      {Map}    Optional block overrides for inheritance
+    # @return               {String} Rendered HTML string
+    renderString(templateString, data = {}, blocksMap = {})
+        let tokens = self.tokenize(templateString)
+        let state = {"i": 0}
+        let nodes = self.parseTokens(tokens, state)
+        return self.evalNodes(nodes, data, blocksMap)
     end
 end

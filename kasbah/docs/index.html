@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kasbah Web Framework — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: rgba(18, 26, 43, 0.75);
+      --bg-card-hover: rgba(28, 38, 62, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --primary: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.25);
+      --secondary: #818cf8;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --code-bg: #0f172a;
+      --sidebar-width: 280px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.7;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* ── Header / Navbar ── */
+    header {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 70px;
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+      animation: pulseGlow 3s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 15px var(--primary-glow); transform: scale(1); }
+      100% { box-shadow: 0 0 25px rgba(129, 140, 248, 0.4); transform: scale(1.03); }
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-badge {
+      font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border-accent);
+      font-weight: 600;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .search-box {
+      position: relative;
+      width: 260px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      padding: 8px 12px 8px 36px;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Layout ── */
+    .container {
+      display: flex;
+      margin-top: 70px;
+      min-height: calc(100vh - 70px);
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      width: var(--sidebar-width);
+      position: fixed;
+      top: 70px;
+      bottom: 0;
+      left: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      z-index: 900;
+    }
+
+    aside::-webkit-scrollbar {
+      width: 5px;
+    }
+    aside::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .menu-group {
+      margin-bottom: 1.8rem;
+    }
+
+    .menu-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.8rem;
+      padding-left: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .menu-list {
+      list-style: none;
+    }
+
+    .menu-item a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .menu-item a:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(4px);
+    }
+
+    .menu-item a.active {
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 3px solid var(--primary);
+      font-weight: 700;
+    }
+
+    /* ── Main Content ── */
+    main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 3rem 4rem;
+      max-width: 1150px;
+    }
+
+    /* ── Hero Banner ── */
+    .hero {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 3rem;
+      margin-bottom: 3.5rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: 2.8rem;
+      font-weight: 900;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.25;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 750px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .badge.green { border-color: rgba(16, 185, 129, 0.3); color: #34d399; background: rgba(16, 185, 129, 0.1); }
+    .badge.blue  { border-color: rgba(56, 189, 248, 0.3); color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+    .badge.purple { border-color: rgba(129, 140, 248, 0.3); color: #818cf8; background: rgba(129, 140, 248, 0.1); }
+
+    /* ── Sections & Cards ── */
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 90px;
+    }
+
+    h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.8rem;
+      letter-spacing: -0.3px;
+    }
+
+    h2 i {
+      color: var(--primary);
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 2rem 0 0.8rem;
+      color: #e2e8f0;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+      font-size: 1.02rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    /* ── Code Blocks ── */
+    .code-wrapper {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin: 1.2rem 0 1.8rem;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border-color);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .code-header .lang-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: inherit;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: #0b0f19;
+      border-color: var(--primary);
+    }
+
+    pre {
+      padding: 1.2rem 1.5rem;
+      overflow-x: auto;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    p code, li code, td code {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      display: inline-block;
+    }
+
+    /* Syntax Highlighting Colors */
+    .kwd { color: #f472b6; font-weight: 600; }  /* use, let, fn, if, return */
+    .str { color: #a7f3d0; }                     /* "strings" */
+    .fn  { color: #60a5fa; font-weight: 500; }  /* functionNames */
+    .num { color: #fbbf24; }                     /* 123 */
+    .cmt { color: #64748b; font-style: italic; }/* # comments */
+    .typ { color: #c084fc; }                     /* router, app */
+
+    /* ── Tables ── */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0 2rem;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.03);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* ── Callout Boxes ── */
+    .callout {
+      padding: 1.2rem 1.5rem;
+      border-radius: 10px;
+      margin: 1.5rem 0;
+      border-left: 4px solid;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .callout i {
+      font-size: 1.3rem;
+      margin-top: 3px;
+    }
+
+    .callout.tip {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.06);
+    }
+    .callout.tip i { color: var(--accent); }
+
+    .callout.info {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.06);
+    }
+    .callout.info i { color: var(--primary); }
+
+    .callout.warn {
+      border-color: var(--warning);
+      background: rgba(245, 158, 11, 0.06);
+    }
+    .callout.warn i { color: var(--warning); }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      aside {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      aside.open {
+        transform: translateX(0);
+      }
+      main {
+        margin-left: 0;
+        padding: 2rem 1.5rem;
+      }
+      .mobile-menu-btn {
+        display: block !important;
+      }
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top Header ── -->
+  <header>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button class="mobile-menu-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+      <a href="#" class="brand">
+        <div class="brand-logo"><i class="fa-solid fa-layer-group"></i></div>
+        <div>
+          <span class="brand-title">Kasbah</span>
+          <span class="brand-badge">v0.1.0</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="nav-actions">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="Search functions & docs...">
+      </div>
+      <a href="https://github.com" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
+        <i class="fa-brands fa-github"></i>
+      </a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- ── Sidebar Navigation ── -->
+    <aside id="sidebar">
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-compass"></i> Getting Started</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#intro" class="active"><i class="fa-solid fa-circle-info"></i> Overview</a></li>
+          <li class="menu-item"><a href="#quickstart"><i class="fa-solid fa-bolt"></i> Quick Start</a></li>
+          <li class="menu-item"><a href="#config"><i class="fa-solid fa-sliders"></i> Configuration</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-route"></i> Routing Subsystem</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#routing"><i class="fa-solid fa-signs-post"></i> Basic Routing</a></li>
+          <li class="menu-item"><a href="#router-module"><i class="fa-solid fa-sitemap"></i> Standalone Routers</a></li>
+          <li class="menu-item"><a href="#groups"><i class="fa-solid fa-object-group"></i> Route Groups</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-arrows-split-up-and-left"></i> HTTP Lifecycle</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#request"><i class="fa-solid fa-arrow-down-long"></i> Request (req)</a></li>
+          <li class="menu-item"><a href="#response"><i class="fa-solid fa-arrow-up-long"></i> Response (res)</a></li>
+          <li class="menu-item"><a href="#semantic"><i class="fa-solid fa-circle-check"></i> Semantic Helpers</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-toolbox"></i> Core Engines</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#validator"><i class="fa-solid fa-shield-halved"></i> Validation Engine</a></li>
+          <li class="menu-item"><a href="#templating"><i class="fa-solid fa-code"></i> HTML Templating</a></li>
+          <li class="menu-item"><a href="#uploads"><i class="fa-solid fa-cloud-arrow-up"></i> File Uploads</a></li>
+          <li class="menu-item"><a href="#session"><i class="fa-solid fa-key"></i> Sessions & Cookies</a></li>
+          <li class="menu-item"><a href="#errors"><i class="fa-solid fa-triangle-exclamation"></i> Error & 404 Handling</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-laptop-code"></i> Code Examples</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#full-example"><i class="fa-solid fa-rocket"></i> Full App Example</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ── Main Content Area ── -->
+    <main>
+
+      <!-- Hero Banner -->
+      <div class="hero">
+        <h1 class="hero-title">Kasbah Web Framework for Djazair</h1>
+        <p class="hero-subtitle">
+          A modular, high-performance, and secure web framework built natively for the <strong>Djazair</strong> programming language. Designed around modern global standards (Express, FastAPI, Laravel).
+        </p>
+
+        <div class="hero-badges">
+          <span class="badge green"><i class="fa-solid fa-check-double"></i> 100% Test Pass Rate (142/142)</span>
+          <span class="badge blue"><i class="fa-solid fa-shield"></i> Path Traversal Protected</span>
+          <span class="badge purple"><i class="fa-solid fa-feather"></i> 100% Pure Djazair</span>
+        </div>
+
+        <div class="code-wrapper" style="margin-bottom: 0;">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-terminal"></i> Terminal</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>dpm install kasbah</code></pre>
+        </div>
+      </div>
+
+      <!-- Section: Intro -->
+      <section id="intro">
+        <h2><i class="fa-solid fa-circle-info"></i> Overview & Architecture</h2>
+        <p>
+          <strong>Kasbah</strong> is engineered to deliver a world-class developer experience in Djazair without sacrificing speed, security, or readability:
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-sitemap"></i></div>
+            <div class="card-title">Standalone Modular Routers</div>
+            <p>Separate routing logic into dedicated router files and mount them cleanly with <code>app.mount("/prefix", subRouter)</code>.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-cubes"></i></div>
+            <div class="card-title">Intrinsic Core Body Parser</div>
+            <p>Automatic parsing for JSON, URL-encoded forms, and multipart uploads without requiring manual middleware registration.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-shield-cat"></i></div>
+            <div class="card-title">Secure by Default</div>
+            <p>Built-in protections against HTTP Response Splitting (CRLF injection), static path traversal, and HMAC-signed cookie sessions.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div class="card-title">Standardized Fluent APIs</div>
+            <p>Predictable predicate checkers (<code>isJson</code>, <code>isAjax</code>, <code>isSecure</code>, <code>isType</code>) and chainable response builders.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Quickstart -->
+      <section id="quickstart">
+        <h2><i class="fa-solid fa-bolt"></i> Quick Start</h2>
+        <p>Create a file named <code>server.dz</code> and launch your server in just a few lines of code:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> server.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="cmt"># 1. Initialize application</span>
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
+    <span class="str">"port"</span>: <span class="num">3000</span>,
+    <span class="str">"static"</span>: <span class="str">"public"</span>
+})
+
+<span class="cmt"># 2. Register routes</span>
+app.<span class="fn">get</span>(<span class="str">"/"</span>, <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Welcome to Kasbah Web Framework!&lt;/h1&gt;"</span>)
+<span class="kwd">end</span>)
+
+app.<span class="fn">get</span>(<span class="str">"/api/hello/:name"</span>, <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">json</span>({
+        <span class="str">"message"</span>: <span class="str">"Hello, "</span> + req.<span class="fn">param</span>(<span class="str">"name"</span>),
+        <span class="str">"isAjax"</span>: req.<span class="fn">isAjax</span>(),
+        <span class="str">"year"</span>: <span class="num">2026</span>
+    })
+<span class="kwd">end</span>)
+
+<span class="cmt"># 3. Start server</span>
+app.<span class="fn">listen</span>()</code></pre>
+        </div>
+
+        <p>Run your server via terminal:</p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-terminal"></i> Terminal</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>djazair server.dz</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Configuration -->
+      <section id="config">
+        <h2><i class="fa-solid fa-sliders"></i> Standard Configuration Schema</h2>
+        <p>
+          Kasbah applications accept a clean configuration map supporting flat options and structured nested objects:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> app_config.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
+    <span class="cmt"># ── Core Options ──────────────────────────────────────────</span>
+    <span class="str">"port"</span>:        <span class="num">3000</span>,          <span class="cmt"># TCP port to listen on (default: 3000)</span>
+    <span class="str">"host"</span>:        <span class="str">"0.0.0.0"</span>,     <span class="cmt"># Binding host address (default: "0.0.0.0")</span>
+    <span class="str">"static"</span>:      <span class="str">"public"</span>,      <span class="cmt"># Directory path for static assets (CSS, JS, images)</span>
+    <span class="str">"maxBodySize"</span>: <span class="num">10</span>,            <span class="cmt"># Maximum request payload size in MB (default: 10)</span>
+    <span class="str">"debug"</span>:       <span class="kwd">False</span>,         <span class="cmt"># Expose error details in development mode</span>
+    <span class="str">"logger"</span>:      <span class="kwd">True</span>,          <span class="cmt"># Request/error console logging</span>
+    <span class="str">"trustProxy"</span>:  <span class="kwd">False</span>,         <span class="cmt"># Trust X-Forwarded-For reverse proxy headers</span>
+
+    <span class="cmt"># ── Session Management (Nested Object or One-liner) ───────</span>
+    <span class="str">"session"</span>: {
+        <span class="str">"secret"</span>:   <span class="str">"my-secret-key-at-least-32-chars-long"</span>, <span class="cmt"># (Required) >= 32 chars</span>
+        <span class="str">"maxAge"</span>:   <span class="num">86400</span>,        <span class="cmt"># Cookie lifetime in seconds (default: 1 day)</span>
+        <span class="str">"name"</span>:     <span class="str">"kasbah.sid"</span>, <span class="cmt"># Cookie name</span>
+        <span class="str">"secure"</span>:   <span class="kwd">False</span>,        <span class="cmt"># HTTPS only flag</span>
+        <span class="str">"sameSite"</span>: <span class="str">"Lax"</span>         <span class="cmt"># SameSite policy: "Lax", "Strict", "None"</span>
+    },
+
+    <span class="cmt"># ── Advanced Server / HTTP Settings (Optional) ────────────</span>
+    <span class="str">"server"</span>: {
+        <span class="str">"keepAlive"</span>:             <span class="kwd">False</span>,
+        <span class="str">"keepAliveTimeout"</span>:      <span class="num">30</span>,   <span class="cmt"># Keep-alive idle timeout in seconds</span>
+        <span class="str">"maxKeepAliveRequests"</span>:  <span class="num">100</span>   <span class="cmt"># Max requests per persistent connection</span>
+    }
+})</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <i class="fa-solid fa-lightbulb"></i>
+          <div>
+            <strong>Quick Session Setup:</strong> You can enable sessions with a one-liner secret string: 
+            <code>"session": "my-secret-key-at-least-32-chars-long"</code>.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Routing -->
+      <section id="routing">
+        <h2><i class="fa-solid fa-route"></i> Advanced Routing System</h2>
+        <p>
+          Kasbah comes with a dedicated radix-style routing engine handling dynamic parameters, wildcard grouping, and modular sub-routers:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> routes.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt"># Standard HTTP Methods</span>
+app.<span class="fn">get</span>(<span class="str">"/trades"</span>, handler)
+app.<span class="fn">post</span>(<span class="str">"/trades"</span>, handler)
+app.<span class="fn">put</span>(<span class="str">"/trades/:id"</span>, handler)
+app.<span class="fn">delete</span>(<span class="str">"/trades/:id"</span>, handler)
+app.<span class="fn">patch</span>(<span class="str">"/trades/:id"</span>, handler)
+app.<span class="fn">all</span>(<span class="str">"/webhook"</span>, handler) <span class="cmt"># Matches all HTTP verbs</span>
+
+<span class="cmt"># Route-Level Middleware (Single or Array)</span>
+app.<span class="fn">get</span>(<span class="str">"/dashboard"</span>, authGuard, <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">ok</span>({<span class="str">"user"</span>: req.<span class="fn">get</span>(<span class="str">"user"</span>)})
+<span class="kwd">end</span>)
+
+app.<span class="fn">post</span>(<span class="str">"/admin/settings"</span>, [authGuard, adminOnly], <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">ok</span>({<span class="str">"status"</span>: <span class="str">"saved"</span>})
+<span class="kwd">end</span>)
+
+<span class="cmt"># Multiple dynamic route parameters</span>
+app.<span class="fn">get</span>(<span class="str">"/users/:userId/trades/:tradeId"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="kwd">let</span> uid = req.<span class="fn">param</span>(<span class="str">"userId"</span>)
+    <span class="kwd">let</span> tid = req.<span class="fn">param</span>(<span class="str">"tradeId"</span>)
+    res.<span class="fn">json</span>({<span class="str">"user"</span>: uid, <span class="str">"trade"</span>: tid})
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Standalone Routers -->
+      <section id="router-module">
+        <h2><i class="fa-solid fa-sitemap"></i> Standalone Routers & Mounting</h2>
+        <p>
+          Isolate routes into modular files with <code>kasbah.router</code>, and mount them in your application with <code>app.mount(prefix, subRouter)</code>:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> routes/trades.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">import</span> <span class="str">"../kasbah/init.dz"</span> <span class="kwd">as</span> kasbah
+
+<span class="kwd">let</span> tradesRouter = <span class="kwd">new</span> kasbah.<span class="typ">router</span>()
+
+tradesRouter.<span class="fn">get</span>(<span class="str">"/"</span>, <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">ok</span>({<span class="str">"trades"</span>: []})
+<span class="kwd">end</span>)
+
+tradesRouter.<span class="fn">get</span>(<span class="str">"/:id"</span>, <span class="kwd">fn</span>(req, res)
+    res.<span class="fn">ok</span>({<span class="str">"id"</span>: req.<span class="fn">param</span>(<span class="str">"id"</span>)})
+<span class="kwd">end</span>)</code></pre>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> app.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">import</span> <span class="str">"routes/trades.dz"</span> <span class="kwd">as</span> tradesMod
+
+<span class="cmt"># Mount the sub-router under /api/trades</span>
+app.<span class="fn">mount</span>(<span class="str">"/api/trades"</span>, tradesMod.tradesRouter)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Request -->
+      <section id="request">
+        <h2><i class="fa-solid fa-arrow-down-long"></i> Request (`request`) Object</h2>
+        <p>
+          The <code>req</code> instance wraps incoming HTTP data with standardized getters and boolean predicate checkers:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Method / Property</th>
+                <th>Return Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>req.method</code></td>
+                <td><code>String</code></td>
+                <td>HTTP method (e.g. <code>"GET"</code>, <code>"POST"</code>).</td>
+              </tr>
+              <tr>
+                <td><code>req.path</code></td>
+                <td><code>String</code></td>
+                <td>Normalized, URL-decoded request path.</td>
+              </tr>
+              <tr>
+                <td><code>req.body</code></td>
+                <td><code>Map / String</code></td>
+                <td>Parsed body (JSON dictionary or form-urlencoded fields).</td>
+              </tr>
+              <tr>
+                <td><code>req.param(name, fallback)</code></td>
+                <td><code>Any</code></td>
+                <td>Retrieves route URL parameter (e.g. from <code>/trades/:id</code>).</td>
+              </tr>
+              <tr>
+                <td><code>req.query(name, fallback)</code></td>
+                <td><code>Any / Map</code></td>
+                <td>Retrieves URL query parameter (<code>?page=1</code>) or entire query map.</td>
+              </tr>
+              <tr>
+                <td><code>req.input(name, fallback)</code></td>
+                <td><code>Any</code></td>
+                <td>Looks up key across <code>params</code> → <code>query</code> → <code>body</code>.</td>
+              </tr>
+              <tr>
+                <td><code>req.only(keys)</code></td>
+                <td><code>Map</code></td>
+                <td>Filters inputs to only the specified allowed keys.</td>
+              </tr>
+              <tr>
+                <td><code>req.except(keys)</code></td>
+                <td><code>Map</code></td>
+                <td>Returns all inputs excluding the specified keys.</td>
+              </tr>
+              <tr>
+                <td><code>req.isJson()</code></td>
+                <td><code>Boolean</code></td>
+                <td>Checks if client requests or sends JSON (Accept, Content-Type, or AJAX).</td>
+              </tr>
+              <tr>
+                <td><code>req.isAjax()</code></td>
+                <td><code>Boolean</code></td>
+                <td>Checks if request was sent with <code>X-Requested-With: XMLHttpRequest</code>.</td>
+              </tr>
+              <tr>
+                <td><code>req.isSecure()</code></td>
+                <td><code>Boolean</code></td>
+                <td>Checks if request was made via HTTPS or TLS termination proxy.</td>
+              </tr>
+              <tr>
+                <td><code>req.isType(category)</code></td>
+                <td><code>Boolean</code></td>
+                <td>Checks <code>Content-Type</code> (<code>"json"</code>, <code>"form"</code>, <code>"multipart"</code>).</td>
+              </tr>
+              <tr>
+                <td><code>req.token()</code></td>
+                <td><code>String / Null</code></td>
+                <td>Extracts Bearer token from <code>Authorization: Bearer &lt;token&gt;</code>.</td>
+              </tr>
+              <tr>
+                <td><code>req.header(name)</code></td>
+                <td><code>String</code></td>
+                <td>Retrieves HTTP header value (case-insensitive).</td>
+              </tr>
+              <tr>
+                <td><code>req.cookie(name)</code></td>
+                <td><code>String / Null</code></td>
+                <td>Retrieves cookie value from incoming request.</td>
+              </tr>
+              <tr>
+                <td><code>req.file(name)</code></td>
+                <td><code>uploadedFile / Null</code></td>
+                <td>Retrieves uploaded file descriptor for multipart forms.</td>
+              </tr>
+              <tr>
+                <td><code>req.hasFile(name)</code></td>
+                <td><code>Boolean</code></td>
+                <td>Verifies if an uploaded file exists and is saved on disk.</td>
+              </tr>
+              <tr>
+                <td><code>req.set(k, v)</code> / <code>get(k)</code></td>
+                <td><code>Self / Any</code></td>
+                <td>Store and retrieve custom middleware state across handlers.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Response -->
+      <section id="response">
+        <h2><i class="fa-solid fa-arrow-up-long"></i> Response (`response`) Object</h2>
+        <p>
+          The <code>res</code> instance provides a fluent, chainable API for crafting HTTP responses:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> response_examples.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt"># Status code and response headers</span>
+res.<span class="fn">status</span>(<span class="num">200</span>).<span class="fn">header</span>(<span class="str">"X-Powered-By"</span>, <span class="str">"Kasbah"</span>).<span class="fn">json</span>({<span class="str">"status"</span>: <span class="str">"success"</span>})
+
+<span class="cmt"># HTML, JSON, and Text sending</span>
+res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Custom HTML Page&lt;/h1&gt;"</span>)
+res.<span class="fn">text</span>(<span class="str">"Plain text content"</span>)
+res.<span class="fn">json</span>({<span class="str">"status"</span>: <span class="str">"ok"</span>})
+
+<span class="cmt"># File streaming and downloads</span>
+res.<span class="fn">file</span>(<span class="str">"public/reports/annual.pdf"</span>)
+res.<span class="fn">download</span>(<span class="str">"public/export.csv"</span>, <span class="str">"trades_report.csv"</span>)
+
+<span class="cmt"># Cookie management and redirects</span>
+res.<span class="fn">cookie</span>(<span class="str">"theme"</span>, <span class="str">"dark"</span>, {<span class="str">"maxAge"</span>: <span class="num">86400</span>, <span class="str">"httpOnly"</span>: <span class="kwd">True</span>})
+res.<span class="fn">clearCookie</span>(<span class="str">"theme"</span>)
+res.<span class="fn">redirect</span>(<span class="str">"/dashboard"</span>)
+res.<span class="fn">back</span>() <span class="cmt"># Redirect back to Referer URL</span></code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Semantic Helpers -->
+      <section id="semantic">
+        <h2><i class="fa-solid fa-circle-check"></i> Semantic Response Helpers</h2>
+        <p>
+          Convenience one-liner helpers for returning standard HTTP status responses with clean JSON payloads:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Helper Method</th>
+                <th>HTTP Status</th>
+                <th>Typical Usage</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>res.ok(data)</code></td>
+                <td><code>200 OK</code></td>
+                <td>Sends 200 response (serializes data as JSON if provided).</td>
+              </tr>
+              <tr>
+                <td><code>res.created(data)</code></td>
+                <td><code>201 Created</code></td>
+                <td>Confirms successful creation of a new resource.</td>
+              </tr>
+              <tr>
+                <td><code>res.noContent()</code></td>
+                <td><code>204 No Content</code></td>
+                <td>Empty success response (common after <code>DELETE</code> operations).</td>
+              </tr>
+              <tr>
+                <td><code>res.badRequest(msg)</code></td>
+                <td><code>400 Bad Request</code></td>
+                <td>Returns error JSON <code>{"error": msg}</code>.</td>
+              </tr>
+              <tr>
+                <td><code>res.unauthorized(msg)</code></td>
+                <td><code>401 Unauthorized</code></td>
+                <td>Authentication failure or expired session.</td>
+              </tr>
+              <tr>
+                <td><code>res.forbidden(msg)</code></td>
+                <td><code>403 Forbidden</code></td>
+                <td>Access forbidden due to insufficient permissions.</td>
+              </tr>
+              <tr>
+                <td><code>res.notFound(msg)</code></td>
+                <td><code>404 Not Found</code></td>
+                <td>Requested resource does not exist.</td>
+              </tr>
+              <tr>
+                <td><code>res.validationError(errors)</code></td>
+                <td><code>422 Unprocessable Entity</code></td>
+                <td>Directly returns validator error dictionary <code>{"errors": errors}</code>.</td>
+              </tr>
+              <tr>
+                <td><code>res.serverError(msg)</code></td>
+                <td><code>500 Internal Error</code></td>
+                <td>Internal server failure JSON response.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Validator -->
+      <section id="validator">
+        <h2><i class="fa-solid fa-shield-halved"></i> Validation Engine (`validator`)</h2>
+        <p>
+          Declarative schema validation with chained constraint rules and error mapping:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> validation_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>app.<span class="fn">post</span>(<span class="str">"/api/trades"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="cmt"># Create validator from request body</span>
+    <span class="kwd">let</span> v = req.<span class="fn">validate</span>()
+
+    <span class="cmt"># Define validation schema rules</span>
+    v.<span class="fn">field</span>(<span class="str">"symbol"</span>).<span class="fn">required</span>().<span class="fn">string</span>().<span class="fn">minLength</span>(<span class="num">2</span>).<span class="fn">maxLength</span>(<span class="num">10</span>)
+    v.<span class="fn">field</span>(<span class="str">"type"</span>).<span class="fn">required</span>().<span class="fn">oneOf</span>([<span class="str">"BUY"</span>, <span class="str">"SELL"</span>])
+    v.<span class="fn">field</span>(<span class="str">"quantity"</span>).<span class="fn">required</span>().<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">1</span>)
+    v.<span class="fn">field</span>(<span class="str">"price"</span>).<span class="fn">required</span>().<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">0.01</span>)
+    v.<span class="fn">field</span>(<span class="str">"email"</span>).<span class="fn">optional</span>().<span class="fn">email</span>()
+
+    <span class="cmt"># Validate constraints</span>
+    <span class="kwd">if</span> v.<span class="fn">fails</span>()
+        <span class="kwd">return</span> res.<span class="fn">validationError</span>(v.<span class="fn">errors</span>())
+    <span class="kwd">end</span>
+
+    <span class="cmt"># Extract sanitized, validated data</span>
+    <span class="kwd">let</span> cleanData = v.<span class="fn">validated</span>()
+    res.<span class="fn">created</span>({<span class="str">"message"</span>: <span class="str">"Trade recorded successfully"</span>, <span class="str">"trade"</span>: cleanData})
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Templating -->
+      <section id="templating">
+        <h2><i class="fa-solid fa-code"></i> HTML Templating (Optional with Qalam)</h2>
+        <p>
+          Kasbah is lightweight and modular. If your application needs an advanced AST-based HTML template engine (layouts, partials, loops, conditionals, and auto-XSS escaping), pair Kasbah with the standalone <strong>Qalam</strong> library:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> controller.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+<span class="kwd">use</span> qalam
+
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({<span class="str">"port"</span>: <span class="num">3000</span>})
+<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">view</span>({<span class="str">"views"</span>: <span class="str">"views"</span>})
+
+app.<span class="fn">get</span>(<span class="str">"/trades"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="kwd">let</span> html = view.<span class="fn">render</span>(<span class="str">"trades/list"</span>, {
+        <span class="str">"user"</span>: {<span class="str">"name"</span>: <span class="str">"Alice"</span>},
+        <span class="str">"trades"</span>: tradeList
+    })
+    res.<span class="fn">html</span>(html)
+<span class="kwd">end</span>)
+
+app.<span class="fn">listen</span>()</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Uploads -->
+      <section id="uploads">
+        <h2><i class="fa-solid fa-cloud-arrow-up"></i> File Uploads & FileManager</h2>
+        <p>
+          Secure file upload processing with extension whitelisting, MIME checks, and automated temporary file cleanup:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> upload_handler.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>app.<span class="fn">post</span>(<span class="str">"/upload/avatar"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="cmt"># 1. Verify file presence</span>
+    <span class="kwd">if</span> <span class="kwd">not</span> req.<span class="fn">hasFile</span>(<span class="str">"avatar"</span>)
+        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(<span class="str">"No avatar uploaded"</span>)
+    <span class="kwd">end</span>
+
+    <span class="kwd">let</span> file = req.<span class="fn">file</span>(<span class="str">"avatar"</span>)
+
+    <span class="cmt"># 2. Check extension & MIME type</span>
+    <span class="kwd">if</span> <span class="kwd">not</span> file.<span class="fn">isImage</span>() <span class="kwd">or</span> <span class="kwd">not</span> file.<span class="fn">hasExt</span>([<span class="str">"jpg"</span>, <span class="str">"png"</span>, <span class="str">"webp"</span>])
+        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(<span class="str">"Invalid image file format"</span>)
+    <span class="kwd">end</span>
+
+    <span class="cmt"># 3. Save to target directory</span>
+    <span class="kwd">let</span> savedPath = file.<span class="fn">saveTo</span>(<span class="str">"public/uploads/avatars"</span>)
+    res.<span class="fn">ok</span>({<span class="str">"status"</span>: <span class="str">"success"</span>, <span class="str">"path"</span>: <span class="str">"/"</span> + savedPath})
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Sessions -->
+      <section id="session">
+        <h2><i class="fa-solid fa-key"></i> Sessions & Cookie Management</h2>
+        <p>
+          Secure cookie jars and persistent file-based sessions:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> session_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>app.<span class="fn">get</span>(<span class="str">"/profile"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="cmt"># Read session value with fallback</span>
+    <span class="kwd">let</span> visits = req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>
+    req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, visits)
+
+    res.<span class="fn">json</span>({
+        <span class="str">"sessionId"</span>: req.session.<span class="fn">id</span>(),
+        <span class="str">"visits"</span>: visits
+    })
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Errors -->
+      <section id="errors">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> Error & 404 Handling</h2>
+        <p>
+          Register custom handlers for 404 Not Found routes and unhandled 500 exceptions:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> error_handlers.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt"># Custom 404 Not Found Handler</span>
+app.<span class="fn">onNotFound</span>(<span class="kwd">fn</span>(req, res)
+    <span class="kwd">if</span> req.<span class="fn">isJson</span>()
+        res.<span class="fn">notFound</span>(<span class="str">"Endpoint does not exist"</span>)
+    <span class="kwd">else</span>
+        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: "</span> + req.path + <span class="str">"&lt;/p&gt;"</span>)
+    <span class="kwd">end</span>
+<span class="kwd">end</span>)
+
+<span class="cmt"># Custom 500 Internal Error Handler</span>
+app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
+    res.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({
+        <span class="str">"error"</span>: <span class="str">"Internal Server Error"</span>,
+        <span class="str">"message"</span>: <span class="fn">str</span>(err)
+    })
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Full Example -->
+      <section id="full-example">
+        <h2><i class="fa-solid fa-rocket"></i> Full Application Example</h2>
+        <p>A complete production-ready application demonstrating routing, middleware, sessions, validation, and APIs:</p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> app_complete.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="cmt"># Initialize Application with standard config</span>
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
+    <span class="str">"port"</span>: <span class="num">3000</span>,
+    <span class="str">"static"</span>: <span class="str">"public"</span>,
+    <span class="str">"session"</span>: {
+        <span class="str">"secret"</span>: <span class="str">"secret-key-must-be-at-least-32-chars-long"</span>,
+        <span class="str">"maxAge"</span>: <span class="num">86400</span>
+    }
+})
+
+<span class="cmt"># Global Logger Middleware</span>
+app.<span class="fn">middleware</span>(<span class="kwd">fn</span>(req, res)
+    <span class="fn">print</span>(<span class="str">"["</span> + req.method + <span class="str">"] "</span> + req.path)
+<span class="kwd">end</span>)
+
+<span class="cmt"># HTML Route</span>
+app.<span class="fn">get</span>(<span class="str">"/"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="kwd">let</span> visits = req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>
+    req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, visits)
+    res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Welcome to Kasbah&lt;/h1&gt;&lt;p&gt;Visits: "</span> + <span class="fn">str</span>(visits) + <span class="str">"&lt;/p&gt;"</span>)
+<span class="kwd">end</span>)
+
+<span class="cmt"># REST API with Validation</span>
+app.<span class="fn">post</span>(<span class="str">"/api/trades"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="kwd">let</span> v = req.<span class="fn">validate</span>()
+    v.<span class="fn">field</span>(<span class="str">"symbol"</span>).<span class="fn">required</span>().<span class="fn">string</span>()
+    v.<span class="fn">field</span>(<span class="str">"price"</span>).<span class="fn">required</span>().<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">0.01</span>)
+
+    <span class="kwd">if</span> v.<span class="fn">fails</span>()
+        <span class="kwd">return</span> res.<span class="fn">validationError</span>(v.<span class="fn">errors</span>())
+    <span class="kwd">end</span>
+
+    res.<span class="fn">created</span>({<span class="str">"trade"</span>: v.<span class="fn">validated</span>()})
+<span class="kwd">end</span>)
+
+<span class="cmt"># 404 Route Handler</span>
+app.<span class="fn">onNotFound</span>(<span class="kwd">fn</span>(req, res)
+    <span class="kwd">if</span> req.<span class="fn">isJson</span>()
+        res.<span class="fn">notFound</span>(<span class="str">"Requested resource not found"</span>)
+    <span class="kwd">else</span>
+        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: "</span> + req.path + <span class="str">"&lt;/p&gt;"</span>)
+    <span class="kwd">end</span>
+<span class="kwd">end</span>)
+
+<span class="cmt"># Start the Server</span>
+app.<span class="fn">listen</span>()</code></pre>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <p>Kasbah Web Framework — Open source for the <strong>Djazair</strong> programming language 🇩🇿</p>
+        <p style="font-size: 0.8rem; margin-top: 5px;">Created by Harizi Riyadh &copy; 2026</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    // Copy Code functionality
+    function copyCode(button) {
+      const pre = button.closest('.code-wrapper').querySelector('pre code');
+      if (pre) {
+        navigator.clipboard.writeText(pre.innerText).then(() => {
+          const origHtml = button.innerHTML;
+          button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+          button.style.background = '#10b981';
+          button.style.color = '#fff';
+          setTimeout(() => {
+            button.innerHTML = origHtml;
+            button.style.background = '';
+            button.style.color = '';
+          }, 2000);
+        });
+      }
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const sections = document.querySelectorAll('main section');
+        sections.forEach(sec => {
+          if (query === '' || sec.innerText.toLowerCase().includes(query)) {
+            sec.style.display = 'block';
+          } else {
+            sec.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Active link highlighting on scroll
+    const navLinks = document.querySelectorAll('.menu-item a');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (pageYOffset >= (sectionTop - 120)) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
