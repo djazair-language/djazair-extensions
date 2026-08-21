@@ -75,6 +75,15 @@ class Evaluator
             return Null
         end
 
+        # Inline Array Literal check: [a, b, c]
+        if s.startsWith("[") and s.endsWith("]")
+            let inner = s.slice(1, s.length() - 1).strip()
+            if inner.length() == 0
+                return []
+            end
+            return self.parseArgs(inner, data)
+        end
+
         # Numeric literal check
         let isNum = True
         let dotCount = 0

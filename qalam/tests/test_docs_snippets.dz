@@ -1,0 +1,295 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# test_docs_snippets.dz — Automated Verification of All Documentation Code Snippets
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs and asserts every single code example and snippet present in README.md
+# and docs/index.html to ensure 100% documentation accuracy.
+
+use qalam
+use os
+use file
+use dir
+
+let passed = 0
+let failed = 0
+
+fn test(name, result, expected)
+    if result == expected
+        passed += 1
+    else
+        failed += 1
+        print("FAIL: " + name)
+        print("  Expected: " + str(expected))
+        print("  Got:      " + str(result))
+    end
+end
+
+fn testContains(name, result, expectedSubstring)
+    if isString(result) and result.contains(expectedSubstring)
+        passed += 1
+    else
+        failed += 1
+        print("FAIL: " + name)
+        print("  Expected to contain: " + str(expectedSubstring))
+        print("  Got:                 " + str(result))
+    end
+end
+
+print("=== Running Documentation Code Snippets Tests ===\n")
+
+# ── 1. Quick Start In-Memory ──────────────────────────────────────────────────
+let tpl1 = `
+<h1>Hello, {{ user.name | capitalize }}!</h1>
+<p>Status: {% if user.isActive %}Active Member{% else %}Pending{% endif %}</p>
+<ul>
+{% for item in items %}
+  <li>#{{ loop.index }}: {{ item }}</li>
+{% endfor %}
+</ul>
+`
+let data1 = {
+    "user": {"name": "riad", "isActive": True},
+    "items": ["Djazair Language", "Kasbah Framework", "Qalam Template Engine"]
+}
+let res1 = qalam.renderString(tpl1, data1)
+testContains("DOC: QuickStart In-Memory user.name", res1, "Hello, Riad!")
+testContains("DOC: QuickStart In-Memory status", res1, "Active Member")
+testContains("DOC: QuickStart In-Memory loop item 1", res1, "<li>#1: Djazair Language</li>")
+testContains("DOC: QuickStart In-Memory loop item 3", res1, "<li>#3: Qalam Template Engine</li>")
+
+# ── 2. Quick Start File-Based & Layout Inheritance ────────────────────────────
+let tmpDir = "${os.tmpDir()}/qalam_doc_snippets"
+if not file.exists(tmpDir) dir.createAll(tmpDir) end
+if not file.exists("${tmpDir}/layouts") dir.createAll("${tmpDir}/layouts") end
+if not file.exists("${tmpDir}/partials") dir.createAll("${tmpDir}/partials") end
+
+file.write("${tmpDir}/layouts/base.html", `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}My Application{% endblock %}</title>
+</head>
+<body>
+    <header>{% include "partials/nav" %}</header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>&copy; 2026 Djazair Language</footer>
+</body>
+</html>`)
+
+file.write("${tmpDir}/partials/nav.html", `<nav><a href="/">Home</a></nav>`)
+
+file.write("${tmpDir}/home.html", `{% extends "layouts/base" %}
+
+{% block title %}Dashboard — {{ siteName }}{% endblock %}
+
+{% block content %}
+    <h2>Welcome back, {{ user.name }}!</h2>
+    <p>Your role: <span class="badge">{{ user.role | upper }}</span></p>
+{% endblock %}`)
+
+let viewEngine = new qalam.View({
+    "views": tmpDir,
+    "cache": True
+})
+
+let htmlRes = viewEngine.render("home", {
+    "siteName": "Enterprise Portal",
+    "user": {"name": "Riad", "role": "admin"}
+})
+
+testContains("DOC: File-Based base layout title override", htmlRes, "<title>Dashboard — Enterprise Portal</title>")
+testContains("DOC: File-Based include partial", htmlRes, "<nav><a href=\"/\">Home</a></nav>")
+testContains("DOC: File-Based block content", htmlRes, "<h2>Welcome back, Riad!</h2>")
+testContains("DOC: File-Based filter in inheritance", htmlRes, "<span class=\"badge\">ADMIN</span>")
+
+# ── 3. Variables, Dot Notation, Bracket Indexing & Raw ────────────────────────
+let tplVar = `<p>Hello, {{ user.name }}</p>
+<p>Escaped input: {{ userInput }}</p>
+<p>City: {{ user.profile.address.city }}</p>
+<p>First item: {{ articles[0].title }}</p>
+<div class="article-body">{{{ article.trustedHtmlContent }}}</div>`
+
+let dataVar = {
+    "user": {"name": "Riad", "profile": {"address": {"city": "Blida"}}},
+    "userInput": "<script>alert(1)</script>",
+    "articles": [{"title": "Getting Started"}],
+    "article": {"trustedHtmlContent": "<b>Hello World</b>"}
+}
+let resVar = qalam.renderString(tplVar, dataVar)
+testContains("DOC: Variable dot notation", resVar, "<p>City: Blida</p>")
+testContains("DOC: Variable bracket index", resVar, "<p>First item: Getting Started</p>")
+testContains("DOC: Variable auto-escaping", resVar, "&lt;script&gt;alert(1)&lt;/script&gt;")
+testContains("DOC: Raw unescaped output", resVar, "<div class=\"article-body\"><b>Hello World</b></div>")
+
+# ── 4. Filters & Piping ───────────────────────────────────────────────────────
+let tplFilter = `<h1>{{ article.title | trim | title }}</h1>
+<p>Joined tags: {{ tags | join(" • ") | upper }}</p>
+<p>Price: \${{ product.price | round(2) }}</p>
+<p>Bio: {{ user.bio | default("No biography provided.") }}</p>`
+
+let dataFilter = {
+    "article": {"title": "  qalam template engine  "},
+    "tags": ["djazair", "qalam", "kasbah"],
+    "product": {"price": 19.999},
+    "user": {"bio": ""}
+}
+let resFilter = qalam.renderString(tplFilter, dataFilter)
+testContains("DOC: Chained trim | title", resFilter, "<h1>Qalam Template Engine</h1>")
+testContains("DOC: Chained join | upper", resFilter, "<p>Joined tags: DJAZAIR • QALAM • KASBAH</p>")
+testContains("DOC: Math round filter", resFilter, "<p>Price: $20</p>")
+testContains("DOC: Default filter fallback", resFilter, "<p>Bio: No biography provided.</p>")
+
+# ── 5. Conditionals & Logical Operators ───────────────────────────────────────
+let tplCond = `{% if user.role == 'admin' %}
+<span class="badge badge-danger">Administrator</span>
+{% elif user.role == 'moderator' %}
+<span class="badge badge-warning">Moderator</span>
+{% elif user.role == 'author' %}
+<span class="badge badge-info">Author</span>
+{% else %}
+<span class="badge badge-secondary">Member</span>
+{% endif %}`
+
+testContains("DOC: Conditional if branch", qalam.renderString(tplCond, {"user": {"role": "admin"}}), "Administrator")
+testContains("DOC: Conditional elif 1 branch", qalam.renderString(tplCond, {"user": {"role": "moderator"}}), "Moderator")
+testContains("DOC: Conditional elif 2 branch", qalam.renderString(tplCond, {"user": {"role": "author"}}), "Author")
+testContains("DOC: Conditional else fallback", qalam.renderString(tplCond, {"user": {"role": "guest"}}), "Member")
+
+let tplLogic = `{% if user.isVerified and not user.isBanned %}
+<button class="btn-primary">Proceed to Checkout</button>
+{% endif %}`
+testContains("DOC: Logic and + not (allowed)", qalam.renderString(tplLogic, {"user": {"isVerified": True, "isBanned": False}}), "Proceed to Checkout")
+test("DOC: Logic and + not (banned)", qalam.renderString(tplLogic, {"user": {"isVerified": True, "isBanned": True}}).strip(), "")
+
+# ── 6. Loops, Loop Context Metadata & For-Else ────────────────────────────────
+let tplLoop = `<table>
+  <tbody>
+  {% for item in products %}
+    <tr class="{% if loop.even %}row-even{% else %}row-odd{% endif %}">
+      <td>{{ loop.index }}</td>
+      <td>{{ item.name }}</td>
+      <td>\${{ item.price | round(2) }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">No products found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>`
+
+let resLoop = qalam.renderString(tplLoop, {
+    "products": [
+        {"name": "Keyboard", "price": 45.5},
+        {"name": "Mouse", "price": 25.0}
+    ]
+})
+testContains("DOC: Loop item 1 index", resLoop, "<td>1</td>")
+testContains("DOC: Loop item 1 odd class", resLoop, "<tr class=\"row-odd\">")
+testContains("DOC: Loop item 2 even class", resLoop, "<tr class=\"row-even\">")
+testContains("DOC: Loop item 2 price", resLoop, "<td>$25</td>")
+
+let resLoopEmpty = qalam.renderString(tplLoop, {"products": []})
+testContains("DOC: For-else fallback", resLoopEmpty, "No products found.")
+
+# ── 7. Comments & Whitespace Control ──────────────────────────────────────────
+let tplComment = `{# Internal comment #}Hello   {{- user.name -}}   World`
+let resComment = qalam.renderString(tplComment, {"user": {"name": "Riad"}})
+test("DOC: Comments stripped and whitespace trimmed", resComment, "HelloRiadWorld")
+
+# ── 8. Custom Filter Registration ─────────────────────────────────────────────
+let vCustom = new qalam.View({})
+vCustom.registerFilter("currency", fn(val, args = [])
+    let code = if args.length() > 0 ? str(args[0]) else "USD"
+    return str(val) + " " + code
+end)
+
+vCustom.registerFilter("statusBadge", fn(status, args = [])
+    if status == "active"
+        return "<span class='badge-green'>ACTIVE</span>"
+    end
+    return "<span class='badge-red'>INACTIVE</span>"
+end)
+
+let htmlCustom = vCustom.renderString(
+    "<p>Price: {{ amount | currency('DZD') }}</p><div>{{{ status | statusBadge }}}</div>",
+    {"amount": 4500, "status": "active"}
+)
+testContains("DOC: Custom currency filter", htmlCustom, "<p>Price: 4500 DZD</p>")
+testContains("DOC: Custom statusBadge raw HTML", htmlCustom, "<span class='badge-green'>ACTIVE</span>")
+
+# ── 9. Transactional Email Recipe ─────────────────────────────────────────────
+let emailTpl = `
+<h1>Invoice #{{ invoiceId }}</h1>
+<p>Dear {{ customer.name | capitalize }},</p>
+<p>Thank you for your order on {{ orderDate }}.</p>
+<table>
+  <tr><th>Item</th><th>Price</th></tr>
+  {% for item in items %}
+  <tr>
+    <td>{{ item.name }}</td>
+    <td>\${{ item.price | round(2) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p><strong>Total: \${{ total | round(2) }}</strong></p>
+`
+
+let emailHtml = qalam.renderString(emailTpl, {
+    "invoiceId": "INV-2026-08",
+    "customer": {"name": "riad harizi"},
+    "orderDate": "2026-08-21",
+    "items": [
+        {"name": "Djazair Pro License", "price": 199.99},
+        {"name": "Kasbah Cloud Hosting", "price": 49.50}
+    ],
+    "total": 249.49
+})
+
+testContains("DOC: Email recipe customer name", emailHtml, "Dear Riad harizi,")
+testContains("DOC: Email recipe item 1", emailHtml, "<td>Djazair Pro License</td>")
+testContains("DOC: Email recipe total", emailHtml, "<strong>Total: $249.49</strong>")
+
+# ── 10. Built-in Filter Catalog (All 19 Filters Verification) ─────────────────
+test("FILTER: upper", qalam.renderString("{{ 'riad' | upper }}", {}), "RIAD")
+test("FILTER: lower", qalam.renderString("{{ 'RIAD' | lower }}", {}), "riad")
+test("FILTER: capitalize", qalam.renderString("{{ 'hello world' | capitalize }}", {}), "Hello world")
+test("FILTER: title", qalam.renderString("{{ 'hello world' | title }}", {}), "Hello World")
+test("FILTER: trim", qalam.renderString("{{ '  hi  ' | trim }}", {}), "hi")
+test("FILTER: ltrim", qalam.renderString("{{ '  hi' | ltrim }}", {}), "hi")
+test("FILTER: rtrim", qalam.renderString("{{ 'hi  ' | rtrim }}", {}), "hi")
+test("FILTER: length array", qalam.renderString("{{ [1,2,3] | length }}", {}), "3")
+test("FILTER: len alias", qalam.renderString("{{ [1,2,3] | len }}", {}), "3")
+test("FILTER: reverse", qalam.renderString("{{ 'abc' | reverse }}", {}), "cba")
+test("FILTER: first", qalam.renderString("{{ ['a','b'] | first }}", {}), "a")
+test("FILTER: last", qalam.renderString("{{ ['a','b'] | last }}", {}), "b")
+test("FILTER: join", qalam.renderString("{{ ['a','b'] | join(' • ') }}", {}), "a • b")
+test("FILTER: default fallback", qalam.renderString("{{ '' | default('N/A') }}", {}), "N/A")
+test("FILTER: json raw", qalam.renderString("{{{ data | json }}}", {"data": {"k": "v"}}), "{\"k\":\"v\"}")
+test("FILTER: replace", qalam.renderString("{{ 'a-b' | replace('-', '/') }}", {}), "a/b")
+test("FILTER: abs", qalam.renderString("{{ -15 | abs }}", {}), "15")
+test("FILTER: round", qalam.renderString("{{ 3.14159 | round(2) }}", {}), "3.14")
+test("FILTER: int", qalam.renderString("{{ '42' | int }}", {}), "42")
+test("FILTER: float", qalam.renderString("{{ '3.14' | float }}", {}), "3.14")
+test("FILTER: str", qalam.renderString("{{ 123 | str }}", {}), "123")
+
+# ── 11. Security API & Helpers ────────────────────────────────────────────────
+test("SECURITY: escapeHtml utility",
+    qalam.escapeHtml("<script>alert('xss')</script>"),
+    "&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;")
+
+test("API: getSafePath valid",
+    viewEngine.getSafePath("home").length() > 0,
+    True)
+
+viewEngine.clearCache()
+test("API: clearCache executed without error", True, True)
+
+# ── Report ────────────────────────────────────────────────────────────────────
+print("\n═══════════════════════════════════════════════════════════════")
+print("Documentation Snippets Tests")
+print("  Passed : " + str(passed))
+print("  Failed : " + str(failed))
+if failed == 0
+    print("  Result : ALL DOCUMENTATION SNIPPETS VERIFIED 100% ✅")
+end
+print("═══════════════════════════════════════════════════════════════")

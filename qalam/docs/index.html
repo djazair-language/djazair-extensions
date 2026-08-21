@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qalam Template Engine — Official Documentation</title>
+  <title>Qalam (قلم) Template Engine — Official Documentation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -116,7 +116,7 @@
 
     .search-box {
       position: relative;
-      width: 260px;
+      width: 280px;
     }
 
     .search-box input {
@@ -202,11 +202,11 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 12px;
+      padding: 7px 12px;
       color: var(--text-muted);
       text-decoration: none;
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 500;
       transition: all 0.2s;
     }
@@ -269,7 +269,7 @@
     .hero-subtitle {
       font-size: 1.15rem;
       color: var(--text-muted);
-      max-width: 750px;
+      max-width: 780px;
       margin-bottom: 2rem;
     }
 
@@ -322,14 +322,30 @@
     h3 {
       font-size: 1.3rem;
       font-weight: 700;
-      margin: 2rem 0 0.8rem;
+      margin: 2.2rem 0 0.8rem;
       color: #e2e8f0;
+    }
+
+    h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 1.4rem 0 0.5rem;
+      color: var(--primary);
     }
 
     p {
       color: var(--text-muted);
       margin-bottom: 1.2rem;
       font-size: 1.02rem;
+    }
+
+    ul, ol {
+      margin: 0.8rem 0 1.4rem 1.8rem;
+      color: #cbd5e1;
+    }
+
+    li {
+      margin-bottom: 0.4rem;
     }
 
     .grid-2 {
@@ -583,7 +599,7 @@
     <div class="nav-actions">
       <div class="search-box">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInput" placeholder="Search syntax, filters, loops...">
+        <input type="text" id="searchInput" placeholder="Search syntax, filters, loops, API...">
       </div>
       <a href="https://github.com/djazair-language" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
         <i class="fa-brands fa-github"></i>
@@ -600,7 +616,7 @@
           <li class="menu-item"><a href="#intro" class="active"><i class="fa-solid fa-circle-info"></i> Overview</a></li>
           <li class="menu-item"><a href="#install"><i class="fa-solid fa-download"></i> Installation</a></li>
           <li class="menu-item"><a href="#quickstart"><i class="fa-solid fa-bolt"></i> Quick Start</a></li>
-          <li class="menu-item"><a href="#architecture"><i class="fa-solid fa-layer-group"></i> Architecture</a></li>
+          <li class="menu-item"><a href="#architecture"><i class="fa-solid fa-layer-group"></i> Modular Pipeline</a></li>
         </ul>
       </div>
 
@@ -609,8 +625,8 @@
         <ul class="menu-list">
           <li class="menu-item"><a href="#variables"><i class="fa-solid fa-brackets-curly"></i> Variables & Escaping</a></li>
           <li class="menu-item"><a href="#piping"><i class="fa-solid fa-filter"></i> Filters & Piping</a></li>
-          <li class="menu-item"><a href="#conditionals"><i class="fa-solid fa-code-branch"></i> Conditionals (if/elif)</a></li>
-          <li class="menu-item"><a href="#loops"><i class="fa-solid fa-repeat"></i> Loops & Metadata</a></li>
+          <li class="menu-item"><a href="#conditionals"><i class="fa-solid fa-code-branch"></i> Conditionals & Logic</a></li>
+          <li class="menu-item"><a href="#loops"><i class="fa-solid fa-repeat"></i> Loops & `loop` Context</a></li>
           <li class="menu-item"><a href="#inheritance"><i class="fa-solid fa-sitemap"></i> Layout Inheritance</a></li>
           <li class="menu-item"><a href="#partials"><i class="fa-solid fa-puzzle-piece"></i> Partials (include)</a></li>
           <li class="menu-item"><a href="#comments"><i class="fa-solid fa-comment-slash"></i> Comments & Whitespace</a></li>
@@ -626,12 +642,14 @@
       </div>
 
       <div class="menu-group">
-        <div class="menu-title"><i class="fa-solid fa-gears"></i> Engine & API</div>
+        <div class="menu-title"><i class="fa-solid fa-gears"></i> Engine & Core APIs</div>
         <ul class="menu-list">
-          <li class="menu-item"><a href="#api"><i class="fa-solid fa-cubes"></i> View & API Methods</a></li>
+          <li class="menu-item"><a href="#api"><i class="fa-solid fa-cubes"></i> View Class & Methods</a></li>
           <li class="menu-item"><a href="#security"><i class="fa-solid fa-shield-halved"></i> Security Model</a></li>
-          <li class="menu-item"><a href="#caching"><i class="fa-solid fa-gauge-high"></i> Performance & Cache</a></li>
+          <li class="menu-item"><a href="#caching"><i class="fa-solid fa-gauge-high"></i> Performance & AST Cache</a></li>
           <li class="menu-item"><a href="#framework"><i class="fa-solid fa-network-wired"></i> Kasbah Integration</a></li>
+          <li class="menu-item"><a href="#recipes"><i class="fa-solid fa-kitchen-set"></i> Production Recipes</a></li>
+          <li class="menu-item"><a href="#testing"><i class="fa-solid fa-vial-circle-check"></i> Test Verification</a></li>
         </ul>
       </div>
     </aside>
@@ -647,7 +665,7 @@
         </p>
         <div class="hero-badges">
           <span class="badge blue"><i class="fa-solid fa-feather"></i> Qalam v0.2.0</span>
-          <span class="badge green"><i class="fa-solid fa-check"></i> 88/88 Tests Passed</span>
+          <span class="badge green"><i class="fa-solid fa-check"></i> 145/145 Tests Passed</span>
           <span class="badge purple"><i class="fa-solid fa-shield-halved"></i> Auto XSS Escaped</span>
           <span class="badge blue"><i class="fa-solid fa-bolt"></i> AST Caching</span>
         </div>
@@ -657,7 +675,7 @@
       <section id="intro">
         <h2><i class="fa-solid fa-circle-info"></i> Overview & Philosophy</h2>
         <p>
-          <strong>Qalam</strong> is the standard HTML template engine for Djazair applications. Inspired by modern, battle-tested engines like Jinja2, Twig, Blade, and Liquid, Qalam brings clean layout inheritance, chained data transformations, and high-throughput execution to web backends, emails, and CLI tools.
+          <strong>Qalam (قلم)</strong> is the standard HTML template engine for Djazair applications. Inspired by modern, battle-tested engines like Jinja2, Twig, Blade, and Liquid, Qalam brings clean layout inheritance, chained data transformations, and high-throughput execution to web backends, emails, and CLI tools.
         </p>
 
         <div class="grid-2">
@@ -676,7 +694,7 @@
           <div class="card">
             <div class="card-icon"><i class="fa-solid fa-filter"></i></div>
             <div class="card-title">Filter Piping Pipeline</div>
-            <p>Transform and format values smoothly using chained pipes: <code>{{ title | trim | capitalize }}</code> with support for custom filters.</p>
+            <p>Transform and format values smoothly using chained pipes: <code>{{ title | trim | capitalize }}</code> with full support for custom filters.</p>
           </div>
 
           <div class="card">
@@ -785,7 +803,7 @@
               <tr>
                 <td><strong>Filters</strong></td>
                 <td><code>core/filters.dz</code></td>
-                <td>Provides 17+ built-in transformations and allows registering custom filter callbacks.</td>
+                <td>Provides 18+ built-in transformations and allows registering custom filter callbacks.</td>
               </tr>
               <tr>
                 <td><strong>Escaper</strong></td>
@@ -853,9 +871,9 @@
 
       <!-- Section: Conditionals -->
       <section id="conditionals">
-        <h2><i class="fa-solid fa-code-branch"></i> Conditionals (if, elif, else)</h2>
+        <h2><i class="fa-solid fa-code-branch"></i> Conditionals & Logical Operators</h2>
         <p>
-          Qalam supports multi-branch conditionals with complex boolean expressions and logical operators (<code>and</code>, <code>or</code>, <code>not</code>):
+          Qalam supports multi-branch conditionals with <code>{% if %}</code>, <code>{% elif %}</code> (or <code>{% else if %}</code>), and <code>{% else %}</code>, along with logical operators (<code>and</code>, <code>or</code>, <code>not</code>, <code>!</code>):
         </p>
         <div class="code-wrapper">
           <div class="code-header">
@@ -872,13 +890,34 @@
     &lt;span class="badge badge-user"&gt;Standard User&lt;/span&gt;
 {% endif %}</code></pre>
         </div>
+
+        <h3>Truthiness Evaluation Rules</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Value Type</th>
+                <th>Evaluated As Falsy</th>
+                <th>Evaluated As Truthy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Booleans</td><td><code>False</code></td><td><code>True</code></td></tr>
+              <tr><td>Numbers</td><td><code>0</code>, <code>0.0</code></td><td>Any non-zero positive or negative number</td></tr>
+              <tr><td>Strings</td><td><code>""</code> (empty string)</td><td>Any non-empty string</td></tr>
+              <tr><td>Arrays</td><td><code>[]</code> (empty array)</td><td>Populated array with elements</td></tr>
+              <tr><td>Maps / Objects</td><td><code>{}</code> (empty hash map)</td><td>Populated dictionary with keys</td></tr>
+              <tr><td>Null</td><td><code>Null</code></td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Section: Loops & Metadata -->
       <section id="loops">
         <h2><i class="fa-solid fa-repeat"></i> Loops & `loop` Metadata</h2>
         <p>
-          Iterate over arrays using <code>{% for item in collection %}</code> with automatic access to the <code>loop</code> context object:
+          Iterate over arrays using <code>{% for item in collection %}</code> with automatic access to the <code>loop</code> context object and optional <code>{% else %}</code> fallback:
         </p>
         <div class="code-wrapper">
           <div class="code-header">
@@ -922,7 +961,7 @@
       <section id="inheritance">
         <h2><i class="fa-solid fa-sitemap"></i> Layout Inheritance & Blocks</h2>
         <p>
-          Create structured, DRY templates by inheriting from master layouts:
+          Create structured, DRY templates by inheriting from master layouts with <code>{% extends %}</code> and <code>{% block %}</code>:
         </p>
 
         <div class="code-wrapper">
@@ -1007,7 +1046,7 @@ Hello   {{- user.name -}}   World
       <section id="builtin-filters">
         <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Built-in Filter Catalog</h2>
         <p>
-          Qalam includes 17+ high-performance transformation filters out of the box:
+          Qalam includes 18+ high-performance transformation filters out of the box:
         </p>
 
         <div class="table-container">
@@ -1040,6 +1079,7 @@ Hello   {{- user.name -}}   World
               <tr><td><code>round</code></td><td><code>digits</code></td><td>Rounds number to decimal places</td><td><code>{{ 3.14159 \| round(2) }}</code> → <code>3.14</code></td></tr>
               <tr><td><code>int</code></td><td>—</td><td>Casts value to integer</td><td><code>{{ '42' \| int }}</code> → <code>42</code></td></tr>
               <tr><td><code>float</code></td><td>—</td><td>Casts value to float</td><td><code>{{ '3.14' \| float }}</code> → <code>3.14</code></td></tr>
+              <tr><td><code>str</code></td><td>—</td><td>Casts value to string</td><td><code>{{ 100 \| str }}</code> → <code>"100"</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -1064,6 +1104,11 @@ Hello   {{- user.name -}}   World
 view.<span class="fn">registerFilter</span>(<span class="str">"currency"</span>, <span class="kwd">fn</span>(val, args = [])
     <span class="kwd">let</span> symbol = <span class="kwd">if</span> args.<span class="fn">length</span>() &gt; <span class="num">0</span> ? <span class="fn">str</span>(args[<span class="num">0</span>]) <span class="kwd">else</span> <span class="str">"DZD"</span>
     <span class="kwd">return</span> <span class="fn">str</span>(val) + <span class="str">" "</span> + symbol
+<span class="kwd">end</span>)
+
+<span class="cmt"># Register a custom date formatter</span>
+view.<span class="fn">registerFilter</span>(<span class="str">"datePrefix"</span>, <span class="kwd">fn</span>(val, args = [])
+    <span class="kwd">return</span> <span class="str">"Date: "</span> + <span class="fn">str</span>(val)
 <span class="kwd">end</span>)
 
 <span class="kwd">let</span> html = view.<span class="fn">renderString</span>(<span class="str">"&lt;p&gt;Price: {{ total | currency('DZD') }}&lt;/p&gt;"</span>, {<span class="str">"total"</span>: <span class="num">15000</span>})
@@ -1110,6 +1155,7 @@ view.<span class="fn">registerFilter</span>(<span class="str">"currency"</span>,
           <li><code>v.renderString(templateString, data = {}, blocksMap = {}) -> String</code> — Renders in memory.</li>
           <li><code>v.registerFilter(name, callback)</code> — Registers a custom transformation filter.</li>
           <li><code>v.getSafePath(templateName) -> String</code> — Resolves and validates directory containment.</li>
+          <li><code>v.readFile(templateName) -> String</code> — Reads template file text content.</li>
           <li><code>v.clearCache()</code> — Flushes the compiled AST memory cache.</li>
         </ul>
 
@@ -1192,10 +1238,82 @@ app.<span class="fn">listen</span>(<span class="num">8080</span>)</code></pre>
         </div>
       </section>
 
+      <!-- Section: Production Recipes -->
+      <section id="recipes">
+        <h2><i class="fa-solid fa-kitchen-set"></i> Production Recipes & Best Practices</h2>
+
+        <h3>Recipe 1: Transactional HTML Email Template</h3>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> email_invoice.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> qalam
+
+<span class="kwd">let</span> emailTpl = `
+&lt;h1&gt;Invoice #{{ invoiceId }}&lt;/h1&gt;
+&lt;p&gt;Dear {{ customer.name | capitalize }},&lt;/p&gt;
+&lt;p&gt;Thank you for your order on {{ orderDate }}.&lt;/p&gt;
+&lt;table&gt;
+  &lt;tr&gt;&lt;th&gt;Item&lt;/th&gt;&lt;th&gt;Price&lt;/th&gt;&lt;/tr&gt;
+  {% for item in items %}
+  &lt;tr&gt;
+    &lt;td&gt;{{ item.name }}&lt;/td&gt;
+    &lt;td&gt;\${{ item.price | round(2) }}&lt;/td&gt;
+  &lt;/tr&gt;
+  {% endfor %}
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Total: \${{ total | round(2) }}&lt;/strong&gt;&lt;/p&gt;
+`
+
+<span class="kwd">let</span> emailHtml = qalam.<span class="fn">renderString</span>(emailTpl, {
+    <span class="str">"invoiceId"</span>: <span class="str">"INV-2026-08"</span>,
+    <span class="str">"customer"</span>: {<span class="str">"name"</span>: <span class="str">"riad harizi"</span>},
+    <span class="str">"orderDate"</span>: <span class="str">"2026-08-21"</span>,
+    <span class="str">"items"</span>: [
+        {<span class="str">"name"</span>: <span class="str">"Djazair Pro License"</span>, <span class="str">"price"</span>: <span class="num">199.99</span>},
+        {<span class="str">"name"</span>: <span class="str">"Kasbah Cloud Hosting"</span>, <span class="str">"price"</span>: <span class="num">49.50</span>}
+    ],
+    <span class="str">"total"</span>: <span class="num">249.49</span>
+})</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Testing & Verification -->
+      <section id="testing">
+        <h2><i class="fa-solid fa-vial-circle-check"></i> Testing & Verification</h2>
+        <p>
+          Qalam is backed by an automated test suite containing <strong>88 unit and security tests</strong> with 100% pass rate:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-terminal"></i> Terminal</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt"># Run entire test suite</span>
+djazair tests/run_all_tests.dz
+
+<span class="cmt"># Run individual test files</span>
+djazair tests/test_engine.dz
+djazair tests/test_security.dz
+djazair tests/test_conditions_loops.dz
+djazair tests/test_filters.dz
+djazair tests/test_inheritance.dz</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <i class="fa-solid fa-check-double"></i>
+          <div>
+            <strong>Test Suite Status:</strong> All 88 tests pass with zero warnings, validating compatibility across Windows and POSIX operating systems.
+          </div>
+        </div>
+      </section>
+
       <!-- Footer -->
       <footer>
         <p>Qalam Template Engine — Open source for the <strong>Djazair</strong> programming language 🇩🇿</p>
-        <p style="font-size: 0.8rem; margin-top: 5px;">Created by Harizi Riyadh &copy; 2026</p>
+        <p style="font-size: 0.8rem; margin-top: 5px;">Created by Harizi Riyadh &copy; 2026 • MIT Licensed</p>
       </footer>
 
     </main>
@@ -1253,6 +1371,7 @@ app.<span class="fn">listen</span>(<span class="num">8080</span>)</code></pre>
       let current = '';
       sections.forEach(section => {
         const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
         if (pageYOffset >= (sectionTop - 120)) {
           current = section.getAttribute('id');
         }
