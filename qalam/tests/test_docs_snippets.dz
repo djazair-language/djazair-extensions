@@ -88,7 +88,7 @@ file.write("${tmpDir}/home.html", `{% extends "layouts/base" %}
     <p>Your role: <span class="badge">{{ user.role | upper }}</span></p>
 {% endblock %}`)
 
-let viewEngine = new qalam.View({
+let viewEngine = new qalam.view({
     "views": tmpDir,
     "cache": True
 })
@@ -197,7 +197,7 @@ let resComment = qalam.renderString(tplComment, {"user": {"name": "Riad"}})
 test("DOC: Comments stripped and whitespace trimmed", resComment, "HelloRiadWorld")
 
 # ── 8. Custom Filter Registration ─────────────────────────────────────────────
-let vCustom = new qalam.View({})
+let vCustom = new qalam.view({})
 vCustom.registerFilter("currency", fn(val, args = [])
     let code = if args.length() > 0 ? str(args[0]) else "USD"
     return "${val} ${code}"

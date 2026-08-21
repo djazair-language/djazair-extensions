@@ -1,4 +1,4 @@
-﻿# ── Example 05: Partials (include) ────────────────────────────────────────────
+# ── Example 05: Partials (include) ────────────────────────────────────────────
 # Demonstrates {% include "partial" %} for reusable sub-templates.
 
 use qalam

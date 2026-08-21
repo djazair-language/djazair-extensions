@@ -7,7 +7,7 @@
 use file
 use path
 
-class TemplateLoader
+class templateLoader
     # Initializes the loader with views directory and cache configuration.
     #
     # @param viewsDir     {String}  Base directory containing templates

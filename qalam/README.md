@@ -42,7 +42,7 @@
 - [Built-In Filter Catalog](#-built-in-filter-catalog)
 - [Custom Filter Registration](#-custom-filter-registration)
 - [API Reference](#-api-reference)
-  - [Class: `qalam.View`](#class-qalamview)
+  - [Class: `qalam.view`](#class-qalamview)
   - [Helper: `qalam.renderString()`](#helper-qalamrenderstring)
   - [Security: `qalam.escapeHtml()`](#security-qalamescapehtml)
 - [Security Model](#-security-model)
@@ -95,6 +95,7 @@ Qalam is engineered according to **SOLID** principles and Clean Architecture. Ea
 
 | Module | Location | Responsibility |
 |---|---|---|
+| `init.dz` | `init.dz` | Main entry point exporting the `view` class, helpers, and escape utilities. |
 | `constants.dz` | `core/constants.dz` | Type constants for Tokens (`TOKEN_VAR`, `TOKEN_TAG`...) and AST Nodes. |
 | `escaper.dz` | `core/escaper.dz` | High-speed HTML entity encoding (`&`, `<`, `>`, `"`, `'`). |
 | `lexer.dz` | `core/lexer.dz` | Tokenizes source code into tokens, handles comments and whitespace. |
@@ -102,8 +103,6 @@ Qalam is engineered according to **SOLID** principles and Clean Architecture. Ea
 | `filters.dz` | `core/filters.dz` | Manages built-in transformations and user-registered custom filters. |
 | `evaluator.dz` | `core/evaluator.dz` | Traverses AST nodes, executes boolean logic, filters, and loop contexts. |
 | `loader.dz` | `core/loader.dz` | Filesystem boundary verification and in-memory AST cache engine. |
-| `view.dz` | `core/view.dz` | Public orchestrator class (`View`). |
-| `engine.dz` | `core/engine.dz` | Backward-compatibility facade. |
 
 ---
 
@@ -201,7 +200,7 @@ my_project/
 ```djazair
 use qalam
 
-let viewEngine = new qalam.View({
+let viewEngine = new qalam.view({
     "views": "views",
     "cache": True
 })
@@ -534,12 +533,12 @@ Extend Qalam by registering custom domain-specific filters:
 ```djazair
 use qalam
 
-let v = new qalam.View({})
+let v = new qalam.view({})
 
 # Register custom currency formatter
 v.registerFilter("currency", fn(val, args = [])
     let code = if args.length() > 0 ? str(args[0]) else "USD"
-    return str(val) + " " + code
+    return "${val} ${code}"
 end)
 
 # Register custom badge generator
@@ -562,11 +561,11 @@ print(html)
 
 ## 📚 API Reference
 
-### Class: `qalam.View`
+### Class: `qalam.view`
 
 The primary template renderer orchestrator.
 
-#### Constructor: `new qalam.View(config = {})`
+#### Constructor: `new qalam.view(config = {})`
 
 **Configuration Map:**
 
@@ -648,7 +647,7 @@ Qalam includes an intelligent **In-Memory AST Cache**:
 
 To disable caching during local development, set `"cache": False`:
 ```djazair
-let devView = new qalam.View({"views": "views", "cache": False})
+let devView = new qalam.view({"views": "views", "cache": False})
 ```
 
 ---

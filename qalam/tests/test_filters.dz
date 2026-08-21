@@ -105,7 +105,7 @@ test("PIPING: array join | upper",
     "APPLE, ORANGE")
 
 # ── 5. Custom Registered Filters ──────────────────────────────────────────────
-let v = new qalam.View({})
+let v = new qalam.view({})
 v.registerFilter("currency", fn(val, args = [])
     return "\$${val}.00"
 end)

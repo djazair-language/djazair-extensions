@@ -9,7 +9,7 @@ use json
 use math
 
 # Registry and executor for template transformation filters.
-class FilterRegistry
+class filterRegistry
     # Initializes the registry with default standard library filters.
     init()
         self.filtersMap = {}

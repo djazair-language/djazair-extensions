@@ -7,7 +7,7 @@
 
 import "constants.dz" as consts
 
-class Parser
+class parser
     # Initializes the AST Parser.
     init()
     end

@@ -16,12 +16,12 @@ import "constants.dz" as consts
 import "escaper.dz" as escaperMod
 import "filters.dz" as filtersMod
 
-class Evaluator
+class evaluator
     # Initializes the Evaluator with a shared filter registry.
     #
     # @param filterRegistry {FilterRegistry} Registry containing filters
     init(filterRegistry = Null)
-        self.filters = if isNull(filterRegistry) ? new filtersMod.FilterRegistry() else filterRegistry
+        self.filters = if isNull(filterRegistry) ? new filtersMod.filterRegistry() else filterRegistry
         self.viewEngine = Null
     end
 
