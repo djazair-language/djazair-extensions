@@ -22,6 +22,7 @@ fn parseJson(req, res)
     try
         req.body = decode(req.body)
     catch err
+        print("[Kasbah BodyParser Error] Failed to parse JSON request body: ${err}")
         res.status(400).json({"error": "Invalid JSON body"})
         return
     end

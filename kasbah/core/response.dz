@@ -181,6 +181,7 @@ class response
             let content = v.render(templateName, data)
             return self.html(content)
         catch err
+            print("[Kasbah View Error] Failed to render template '${templateName}': ${err}")
             if str(err).startsWith("Template not found") or str(err).startsWith("View not found")
                 self.status(404).send("View not found: ${templateName}")
             else

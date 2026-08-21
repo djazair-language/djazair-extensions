@@ -382,6 +382,10 @@ class app
             self.loggerInstance.onError(req, err)
         end
 
+        let reqMethod = if not isNull(req) ? req.method else "UNKNOWN"
+        let reqPath = if not isNull(req) ? req.path else "/"
+        print("[Kasbah Error] Unhandled exception on ${reqMethod} ${reqPath} -> ${err}")
+
         try
             if not isNull(self.errorHandler)
                 self.errorHandler(err, req, res)
@@ -395,6 +399,7 @@ class app
                 end
             end
         catch handlerErr
+            print("[Kasbah Error] Error inside custom onError handler: ${handlerErr}")
             if not res.sentFlag
                 res.status(500).text("Internal Server Error")
             end
@@ -423,6 +428,7 @@ class app
                 end
             catch err
                 if isNull(res)
+                    print("[Kasbah Fatal Error] Failed before response initialization: ${err}")
                     httpRes.status(500).send("Internal Server Error")
                 else
                     self.handleError(err, req, res)
@@ -439,6 +445,7 @@ class app
                     self.loggerInstance.onComplete(req, res)
                 end
             catch postErr
+                print("[Kasbah Error] Post-request processing error: ${postErr}")
                 if not isNull(self.loggerInstance) and not isNull(req)
                     self.loggerInstance.onError(req, "Post-request error: ${postErr}")
                 end
