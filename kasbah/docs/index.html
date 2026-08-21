@@ -739,7 +739,7 @@ app.<span class="fn">get</span>(<span class="str">"/"</span>, <span class="kwd">
 
 app.<span class="fn">get</span>(<span class="str">"/api/hello/:name"</span>, <span class="kwd">fn</span>(req, res)
     res.<span class="fn">json</span>({
-        <span class="str">"message"</span>: <span class="str">"Hello, "</span> + req.<span class="fn">param</span>(<span class="str">"name"</span>),
+        <span class="str">"message"</span>: <span class="str">"Hello, ${req.param(\"name\")}!"</span>,
         <span class="str">"isAjax"</span>: req.<span class="fn">isAjax</span>(),
         <span class="str">"version"</span>: <span class="str">"0.2.0"</span>
     })
@@ -1363,13 +1363,13 @@ app.<span class="fn">onNotFound</span>(<span class="kwd">fn</span>(req, res)
     <span class="kwd">if</span> req.<span class="fn">isJson</span>()
         res.<span class="fn">notFound</span>(<span class="str">"Endpoint does not exist"</span>)
     <span class="kwd">else</span>
-        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: "</span> + req.path + <span class="str">"&lt;/p&gt;"</span>)
+        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: ${req.path}&lt;/p&gt;"</span>)
     <span class="kwd">end</span>
 <span class="kwd">end</span>)
 
 <span class="cmt"># Custom 500 Internal Error Handler</span>
 app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
-    <span class="fn">print</span>(<span class="str">"[ERROR] "</span> + req.method + <span class="str">" "</span> + req.path + <span class="str">" -> "</span> + <span class="fn">str</span>(err))
+    <span class="fn">print</span>(<span class="str">"[ERROR] ${req.method} ${req.path} -> ${str(err)}"</span>)
     
     <span class="kwd">if</span> res.sentFlag <span class="kwd">return</span> <span class="kwd">end</span>
 
@@ -1472,7 +1472,7 @@ app.<span class="fn">onNotFound</span>(<span class="kwd">fn</span>(req, res)
     <span class="kwd">if</span> req.<span class="fn">isJson</span>()
         res.<span class="fn">notFound</span>(<span class="str">"Requested resource not found"</span>)
     <span class="kwd">else</span>
-        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: "</span> + req.path + <span class="str">"&lt;/p&gt;"</span>)
+        res.<span class="fn">status</span>(<span class="num">404</span>).<span class="fn">html</span>(<span class="str">"&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;p&gt;Path: ${req.path}&lt;/p&gt;"</span>)
     <span class="kwd">end</span>
 <span class="kwd">end</span>)
 

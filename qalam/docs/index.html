@@ -751,7 +751,7 @@
           <pre><code><span class="kwd">use</span> qalam
 
 <span class="cmt"># Initialize View engine with views directory and cache</span>
-<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">View</span>({
+<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">view</span>({
     <span class="str">"views"</span>: <span class="str">"views"</span>,
     <span class="str">"cache"</span>: <span class="kwd">True</span>
 })
@@ -1120,17 +1120,17 @@ Hello   {{- user.name -}}   World
           </div>
           <pre><code><span class="kwd">use</span> qalam
 
-<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">View</span>({})
+<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">view</span>({})
 
 <span class="cmt"># Register a custom currency filter</span>
 view.<span class="fn">registerFilter</span>(<span class="str">"currency"</span>, <span class="kwd">fn</span>(val, args = [])
     <span class="kwd">let</span> symbol = <span class="kwd">if</span> args.<span class="fn">length</span>() &gt; <span class="num">0</span> ? <span class="fn">str</span>(args[<span class="num">0</span>]) <span class="kwd">else</span> <span class="str">"DZD"</span>
-    <span class="kwd">return</span> <span class="fn">str</span>(val) + <span class="str">" "</span> + symbol
+    <span class="kwd">return</span> <span class="str">"${val} ${symbol}"</span>
 <span class="kwd">end</span>)
 
 <span class="cmt"># Register a custom date formatter</span>
 view.<span class="fn">registerFilter</span>(<span class="str">"datePrefix"</span>, <span class="kwd">fn</span>(val, args = [])
-    <span class="kwd">return</span> <span class="str">"Date: "</span> + <span class="fn">str</span>(val)
+    <span class="kwd">return</span> <span class="str">"Date: ${val}"</span>
 <span class="kwd">end</span>)
 
 <span class="kwd">let</span> html = view.<span class="fn">renderString</span>(<span class="str">"&lt;p&gt;Price: {{ total | currency('DZD') }}&lt;/p&gt;"</span>, {<span class="str">"total"</span>: <span class="num">15000</span>})

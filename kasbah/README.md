@@ -551,11 +551,11 @@ app.middleware(kasbah.serveStatic("./public"))
 
 ### Structured Logging (`kasbah.logger`)
 
-Outputs formatted request timing, status codes, and latency in milliseconds:
+Outputs standardized RFC 5424 severity levels, ISO 8601 timestamps, request telemetry, status codes, and latency in milliseconds:
 
 ```djazair
 app.middleware(kasbah.logger({
-    "level":  "info",    # "debug" | "info" | "warn" | "error" | "none"
+    "level":  "info",    # "debug" | "info" | "warn" | "error" | "fatal" | "none"
     "format": "combined" # "dev" | "combined"
 }))
 ```
