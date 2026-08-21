@@ -215,6 +215,13 @@ class request
         return result
     end
 
+    # Alias for all() — Combines route params, query string, and body into a single dictionary.
+    #
+    # @return {Map} Unified inputs map
+    inputs()
+        return self.all()
+    end
+
     # Returns a subset map of inputs matching specified keys.
     #
     # @param keys {Array} List of allowed input keys

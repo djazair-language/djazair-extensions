@@ -1,32 +1,41 @@
+# ═══════════════════════════════════════════════════════════════════════════════
 # Kasbah Example 02 — Routing & Input Helpers
-# Route params, query strings, POST body, and shorthand input helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+# Demonstrates route parameters (:param), query strings (?key=val), JSON/Form bodies,
+# and fluent input helper methods (`param`, `query`, `input`, `all`, `only`, `except`).
 #
 # Usage:
-#   GET  /users/5           -> req.param("id") = "5"
-#   GET  /users/5?page=2    -> req.query("page") = "2"
-#   GET  /search?q=kasbah   -> req.input("q") = "kasbah" (shorthand)
-#   POST /users             -> req.body contains parsed JSON/form
-#   GET  /inputs            -> req.inputs() merges params+query+body
+#   Run: djazair examples/02_routing.dz
+#   Endpoints:
+#     GET  /users/5                 -> Extracts :id param ("5")
+#     GET  /users/5/posts/99        -> Extracts multi-params (:id, :postId)
+#     GET  /search?q=kasbah         -> Accesses query string parameter
+#     GET  /inputs?name=john&age=25 -> Extracts unified inputs, only(), except()
+#     POST /users                   -> Receives JSON or URL-encoded form body
 
 use kasbah
 
+# Initialize application instance with body parser enabled
 let app = new kasbah.kasbahApp({
     "port": 8080,
     "bodyParser": True
 })
 
+# 1. Base route
 app.get("/", fn(req, res)
     res.text("Kasbah Routing Demo — try /users/123 or /search?q=hello")
 end)
 
+# 2. Single dynamic parameter route
 app.get("/users/:id", fn(req, res)
     res.json({
-        "route": "/users/:id",
+        "route":  "/users/:id",
         "userId": req.param("id"),
         "method": req.method
     })
 end)
 
+# 3. Multi-parameter nested route
 app.get("/users/:id/posts/:postId", fn(req, res)
     res.json({
         "userId": req.param("id"),
@@ -34,34 +43,39 @@ app.get("/users/:id/posts/:postId", fn(req, res)
     })
 end)
 
+# 4. Query string extraction
 app.get("/search", fn(req, res)
     let q = req.input("q")
     if isNull(q)
-        res.json({"error": "Missing ?q= parameter"})
+        res.status(400).json({"error": "Missing ?q= query parameter"})
     else
         res.json({"query": q, "results": ["result1", "result2"]})
     end
 end)
 
+# 5. Unified input helpers (`all`, `inputs`, `only`, `except`)
 app.get("/inputs", fn(req, res)
-    let all = req.inputs()
+    let allInputs = req.inputs()
     res.json({
-        "allInputs": all,
-        "only": req.only(["name", "page"]),
-        "except": req.except(["token"])
+        "allInputs": allInputs,
+        "only":      req.only(["name", "page"]),
+        "except":    req.except(["token"])
     })
 end)
 
+# 6. POST body handling
 app.post("/users", fn(req, res)
     let name = req.input("name")
-    if isNull(name)
-        res.status(400).json({"error": "name field is required"})
+    if isNull(name) or name == ""
+        res.status(400).json({"error": "Field 'name' is required"})
         return
     end
     res.status(201).json({
-        "created": name,
-        "data": req.body
+        "message": "User created successfully",
+        "name":    name,
+        "data":    req.body
     })
 end)
 
+# Start server listener
 app.listen()

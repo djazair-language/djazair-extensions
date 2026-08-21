@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qalam Template Engine — Official Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: rgba(18, 26, 43, 0.75);
+      --bg-card-hover: rgba(28, 38, 62, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --primary: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.25);
+      --secondary: #818cf8;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --code-bg: #0f172a;
+      --sidebar-width: 280px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.7;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* ── Header / Navbar ── */
+    header {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 70px;
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+      animation: pulseGlow 3s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 15px var(--primary-glow); transform: scale(1); }
+      100% { box-shadow: 0 0 25px rgba(129, 140, 248, 0.4); transform: scale(1.03); }
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-badge {
+      font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border-accent);
+      font-weight: 600;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .search-box {
+      position: relative;
+      width: 260px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      padding: 8px 12px 8px 36px;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Layout ── */
+    .container {
+      display: flex;
+      margin-top: 70px;
+      min-height: calc(100vh - 70px);
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      width: var(--sidebar-width);
+      position: fixed;
+      top: 70px;
+      bottom: 0;
+      left: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      z-index: 900;
+    }
+
+    aside::-webkit-scrollbar {
+      width: 5px;
+    }
+    aside::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .menu-group {
+      margin-bottom: 1.8rem;
+    }
+
+    .menu-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.8rem;
+      padding-left: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .menu-list {
+      list-style: none;
+    }
+
+    .menu-item a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .menu-item a:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(4px);
+    }
+
+    .menu-item a.active {
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 3px solid var(--primary);
+      font-weight: 700;
+    }
+
+    /* ── Main Content ── */
+    main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 3rem 4rem;
+      max-width: 1150px;
+    }
+
+    /* ── Hero Banner ── */
+    .hero {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 3rem;
+      margin-bottom: 3.5rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: 2.8rem;
+      font-weight: 900;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.25;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 750px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .badge.green { border-color: rgba(16, 185, 129, 0.3); color: #34d399; background: rgba(16, 185, 129, 0.1); }
+    .badge.blue  { border-color: rgba(56, 189, 248, 0.3); color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+    .badge.purple { border-color: rgba(129, 140, 248, 0.3); color: #818cf8; background: rgba(129, 140, 248, 0.1); }
+
+    /* ── Sections & Cards ── */
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 90px;
+    }
+
+    h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.8rem;
+      letter-spacing: -0.3px;
+    }
+
+    h2 i {
+      color: var(--primary);
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 2rem 0 0.8rem;
+      color: #e2e8f0;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1.2rem;
+      font-size: 1.02rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    /* ── Code Blocks ── */
+    .code-wrapper {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin: 1.2rem 0 1.8rem;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--border-color);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .code-header .lang-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: inherit;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: #0b0f19;
+      border-color: var(--primary);
+    }
+
+    pre {
+      padding: 1.2rem 1.5rem;
+      overflow-x: auto;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    p code, li code, td code {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      display: inline-block;
+    }
+
+    /* Syntax Highlighting Colors */
+    .kwd { color: #f472b6; font-weight: 600; }  /* use, let, fn, if, return */
+    .str { color: #a7f3d0; }                     /* "strings" */
+    .fn  { color: #60a5fa; font-weight: 500; }  /* functionNames */
+    .num { color: #fbbf24; }                     /* 123 */
+    .cmt { color: #64748b; font-style: italic; }/* # comments */
+    .typ { color: #c084fc; }                     /* View, FilterRegistry */
+
+    /* ── Tables ── */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0 2rem;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.03);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* ── Callout Boxes ── */
+    .callout {
+      padding: 1.2rem 1.5rem;
+      border-radius: 10px;
+      margin: 1.5rem 0;
+      border-left: 4px solid;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .callout i {
+      font-size: 1.3rem;
+      margin-top: 3px;
+    }
+
+    .callout.tip {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.06);
+    }
+    .callout.tip i { color: var(--accent); }
+
+    .callout.info {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.06);
+    }
+    .callout.info i { color: var(--primary); }
+
+    .callout.warn {
+      border-color: var(--warning);
+      background: rgba(245, 158, 11, 0.06);
+    }
+    .callout.warn i { color: var(--warning); }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      aside {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      aside.open {
+        transform: translateX(0);
+      }
+      main {
+        margin-left: 0;
+        padding: 2rem 1.5rem;
+      }
+      .mobile-menu-btn {
+        display: block !important;
+      }
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top Header ── -->
+  <header>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button class="mobile-menu-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+      <a href="#" class="brand">
+        <div class="brand-logo"><i class="fa-solid fa-feather-pointed"></i></div>
+        <div>
+          <span class="brand-title">Qalam</span>
+          <span class="brand-badge">v0.2.0</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="nav-actions">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="Search syntax, filters, loops...">
+      </div>
+      <a href="https://github.com/djazair-language" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
+        <i class="fa-brands fa-github"></i>
+      </a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- ── Sidebar Navigation ── -->
+    <aside id="sidebar">
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-compass"></i> Getting Started</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#intro" class="active"><i class="fa-solid fa-circle-info"></i> Overview</a></li>
+          <li class="menu-item"><a href="#install"><i class="fa-solid fa-download"></i> Installation</a></li>
+          <li class="menu-item"><a href="#quickstart"><i class="fa-solid fa-bolt"></i> Quick Start</a></li>
+          <li class="menu-item"><a href="#architecture"><i class="fa-solid fa-layer-group"></i> Architecture</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-code"></i> Template Syntax</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#variables"><i class="fa-solid fa-brackets-curly"></i> Variables & Escaping</a></li>
+          <li class="menu-item"><a href="#piping"><i class="fa-solid fa-filter"></i> Filters & Piping</a></li>
+          <li class="menu-item"><a href="#conditionals"><i class="fa-solid fa-code-branch"></i> Conditionals (if/elif)</a></li>
+          <li class="menu-item"><a href="#loops"><i class="fa-solid fa-repeat"></i> Loops & Metadata</a></li>
+          <li class="menu-item"><a href="#inheritance"><i class="fa-solid fa-sitemap"></i> Layout Inheritance</a></li>
+          <li class="menu-item"><a href="#partials"><i class="fa-solid fa-puzzle-piece"></i> Partials (include)</a></li>
+          <li class="menu-item"><a href="#comments"><i class="fa-solid fa-comment-slash"></i> Comments & Whitespace</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-list-check"></i> Filter Catalog</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#builtin-filters"><i class="fa-solid fa-wand-magic-sparkles"></i> Built-in Filters</a></li>
+          <li class="menu-item"><a href="#custom-filters"><i class="fa-solid fa-plus-circle"></i> Custom Filters</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-gears"></i> Engine & API</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#api"><i class="fa-solid fa-cubes"></i> View & API Methods</a></li>
+          <li class="menu-item"><a href="#security"><i class="fa-solid fa-shield-halved"></i> Security Model</a></li>
+          <li class="menu-item"><a href="#caching"><i class="fa-solid fa-gauge-high"></i> Performance & Cache</a></li>
+          <li class="menu-item"><a href="#framework"><i class="fa-solid fa-network-wired"></i> Kasbah Integration</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ── Main Content Area ── -->
+    <main>
+
+      <!-- Hero Banner -->
+      <div class="hero">
+        <h1 class="hero-title">Qalam (قلم) Template Engine</h1>
+        <p class="hero-subtitle">
+          An enterprise-grade, AST-based HTML template engine for the Djazair Programming Language. Built with clean modular architecture, In-Memory AST Caching, expressive UNIX-style filter pipelines, and automatic XSS escaping.
+        </p>
+        <div class="hero-badges">
+          <span class="badge blue"><i class="fa-solid fa-feather"></i> Qalam v0.2.0</span>
+          <span class="badge green"><i class="fa-solid fa-check"></i> 88/88 Tests Passed</span>
+          <span class="badge purple"><i class="fa-solid fa-shield-halved"></i> Auto XSS Escaped</span>
+          <span class="badge blue"><i class="fa-solid fa-bolt"></i> AST Caching</span>
+        </div>
+      </div>
+
+      <!-- Section: Overview -->
+      <section id="intro">
+        <h2><i class="fa-solid fa-circle-info"></i> Overview & Philosophy</h2>
+        <p>
+          <strong>Qalam</strong> is the standard HTML template engine for Djazair applications. Inspired by modern, battle-tested engines like Jinja2, Twig, Blade, and Liquid, Qalam brings clean layout inheritance, chained data transformations, and high-throughput execution to web backends, emails, and CLI tools.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-shield-virus"></i></div>
+            <div class="card-title">XSS-Safe by Default</div>
+            <p>Every <code>{{ var }}</code> interpolation is automatically encoded for HTML special characters. Raw HTML output is strictly opt-in via <code>{{{ raw }}}</code>.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+            <div class="card-title">AST Memory Caching</div>
+            <p>Templates are parsed once into an Abstract Syntax Tree (AST) and reused across requests, delivering up to 30x faster rendering in production.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-filter"></i></div>
+            <div class="card-title">Filter Piping Pipeline</div>
+            <p>Transform and format values smoothly using chained pipes: <code>{{ title | trim | capitalize }}</code> with support for custom filters.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon"><i class="fa-solid fa-sitemap"></i></div>
+            <div class="card-title">Layout Inheritance</div>
+            <p>Define master application layouts with <code>{% extends %}</code> and customize sections with overrideable <code>{% block %}</code> tags.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Installation -->
+      <section id="install">
+        <h2><i class="fa-solid fa-download"></i> Installation</h2>
+        <p>Install Qalam into your Djazair project using the official package manager:</p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-terminal"></i> Terminal</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>dpm install qalam</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Quick Start -->
+      <section id="quickstart">
+        <h2><i class="fa-solid fa-bolt"></i> Quick Start</h2>
+
+        <h3>1. In-Memory Rendering (No Files Needed)</h3>
+        <p>Render dynamic strings directly in memory with full AST evaluation:</p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> memory_render.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> qalam
+
+<span class="kwd">let</span> template = <span class="str">"Hello, {{ user.name | capitalize }}! Your balance is ${{ balance | round(2) }}."</span>
+<span class="kwd">let</span> context = {
+    <span class="str">"user"</span>: {<span class="str">"name"</span>: <span class="str">"riad"</span>},
+    <span class="str">"balance"</span>: <span class="num">125.789</span>
+}
+
+<span class="kwd">let</span> result = qalam.<span class="fn">renderString</span>(template, context)
+<span class="fn">print</span>(result)
+<span class="cmt"># Output: Hello, Riad! Your balance is $125.79.</span></code></pre>
+        </div>
+
+        <h3>2. File-Based Rendering with Layouts</h3>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> app.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> qalam
+
+<span class="cmt"># Initialize View engine with views directory and cache</span>
+<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">View</span>({
+    <span class="str">"views"</span>: <span class="str">"views"</span>,
+    <span class="str">"cache"</span>: <span class="kwd">True</span>
+})
+
+<span class="kwd">let</span> html = view.<span class="fn">render</span>(<span class="str">"dashboard"</span>, {
+    <span class="str">"pageTitle"</span>: <span class="str">"Trading Overview"</span>,
+    <span class="str">"user"</span>: {<span class="str">"name"</span>: <span class="str">"Riad"</span>, <span class="str">"role"</span>: <span class="str">"admin"</span>}
+})</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Architecture -->
+      <section id="architecture">
+        <h2><i class="fa-solid fa-layer-group"></i> Modular Architecture & Pipeline</h2>
+        <p>
+          Qalam is structured into decoupled, single-responsibility modules located in <code>core/</code>:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>File</th>
+                <th>Primary Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Lexer</strong></td>
+                <td><code>core/lexer.dz</code></td>
+                <td>Tokenizes raw text into clean semantic token streams, strips comments, handles whitespace.</td>
+              </tr>
+              <tr>
+                <td><strong>Parser</strong></td>
+                <td><code>core/parser.dz</code></td>
+                <td>Builds the hierarchical Abstract Syntax Tree (AST), handles <code>if/elif/else</code>, <code>for</code>, and blocks.</td>
+              </tr>
+              <tr>
+                <td><strong>Evaluator</strong></td>
+                <td><code>core/evaluator.dz</code></td>
+                <td>Evaluates AST nodes, dot-paths, logical operators (<code>and</code>/<code>or</code>), loop context, and filter pipes.</td>
+              </tr>
+              <tr>
+                <td><strong>Loader</strong></td>
+                <td><code>core/loader.dz</code></td>
+                <td>Enforces directory security boundaries against traversal attacks and manages in-memory AST caching.</td>
+              </tr>
+              <tr>
+                <td><strong>Filters</strong></td>
+                <td><code>core/filters.dz</code></td>
+                <td>Provides 17+ built-in transformations and allows registering custom filter callbacks.</td>
+              </tr>
+              <tr>
+                <td><strong>Escaper</strong></td>
+                <td><code>core/escaper.dz</code></td>
+                <td>High-speed entity encoding to prevent Cross-Site Scripting (XSS).</td>
+              </tr>
+              <tr>
+                <td><strong>View</strong></td>
+                <td><code>core/view.dz</code></td>
+                <td>Unified facade orchestrating the entire lifecycle.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Variables & Escaping -->
+      <section id="variables">
+        <h2><i class="fa-solid fa-brackets-curly"></i> Variables & Escaping</h2>
+        <p>
+          Variables enclosed in <code>{{ ... }}</code> are evaluated against the data context and automatically sanitized against XSS injection:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> template.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt">&lt;!-- Auto-escaped: safe against &lt;script&gt; and injection --&gt;</span>
+&lt;h1&gt;Hello, {{ user.name }}&lt;/h1&gt;
+
+<span class="cmt">&lt;!-- Nested dot paths and array bracket indexing --&gt;</span>
+&lt;p&gt;City: {{ user.profile.address.city }}&lt;/p&gt;
+&lt;p&gt;First item: {{ articles[0].title }}&lt;/p&gt;
+
+<span class="cmt">&lt;!-- Raw unescaped HTML: Use only for trusted content --&gt;</span>
+&lt;div class="content"&gt;{{{ article.trustedHtmlBody }}}&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Filters & Piping -->
+      <section id="piping">
+        <h2><i class="fa-solid fa-filter"></i> Filters & Piping Pipeline</h2>
+        <p>
+          Transform data directly in your templates using the pipe operator (<code>|</code>). Multiple filters can be chained sequentially:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> filters.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt">&lt;!-- Single and chained filters --&gt;</span>
+&lt;h1&gt;{{ article.title | trim | title }}&lt;/h1&gt;
+&lt;p&gt;Author: {{ author.name | default("Anonymous") }}&lt;/p&gt;
+&lt;p&gt;Tags: {{ tags | join(" • ") | upper }}&lt;/p&gt;
+&lt;p&gt;Price: ${{ product.price | round(2) }}&lt;/p&gt;</code></pre>
+        </div>
+
+        <div class="callout tip">
+          <i class="fa-solid fa-lightbulb"></i>
+          <div>
+            <strong>Piping Order:</strong> Transformations execute from left to right. In <code>{{ text | trim | upper }}</code>, the text is first trimmed, and the result is converted to uppercase.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Conditionals -->
+      <section id="conditionals">
+        <h2><i class="fa-solid fa-code-branch"></i> Conditionals (if, elif, else)</h2>
+        <p>
+          Qalam supports multi-branch conditionals with complex boolean expressions and logical operators (<code>and</code>, <code>or</code>, <code>not</code>):
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> conditionals.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>{% if user.role == 'admin' and user.isActive %}
+    &lt;span class="badge badge-admin"&gt;Active Administrator&lt;/span&gt;
+{% elif user.role == 'editor' or user.role == 'moderator' %}
+    &lt;span class="badge badge-editor"&gt;Staff Member&lt;/span&gt;
+{% elif not user.isVerified %}
+    &lt;span class="badge badge-warning"&gt;Pending Verification&lt;/span&gt;
+{% else %}
+    &lt;span class="badge badge-user"&gt;Standard User&lt;/span&gt;
+{% endif %}</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Loops & Metadata -->
+      <section id="loops">
+        <h2><i class="fa-solid fa-repeat"></i> Loops & `loop` Metadata</h2>
+        <p>
+          Iterate over arrays using <code>{% for item in collection %}</code> with automatic access to the <code>loop</code> context object:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> loops.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>&lt;ul&gt;
+{% for item in items %}
+  &lt;li class="{% if loop.first %}first-item{% endif %} {% if loop.even %}even{% else %}odd{% endif %}"&gt;
+    Item #{{ loop.index }} of {{ loop.length }}: {{ item.name }}
+  &lt;/li&gt;
+{% else %}
+  &lt;li&gt;No items found in list.&lt;/li&gt;
+{% endfor %}
+&lt;/ul&gt;</code></pre>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>loop.index</code></td><td>Integer</td><td>1-based iteration index (<code>1, 2, 3...</code>)</td></tr>
+              <tr><td><code>loop.index0</code></td><td>Integer</td><td>0-based iteration index (<code>0, 1, 2...</code>)</td></tr>
+              <tr><td><code>loop.first</code></td><td>Boolean</td><td><code>True</code> during the first iteration</td></tr>
+              <tr><td><code>loop.last</code></td><td>Boolean</td><td><code>True</code> during the last iteration</td></tr>
+              <tr><td><code>loop.length</code></td><td>Integer</td><td>Total number of elements in the collection</td></tr>
+              <tr><td><code>loop.even</code></td><td>Boolean</td><td><code>True</code> if 1-based iteration is even (2, 4, 6...)</td></tr>
+              <tr><td><code>loop.odd</code></td><td>Boolean</td><td><code>True</code> if 1-based iteration is odd (1, 3, 5...)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Inheritance -->
+      <section id="inheritance">
+        <h2><i class="fa-solid fa-sitemap"></i> Layout Inheritance & Blocks</h2>
+        <p>
+          Create structured, DRY templates by inheriting from master layouts:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> views/layouts/base.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;{% block title %}Default App{% endblock %}&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;header&gt;{% block header %}&lt;nav&gt;Default Navigation&lt;/nav&gt;{% endblock %}&lt;/header&gt;
+  &lt;main&gt;
+    {% block content %}{% endblock %}
+  &lt;/main&gt;
+  &lt;footer&gt;{% block footer %}&copy; 2026 Djazair Language{% endblock %}&lt;/footer&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> views/home.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>{% extends "layouts/base" %}
+
+{% block title %}Dashboard — {{ siteName }}{% endblock %}
+
+{% block content %}
+  &lt;h1&gt;Welcome back, {{ user.name }}!&lt;/h1&gt;
+  &lt;p&gt;Manage your account and settings.&lt;/p&gt;
+{% endblock %}</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Partials -->
+      <section id="partials">
+        <h2><i class="fa-solid fa-puzzle-piece"></i> Partials & Sub-Templates</h2>
+        <p>
+          Embed reusable components across your templates using <code>{% include %}</code>:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> page.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>&lt;div class="page-container"&gt;
+  {% include "partials/header" %}
+  &lt;div class="main-body"&gt;
+    {% include "partials/sidebar" %}
+    &lt;div class="content"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+  {% include "partials/footer" %}
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Comments & Whitespace -->
+      <section id="comments">
+        <h2><i class="fa-solid fa-comment-slash"></i> Comments & Whitespace Control</h2>
+        <p>
+          Template comments inside <code>{# ... #}</code> are stripped during tokenization and never appear in HTML output:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-file-code"></i> template.html</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt">{# This internal note will not be rendered in the browser #}</span>
+&lt;p&gt;Visible Content&lt;/p&gt;
+
+<span class="cmt">&lt;!-- Whitespace trimming using hyphens --&gt;</span>
+Hello   {{- user.name -}}   World
+<span class="cmt">&lt;!-- Output: HelloRiadWorld --&gt;</span></code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Built-in Filter Catalog -->
+      <section id="builtin-filters">
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Built-in Filter Catalog</h2>
+        <p>
+          Qalam includes 17+ high-performance transformation filters out of the box:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Filter</th>
+                <th>Arguments</th>
+                <th>Description</th>
+                <th>Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>upper</code></td><td>—</td><td>Converts string to uppercase</td><td><code>{{ 'riad' \| upper }}</code> → <code>RIAD</code></td></tr>
+              <tr><td><code>lower</code></td><td>—</td><td>Converts string to lowercase</td><td><code>{{ 'RIAD' \| lower }}</code> → <code>riad</code></td></tr>
+              <tr><td><code>capitalize</code></td><td>—</td><td>Capitalizes first letter</td><td><code>{{ 'hello world' \| capitalize }}</code> → <code>Hello world</code></td></tr>
+              <tr><td><code>title</code></td><td>—</td><td>Converts string to title case</td><td><code>{{ 'hello world' \| title }}</code> → <code>Hello World</code></td></tr>
+              <tr><td><code>trim</code></td><td>—</td><td>Strips surrounding whitespace</td><td><code>{{ '  hi  ' \| trim }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>ltrim</code></td><td>—</td><td>Strips leading whitespace</td><td><code>{{ '  hi' \| ltrim }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>rtrim</code></td><td>—</td><td>Strips trailing whitespace</td><td><code>{{ 'hi  ' \| rtrim }}</code> → <code>hi</code></td></tr>
+              <tr><td><code>length</code> / <code>len</code></td><td>—</td><td>Returns length of string, array, or map</td><td><code>{{ [1,2,3] \| length }}</code> → <code>3</code></td></tr>
+              <tr><td><code>reverse</code></td><td>—</td><td>Reverses string or array</td><td><code>{{ 'abc' \| reverse }}</code> → <code>cba</code></td></tr>
+              <tr><td><code>first</code></td><td>—</td><td>First item of array or char</td><td><code>{{ ['a','b'] \| first }}</code> → <code>a</code></td></tr>
+              <tr><td><code>last</code></td><td>—</td><td>Last item of array or char</td><td><code>{{ ['a','b'] \| last }}</code> → <code>b</code></td></tr>
+              <tr><td><code>join</code></td><td><code>delimiter</code></td><td>Joins array with separator</td><td><code>{{ items \| join(' • ') }}</code></td></tr>
+              <tr><td><code>default</code></td><td><code>fallback</code></td><td>Fallback value if empty/null/false</td><td><code>{{ bio \| default('N/A') }}</code></td></tr>
+              <tr><td><code>json</code></td><td>—</td><td>Serializes data to JSON string</td><td><code>{{{ data \| json }}}</code></td></tr>
+              <tr><td><code>replace</code></td><td><code>old, new</code></td><td>Replaces occurrences of substring</td><td><code>{{ 'a-b' \| replace('-', '/') }}</code> → <code>a/b</code></td></tr>
+              <tr><td><code>abs</code></td><td>—</td><td>Absolute numerical value</td><td><code>{{ -10 \| abs }}</code> → <code>10</code></td></tr>
+              <tr><td><code>round</code></td><td><code>digits</code></td><td>Rounds number to decimal places</td><td><code>{{ 3.14159 \| round(2) }}</code> → <code>3.14</code></td></tr>
+              <tr><td><code>int</code></td><td>—</td><td>Casts value to integer</td><td><code>{{ '42' \| int }}</code> → <code>42</code></td></tr>
+              <tr><td><code>float</code></td><td>—</td><td>Casts value to float</td><td><code>{{ '3.14' \| float }}</code> → <code>3.14</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Custom Filters -->
+      <section id="custom-filters">
+        <h2><i class="fa-solid fa-plus-circle"></i> Custom Filter Registration</h2>
+        <p>
+          Register application-specific domain filters directly on the <code>View</code> instance:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> custom_filters.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> qalam
+
+<span class="kwd">let</span> view = <span class="kwd">new</span> qalam.<span class="typ">View</span>({})
+
+<span class="cmt"># Register a custom currency filter</span>
+view.<span class="fn">registerFilter</span>(<span class="str">"currency"</span>, <span class="kwd">fn</span>(val, args = [])
+    <span class="kwd">let</span> symbol = <span class="kwd">if</span> args.<span class="fn">length</span>() &gt; <span class="num">0</span> ? <span class="fn">str</span>(args[<span class="num">0</span>]) <span class="kwd">else</span> <span class="str">"DZD"</span>
+    <span class="kwd">return</span> <span class="fn">str</span>(val) + <span class="str">" "</span> + symbol
+<span class="kwd">end</span>)
+
+<span class="kwd">let</span> html = view.<span class="fn">renderString</span>(<span class="str">"&lt;p&gt;Price: {{ total | currency('DZD') }}&lt;/p&gt;"</span>, {<span class="str">"total"</span>: <span class="num">15000</span>})
+<span class="fn">print</span>(html)
+<span class="cmt"># Output: &lt;p&gt;Price: 15000 DZD&lt;/p&gt;</span></code></pre>
+        </div>
+      </section>
+
+      <!-- Section: API Reference -->
+      <section id="api">
+        <h2><i class="fa-solid fa-cubes"></i> View & API Reference</h2>
+
+        <h3>Class: <code>qalam.View(config = {})</code></h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Config Option</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>"views"</code></td>
+                <td>String</td>
+                <td><code>"views"</code></td>
+                <td>Root filesystem directory for template files.</td>
+              </tr>
+              <tr>
+                <td><code>"cache"</code></td>
+                <td>Boolean</td>
+                <td><code>True</code></td>
+                <td>Enables in-memory compiled AST caching.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Public Methods</h3>
+        <ul>
+          <li><code>v.render(templateName, data = {}) -> String</code> — Renders a template file.</li>
+          <li><code>v.renderString(templateString, data = {}, blocksMap = {}) -> String</code> — Renders in memory.</li>
+          <li><code>v.registerFilter(name, callback)</code> — Registers a custom transformation filter.</li>
+          <li><code>v.getSafePath(templateName) -> String</code> — Resolves and validates directory containment.</li>
+          <li><code>v.clearCache()</code> — Flushes the compiled AST memory cache.</li>
+        </ul>
+
+        <h3>Global Helper Functions</h3>
+        <ul>
+          <li><code>qalam.renderString(tpl, data, blocks) -> String</code> — Quick in-memory template rendering.</li>
+          <li><code>qalam.escapeHtml(value) -> String</code> — Encodes HTML special characters to prevent XSS.</li>
+        </ul>
+      </section>
+
+      <!-- Section: Security -->
+      <section id="security">
+        <h2><i class="fa-solid fa-shield-halved"></i> Security Model</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Threat Vector</th>
+                <th>Mitigation Mechanism</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Cross-Site Scripting (XSS)</strong></td>
+                <td>All <code>{{ ... }}</code> tags automatically sanitize <code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&quot;</code>, <code>&#039;</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Directory Traversal (<code>../</code>)</strong></td>
+                <td><code>TemplateLoader.getSafePath()</code> enforces strict directory boundary containment.</td>
+              </tr>
+              <tr>
+                <td><strong>Null-Byte Injection</strong></td>
+                <td>Null characters in template identifiers are detected and rejected.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Performance & Caching -->
+      <section id="caching">
+        <h2><i class="fa-solid fa-gauge-high"></i> Performance & AST Caching</h2>
+        <p>
+          Under production workloads, repeatedly reading from disk and tokenizing templates creates CPU overhead.
+          Qalam features an automatic **In-Memory AST Cache**:
+        </p>
+
+        <div class="callout tip">
+          <i class="fa-solid fa-bolt"></i>
+          <div>
+            <strong>High Throughput:</strong> On the first render, Qalam compiles the template into an AST and stores it in memory. All subsequent requests execute directly from memory, achieving up to <strong>30x higher requests-per-second</strong>.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Kasbah Integration -->
+      <section id="framework">
+        <h2><i class="fa-solid fa-network-wired"></i> Kasbah Web Framework Integration</h2>
+        <p>
+          Qalam is the native template engine powering the <strong>Kasbah</strong> web framework:
+        </p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> server.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({<span class="str">"views"</span>: <span class="str">"views"</span>})
+
+app.<span class="fn">get</span>(<span class="str">"/profile"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="cmt"># Automatically delegates to Qalam View engine</span>
+    res.<span class="fn">view</span>(<span class="str">"profile"</span>, {
+        <span class="str">"title"</span>: <span class="str">"User Dashboard"</span>,
+        <span class="str">"user"</span>: req.session.<span class="fn">get</span>(<span class="str">"user"</span>)
+    })
+<span class="kwd">end</span>)
+
+app.<span class="fn">listen</span>(<span class="num">8080</span>)</code></pre>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <p>Qalam Template Engine — Open source for the <strong>Djazair</strong> programming language 🇩🇿</p>
+        <p style="font-size: 0.8rem; margin-top: 5px;">Created by Harizi Riyadh &copy; 2026</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    // Copy Code functionality
+    function copyCode(button) {
+      const pre = button.closest('.code-wrapper').querySelector('pre code');
+      if (pre) {
+        navigator.clipboard.writeText(pre.innerText).then(() => {
+          const origHtml = button.innerHTML;
+          button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+          button.style.background = '#10b981';
+          button.style.color = '#fff';
+          setTimeout(() => {
+            button.innerHTML = origHtml;
+            button.style.background = '';
+            button.style.color = '';
+          }, 2000);
+        });
+      }
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const sections = document.querySelectorAll('main section');
+        sections.forEach(sec => {
+          if (query === '' || sec.innerText.toLowerCase().includes(query)) {
+            sec.style.display = 'block';
+          } else {
+            sec.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Active link highlighting on scroll
+    const navLinks = document.querySelectorAll('.menu-item a');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (pageYOffset >= (sectionTop - 120)) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

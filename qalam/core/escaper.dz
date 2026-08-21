@@ -1,20 +1,26 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# escaper.dz — HTML Output Escaping
+# escaper.dz — HTML Output Escaping & XSS Protection
 # ═══════════════════════════════════════════════════════════════════════════════
-# Provides HTML entity encoding to prevent XSS injection in template output.
+# Provides standard HTML entity encoding to prevent Cross-Site Scripting (XSS)
+# vulnerabilities in rendered template outputs.
 
 # Escapes special HTML characters to prevent XSS injection in rendered output.
+# Safely handles strings, numbers, booleans, and null values.
 #
-# @param strVal {String} Raw input string
-# @return       {String} HTML-safe escaped string
-fn escapeHtml(strVal)
-    if isNull(strVal)
+# @param value {Any} Raw input value to escape
+# @return      {String} HTML-safe escaped string
+fn escapeHtml(value)
+    if isNull(value)
         return ""
     end
-    let res = strVal.replace("&", "&amp;")
-    res = res.replace("<", "&lt;")
-    res = res.replace(">", "&gt;")
-    res = res.replace("\"", "&quot;")
-    res = res.replace("'", "&#039;")
-    return res
+    let strVal = str(value)
+    if strVal.length() == 0
+        return ""
+    end
+    let escaped = strVal.replace("&", "&amp;")
+    escaped = escaped.replace("<", "&lt;")
+    escaped = escaped.replace(">", "&gt;")
+    escaped = escaped.replace("\"", "&quot;")
+    escaped = escaped.replace("'", "&#039;")
+    return escaped
 end

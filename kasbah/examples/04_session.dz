@@ -1,26 +1,33 @@
-# Kasbah Example 04 — Sessions
-# Server-side file-based sessions with visit counter
+# ═══════════════════════════════════════════════════════════════════════════════
+# Kasbah Example 04 — Session State Management
+# ═══════════════════════════════════════════════════════════════════════════════
+# Demonstrates server-side file-backed sessions with cryptographically signed
+# HMAC SHA-256 session cookie tokens and fluent session getters/setters.
 #
 # Usage:
-#   First visit  -> "Welcome! Visit #1"
-#   Reload page  -> "Welcome back! Visit #2"
-#   Session data persists in os.tmpDir()/kasbah_sessions/
+#   Run: djazair examples/04_session.dz
+#   Endpoints:
+#     GET /       -> First visit: "Visit #1", Reload: "Visit #2", increments visit count
+#     GET /clear  -> Clears all session keys for the current client
 
 use kasbah
 
+# Initialize application instance with session enabled
+# Note: sessionSecret MUST be at least 32 characters long for cryptographic security
 let app = new kasbah.kasbahApp({
-    "port": 8080,
-    "session": True,
-    "sessionSecret": "my-secret-key"
+    "port":          8080,
+    "session":       True,
+    "sessionSecret": "kasbah-super-secure-session-secret-key-32-chars-minimum!"
 })
 
+# 1. Session Visit Counter Route
 app.get("/", fn(req, res)
     let count = 0
     if req.session.has("visits")
-        count = req.session["visits"]
+        count = req.session.get("visits", 0)
     end
     count = count + 1
-    req.session["visits"] = count
+    req.session.set("visits", count)
 
     let msg = ""
     if count == 1
@@ -30,15 +37,21 @@ app.get("/", fn(req, res)
     end
 
     res.json({
-        "message": msg,
-        "visitCount": count,
-        "sessionData": req.session
+        "message":        msg,
+        "visitCount":     count,
+        "sessionId":      req.session.id(),
+        "isNewSession":   req.session.isNew(),
+        "allSessionData": req.session.all()
     })
 end)
 
+# 2. Clear Session Route
 app.get("/clear", fn(req, res)
-    req.session = {}
-    res.sendStatus(204)
+    req.session.clear()
+    res.json({
+        "message": "Session data cleared successfully"
+    })
 end)
 
+# Start server listener
 app.listen()

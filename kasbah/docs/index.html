@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kasbah Web Framework — Documentation</title>
+  <title>Kasbah Web Framework — Official Documentation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -575,7 +575,7 @@
         <div class="brand-logo"><i class="fa-solid fa-layer-group"></i></div>
         <div>
           <span class="brand-title">Kasbah</span>
-          <span class="brand-badge">v0.1.0</span>
+          <span class="brand-badge">v0.2.0</span>
         </div>
       </a>
     </div>
@@ -583,7 +583,7 @@
     <div class="nav-actions">
       <div class="search-box">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInput" placeholder="Search functions & docs...">
+        <input type="text" id="searchInput" placeholder="Search functions, CORS, Helmet...">
       </div>
       <a href="https://github.com" target="_blank" style="color: var(--text-muted); font-size: 1.3rem; text-decoration: none;">
         <i class="fa-brands fa-github"></i>
@@ -622,12 +622,20 @@
       </div>
 
       <div class="menu-group">
+        <div class="menu-title"><i class="fa-solid fa-shield-halved"></i> Security & Middleware</div>
+        <ul class="menu-list">
+          <li class="menu-item"><a href="#cors"><i class="fa-solid fa-globe"></i> CORS Middleware</a></li>
+          <li class="menu-item"><a href="#helmet"><i class="fa-solid fa-helmet-safety"></i> Helmet Headers</a></li>
+          <li class="menu-item"><a href="#session"><i class="fa-solid fa-key"></i> Sessions & Cookies</a></li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
         <div class="menu-title"><i class="fa-solid fa-toolbox"></i> Core Engines</div>
         <ul class="menu-list">
-          <li class="menu-item"><a href="#validator"><i class="fa-solid fa-shield-halved"></i> Validation Engine</a></li>
+          <li class="menu-item"><a href="#validator"><i class="fa-solid fa-list-check"></i> Validation Engine</a></li>
           <li class="menu-item"><a href="#templating"><i class="fa-solid fa-code"></i> HTML Templating</a></li>
           <li class="menu-item"><a href="#uploads"><i class="fa-solid fa-cloud-arrow-up"></i> File Uploads</a></li>
-          <li class="menu-item"><a href="#session"><i class="fa-solid fa-key"></i> Sessions & Cookies</a></li>
           <li class="menu-item"><a href="#errors"><i class="fa-solid fa-triangle-exclamation"></i> Error & 404 Handling</a></li>
         </ul>
       </div>
@@ -635,7 +643,7 @@
       <div class="menu-group">
         <div class="menu-title"><i class="fa-solid fa-laptop-code"></i> Code Examples</div>
         <ul class="menu-list">
-          <li class="menu-item"><a href="#full-example"><i class="fa-solid fa-rocket"></i> Full App Example</a></li>
+          <li class="menu-item"><a href="#full-example"><i class="fa-solid fa-rocket"></i> Full REST Example</a></li>
         </ul>
       </div>
     </aside>
@@ -647,12 +655,12 @@
       <div class="hero">
         <h1 class="hero-title">Kasbah Web Framework for Djazair</h1>
         <p class="hero-subtitle">
-          A modular, high-performance, and secure web framework built natively for the <strong>Djazair</strong> programming language. Designed around modern global standards (Express, FastAPI, Laravel).
+          A modular, high-performance, and secure web framework built natively for the <strong>Djazair</strong> programming language. Designed around modern global standards (Express, Fastify, Laravel, FastAPI).
         </p>
 
         <div class="hero-badges">
-          <span class="badge green"><i class="fa-solid fa-check-double"></i> 100% Test Pass Rate (142/142)</span>
-          <span class="badge blue"><i class="fa-solid fa-shield"></i> Path Traversal Protected</span>
+          <span class="badge green"><i class="fa-solid fa-check-double"></i> 100% Test Pass Rate (175/175)</span>
+          <span class="badge blue"><i class="fa-solid fa-shield"></i> CORS & Helmet Protected</span>
           <span class="badge purple"><i class="fa-solid fa-feather"></i> 100% Pure Djazair</span>
         </div>
 
@@ -686,9 +694,9 @@
           </div>
 
           <div class="card">
-            <div class="card-icon"><i class="fa-solid fa-shield-cat"></i></div>
-            <div class="card-title">Secure by Default</div>
-            <p>Built-in protections against HTTP Response Splitting (CRLF injection), static path traversal, and HMAC-signed cookie sessions.</p>
+            <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="card-title">Secure by Default (CORS & Helmet)</div>
+            <p>Built-in protections against HTTP Response Splitting, Clickjacking, MIME-sniffing, XSS, and full Cross-Origin resource sharing.</p>
           </div>
 
           <div class="card">
@@ -713,7 +721,7 @@
 
 <span class="cmt"># 1. Initialize application</span>
 <span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
-    <span class="str">"port"</span>: <span class="num">3000</span>,
+    <span class="str">"port"</span>: <span class="num">8080</span>,
     <span class="str">"static"</span>: <span class="str">"public"</span>
 })
 
@@ -758,9 +766,10 @@ app.<span class="fn">listen</span>()</code></pre>
           </div>
           <pre><code><span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
     <span class="cmt"># ── Core Options ──────────────────────────────────────────</span>
-    <span class="str">"port"</span>:        <span class="num">3000</span>,          <span class="cmt"># TCP port to listen on (default: 3000)</span>
+    <span class="str">"port"</span>:        <span class="num">8080</span>,          <span class="cmt"># TCP port to listen on (default: 3000)</span>
     <span class="str">"host"</span>:        <span class="str">"0.0.0.0"</span>,     <span class="cmt"># Binding host address (default: "0.0.0.0")</span>
     <span class="str">"static"</span>:      <span class="str">"public"</span>,      <span class="cmt"># Directory path for static assets (CSS, JS, images)</span>
+    <span class="str">"views"</span>:       <span class="str">"views"</span>,       <span class="cmt"># Directory path for Qalam template views</span>
     <span class="str">"maxBodySize"</span>: <span class="num">10</span>,            <span class="cmt"># Maximum request payload size in MB (default: 10)</span>
     <span class="str">"debug"</span>:       <span class="kwd">False</span>,         <span class="cmt"># Expose error details in development mode</span>
     <span class="str">"logger"</span>:      <span class="kwd">True</span>,          <span class="cmt"># Request/error console logging</span>
@@ -768,7 +777,7 @@ app.<span class="fn">listen</span>()</code></pre>
 
     <span class="cmt"># ── Session Management (Nested Object or One-liner) ───────</span>
     <span class="str">"session"</span>: {
-        <span class="str">"secret"</span>:   <span class="str">"my-secret-key-at-least-32-chars-long"</span>, <span class="cmt"># (Required) >= 32 chars</span>
+        <span class="str">"secret"</span>:   <span class="str">"my-secret-key-at-least-32-chars-long-secure"</span>, <span class="cmt"># (Required) >= 32 chars</span>
         <span class="str">"maxAge"</span>:   <span class="num">86400</span>,        <span class="cmt"># Cookie lifetime in seconds (default: 1 day)</span>
         <span class="str">"name"</span>:     <span class="str">"kasbah.sid"</span>, <span class="cmt"># Cookie name</span>
         <span class="str">"secure"</span>:   <span class="kwd">False</span>,        <span class="cmt"># HTTPS only flag</span>
@@ -782,14 +791,6 @@ app.<span class="fn">listen</span>()</code></pre>
         <span class="str">"maxKeepAliveRequests"</span>:  <span class="num">100</span>   <span class="cmt"># Max requests per persistent connection</span>
     }
 })</code></pre>
-        </div>
-
-        <div class="callout tip">
-          <i class="fa-solid fa-lightbulb"></i>
-          <div>
-            <strong>Quick Session Setup:</strong> You can enable sessions with a one-liner secret string: 
-            <code>"session": "my-secret-key-at-least-32-chars-long"</code>.
-          </div>
         </div>
       </section>
 
@@ -868,6 +869,46 @@ app.<span class="fn">mount</span>(<span class="str">"/api/trades"</span>, trades
         </div>
       </section>
 
+      <!-- Section: Route Groups -->
+      <section id="groups">
+        <h2><i class="fa-solid fa-object-group"></i> Route Groups & Scoped Middleware</h2>
+        <p>
+          Organize related routes under a common URL prefix and apply scoped middleware pipelines to all routes within the group:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> route_groups.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="cmt"># Define scoped authentication middleware</span>
+<span class="kwd">let</span> authMiddleware = <span class="kwd">fn</span>(req, res)
+    <span class="kwd">if</span> <span class="fn">isNull</span>(req.<span class="fn">token</span>())
+        res.<span class="fn">unauthorized</span>(<span class="str">"Authentication token is required"</span>)
+        <span class="kwd">return</span>
+    <span class="kwd">end</span>
+<span class="kwd">end</span>
+
+<span class="cmt"># Register /admin route group with authMiddleware</span>
+app.<span class="fn">group</span>(<span class="str">"/admin"</span>, [authMiddleware], <span class="kwd">fn</span>(g)
+    g.<span class="fn">get</span>(<span class="str">"/dashboard"</span>, <span class="kwd">fn</span>(req, res)
+        res.<span class="fn">json</span>({<span class="str">"status"</span>: <span class="str">"admin dashboard"</span>})
+    <span class="kwd">end</span>)
+
+    g.<span class="fn">get</span>(<span class="str">"/users"</span>, <span class="kwd">fn</span>(req, res)
+        res.<span class="fn">json</span>({<span class="str">"users"</span>: [<span class="str">"Alice"</span>, <span class="str">"Bob"</span>]})
+    <span class="kwd">end</span>)
+
+    <span class="cmt"># Nested sub-groups</span>
+    g.<span class="fn">group</span>(<span class="str">"/settings"</span>, <span class="kwd">fn</span>(settingsGroup)
+        settingsGroup.<span class="fn">get</span>(<span class="str">"/security"</span>, <span class="kwd">fn</span>(req, res)
+            res.<span class="fn">ok</span>({<span class="str">"2fa"</span>: <span class="kwd">True</span>})
+        <span class="kwd">end</span>)
+    <span class="kwd">end</span>)
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
       <!-- Section: Request -->
       <section id="request">
         <h2><i class="fa-solid fa-arrow-down-long"></i> Request (`request`) Object</h2>
@@ -914,6 +955,11 @@ app.<span class="fn">mount</span>(<span class="str">"/api/trades"</span>, trades
                 <td><code>req.input(name, fallback)</code></td>
                 <td><code>Any</code></td>
                 <td>Looks up key across <code>params</code> → <code>query</code> → <code>body</code>.</td>
+              </tr>
+              <tr>
+                <td><code>req.all()</code> / <code>inputs()</code></td>
+                <td><code>Map</code></td>
+                <td>Merges <code>params</code> + <code>query</code> + <code>body</code> into unified map.</td>
               </tr>
               <tr>
                 <td><code>req.only(keys)</code></td>
@@ -1079,9 +1125,103 @@ res.<span class="fn">back</span>() <span class="cmt"># Redirect back to Referer 
         </div>
       </section>
 
+      <!-- Section: CORS -->
+      <section id="cors">
+        <h2><i class="fa-solid fa-globe"></i> CORS Middleware (`kasbah.cors`)</h2>
+        <p>
+          Manage Cross-Origin Resource Sharing with full support for origins, credentials, custom headers, and automated preflight <code>OPTIONS</code> handling:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> cors_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>()
+
+<span class="cmt"># 1. Default (allow all origins '*')</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>())
+
+<span class="cmt"># 2. Enterprise CORS configuration with credentials</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
+    <span class="str">"origin"</span>:            [<span class="str">"https://app.mysite.com"</span>, <span class="str">"https://admin.mysite.com"</span>],
+    <span class="str">"methods"</span>:           [<span class="str">"GET"</span>, <span class="str">"POST"</span>, <span class="str">"PUT"</span>, <span class="str">"DELETE"</span>],
+    <span class="str">"allowedHeaders"</span>:    [<span class="str">"Content-Type"</span>, <span class="str">"Authorization"</span>, <span class="str">"X-Requested-With"</span>],
+    <span class="str">"credentials"</span>:       <span class="kwd">True</span>,
+    <span class="str">"maxAge"</span>:            <span class="num">86400</span>,
+    <span class="str">"preflightContinue"</span>: <span class="kwd">False</span>
+}))</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Helmet -->
+      <section id="helmet">
+        <h2><i class="fa-solid fa-helmet-safety"></i> Helmet Security Headers (`kasbah.helmet`)</h2>
+        <p>
+          Secure your application by automatically configuring essential HTTP security headers:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> helmet_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code><span class="kwd">use</span> kasbah
+
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>()
+
+<span class="cmt"># 1. Default Security Headers</span>
+<span class="cmt"># Injects X-Frame-Options, nosniff, X-XSS-Protection, HSTS, Referrer-Policy, and hides X-Powered-By</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>())
+
+<span class="cmt"># 2. Custom Security Headers & CSP</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>({
+    <span class="str">"xFrameOptions"</span>:  <span class="str">"DENY"</span>,
+    <span class="str">"referrerPolicy"</span>: <span class="str">"strict-origin-when-cross-origin"</span>,
+    <span class="str">"hsts"</span>: {
+        <span class="str">"maxAge"</span>:            <span class="num">31536000</span>,
+        <span class="str">"includeSubDomains"</span>: <span class="kwd">True</span>,
+        <span class="str">"preload"</span>:           <span class="kwd">True</span>
+    },
+    <span class="str">"csp"</span>: {
+        <span class="str">"default-src"</span>: [<span class="str">"'self'"</span>],
+        <span class="str">"script-src"</span>:  [<span class="str">"'self'"</span>, <span class="str">"https://cdn.jsdelivr.net"</span>]
+    }
+}))</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Sessions -->
+      <section id="session">
+        <h2><i class="fa-solid fa-key"></i> Sessions & Cookie Management</h2>
+        <p>
+          Secure cookie jars and persistent file-backed sessions with signed HMAC-SHA256 tokens:
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="lang-badge"><i class="fa-solid fa-code"></i> session_example.dz</span>
+            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <pre><code>app.<span class="fn">get</span>(<span class="str">"/profile"</span>, <span class="kwd">fn</span>(req, res)
+    <span class="cmt"># Read session value with fallback</span>
+    <span class="kwd">let</span> visits = req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>
+    req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, visits)
+
+    res.<span class="fn">json</span>({
+        <span class="str">"sessionId"</span>:    req.session.<span class="fn">id</span>(),
+        <span class="str">"isNewSession"</span>: req.session.<span class="fn">isNew</span>(),
+        <span class="str">"visits"</span>:       visits
+    })
+<span class="kwd">end</span>)</code></pre>
+        </div>
+      </section>
+
       <!-- Section: Validator -->
       <section id="validator">
-        <h2><i class="fa-solid fa-shield-halved"></i> Validation Engine (`validator`)</h2>
+        <h2><i class="fa-solid fa-list-check"></i> Validation Engine (`validator`)</h2>
         <p>
           Declarative schema validation with chained constraint rules and error mapping:
         </p>
@@ -1129,13 +1269,13 @@ res.<span class="fn">back</span>() <span class="cmt"># Redirect back to Referer 
           <pre><code><span class="kwd">use</span> kasbah
 
 <span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
-    <span class="str">"port"</span>: <span class="num">3000</span>,
+    <span class="str">"port"</span>:  <span class="num">8080</span>,
     <span class="str">"views"</span>: <span class="str">"./views"</span>
 })
 
 app.<span class="fn">get</span>(<span class="str">"/trades"</span>, <span class="kwd">fn</span>(req, res)
     res.<span class="fn">view</span>(<span class="str">"trades/list"</span>, {
-        <span class="str">"title"</span>: <span class="str">"My Trades"</span>,
+        <span class="str">"title"</span>:  <span class="str">"My Trades"</span>,
         <span class="str">"trades"</span>: tradeList
     })
 <span class="kwd">end</span>)
@@ -1176,31 +1316,6 @@ app.<span class="fn">listen</span>()</code></pre>
         </div>
       </section>
 
-      <!-- Section: Sessions -->
-      <section id="session">
-        <h2><i class="fa-solid fa-key"></i> Sessions & Cookie Management</h2>
-        <p>
-          Secure cookie jars and persistent file-based sessions:
-        </p>
-
-        <div class="code-wrapper">
-          <div class="code-header">
-            <span class="lang-badge"><i class="fa-solid fa-code"></i> session_example.dz</span>
-            <button class="copy-btn" onclick="copyCode(this)"><i class="fa-regular fa-copy"></i> Copy</button>
-          </div>
-          <pre><code>app.<span class="fn">get</span>(<span class="str">"/profile"</span>, <span class="kwd">fn</span>(req, res)
-    <span class="cmt"># Read session value with fallback</span>
-    <span class="kwd">let</span> visits = req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>
-    req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, visits)
-
-    res.<span class="fn">json</span>({
-        <span class="str">"sessionId"</span>: req.session.<span class="fn">id</span>(),
-        <span class="str">"visits"</span>: visits
-    })
-<span class="kwd">end</span>)</code></pre>
-        </div>
-      </section>
-
       <!-- Section: Errors -->
       <section id="errors">
         <h2><i class="fa-solid fa-triangle-exclamation"></i> Error & 404 Handling</h2>
@@ -1224,6 +1339,10 @@ app.<span class="fn">onNotFound</span>(<span class="kwd">fn</span>(req, res)
 
 <span class="cmt"># Custom 500 Internal Error Handler</span>
 app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
+    <span class="fn">print</span>(<span class="str">"[ERROR] "</span> + req.method + <span class="str">" "</span> + req.path + <span class="str">" -> "</span> + <span class="fn">str</span>(err))
+    
+    <span class="kwd">if</span> res.sentFlag <span class="kwd">return</span> <span class="kwd">end</span>
+
     res.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({
         <span class="str">"error"</span>: <span class="str">"Internal Server Error"</span>,
         <span class="str">"message"</span>: <span class="fn">str</span>(err)
@@ -1234,7 +1353,7 @@ app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
 
       <!-- Section: Full Example -->
       <section id="full-example">
-        <h2><i class="fa-solid fa-rocket"></i> Full Application Example</h2>
+        <h2><i class="fa-solid fa-rocket"></i> Full REST Application Example</h2>
         <p>A complete production-ready application demonstrating routing, middleware, sessions, validation, and APIs:</p>
 
         <div class="code-wrapper">
@@ -1246,37 +1365,51 @@ app.<span class="fn">onError</span>(<span class="kwd">fn</span>(err, req, res)
 
 <span class="cmt"># Initialize Application with standard config</span>
 <span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
-    <span class="str">"port"</span>: <span class="num">3000</span>,
-    <span class="str">"static"</span>: <span class="str">"public"</span>,
+    <span class="str">"port"</span>:       <span class="num">8080</span>,
+    <span class="str">"static"</span>:     <span class="str">"public"</span>,
+    <span class="str">"bodyParser"</span>: <span class="kwd">True</span>,
+    <span class="str">"logger"</span>:     <span class="kwd">True</span>,
     <span class="str">"session"</span>: {
-        <span class="str">"secret"</span>: <span class="str">"secret-key-must-be-at-least-32-chars-long"</span>,
+        <span class="str">"secret"</span>: <span class="str">"kasbah-production-secret-key-32-chars-long!"</span>,
         <span class="str">"maxAge"</span>: <span class="num">86400</span>
     }
 })
 
-<span class="cmt"># Global Logger Middleware</span>
-app.<span class="fn">middleware</span>(<span class="kwd">fn</span>(req, res)
-    <span class="fn">print</span>(<span class="str">"["</span> + req.method + <span class="str">"] "</span> + req.path)
-<span class="kwd">end</span>)
+<span class="cmt"># Global Security Middlewares</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>())
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
+    <span class="str">"origin"</span>:      <span class="str">"*"</span>,
+    <span class="str">"credentials"</span>: <span class="kwd">True</span>
+}))
+
+<span class="cmt"># In-Memory Store</span>
+<span class="kwd">let</span> trades = []
 
 <span class="cmt"># HTML Route</span>
 app.<span class="fn">get</span>(<span class="str">"/"</span>, <span class="kwd">fn</span>(req, res)
     <span class="kwd">let</span> visits = req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>
     req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, visits)
-    res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Welcome to Kasbah&lt;/h1&gt;&lt;p&gt;Visits: "</span> + <span class="fn">str</span>(visits) + <span class="str">"&lt;/p&gt;"</span>)
+    res.<span class="fn">html</span>(<span class="str">"&lt;h1&gt;Kasbah Trades API&lt;/h1&gt;&lt;p&gt;Visits: "</span> + <span class="fn">str</span>(visits) + <span class="str">"&lt;/p&gt;"</span>)
 <span class="kwd">end</span>)
 
 <span class="cmt"># REST API with Validation</span>
 app.<span class="fn">post</span>(<span class="str">"/api/trades"</span>, <span class="kwd">fn</span>(req, res)
     <span class="kwd">let</span> v = req.<span class="fn">validate</span>()
-    v.<span class="fn">field</span>(<span class="str">"symbol"</span>).<span class="fn">required</span>().<span class="fn">string</span>()
+    v.<span class="fn">field</span>(<span class="str">"symbol"</span>).<span class="fn">required</span>().<span class="fn">string</span>().<span class="fn">minLength</span>(<span class="num">2</span>)
     v.<span class="fn">field</span>(<span class="str">"price"</span>).<span class="fn">required</span>().<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">0.01</span>)
 
     <span class="kwd">if</span> v.<span class="fn">fails</span>()
         <span class="kwd">return</span> res.<span class="fn">validationError</span>(v.<span class="fn">errors</span>())
     <span class="kwd">end</span>
 
-    res.<span class="fn">created</span>({<span class="str">"trade"</span>: v.<span class="fn">validated</span>()})
+    <span class="kwd">let</span> newTrade = {
+        <span class="str">"id"</span>:     trades.<span class="fn">length</span>() + <span class="num">1</span>,
+        <span class="str">"symbol"</span>: req.<span class="fn">input</span>(<span class="str">"symbol"</span>),
+        <span class="str">"price"</span>:  req.<span class="fn">input</span>(<span class="str">"price"</span>)
+    }
+    trades.<span class="fn">append</span>(newTrade)
+
+    res.<span class="fn">created</span>({<span class="str">"message"</span>: <span class="str">"Trade recorded"</span>, <span class="str">"trade"</span>: newTrade})
 <span class="kwd">end</span>)
 
 <span class="cmt"># 404 Route Handler</span>

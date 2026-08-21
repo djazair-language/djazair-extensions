@@ -1,0 +1,204 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# filters.dz — Template Filters & Transformation Pipeline
+# ═══════════════════════════════════════════════════════════════════════════════
+# Manages built-in and user-defined template filters (e.g. `{{ name | upper }}`).
+# Filters can be chained sequentially: `{{ title | trim | upper }}`.
+
+use json
+
+# Registry and executor for template transformation filters.
+class FilterRegistry
+    # Initializes the registry with default standard library filters.
+    init()
+        self.filtersMap = {}
+        self.registerDefaults()
+    end
+
+    # Registers all default built-in filters.
+    registerDefaults()
+        # String case transformations
+        self.register("upper", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).upper()
+        end)
+
+        self.register("lower", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).lower()
+        end)
+
+        self.register("capitalize", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).capitalize()
+        end)
+
+        self.register("title", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).title()
+        end)
+
+        # Whitespace stripping
+        self.register("trim", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).strip()
+        end)
+
+        self.register("ltrim", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).lStrip()
+        end)
+
+        self.register("rtrim", fn(val, args = [])
+            return if isNull(val) ? "" else str(val).rStrip()
+        end)
+
+        # Collection & sequence helpers
+        self.register("length", fn(val, args = [])
+            if isNull(val)
+                return 0
+            end
+            if isArray(val) or isMap(val) or isString(val)
+                return val.length()
+            end
+            return str(val).length()
+        end)
+
+        self.register("len", fn(val, args = [])
+            if isNull(val)
+                return 0
+            end
+            if isArray(val) or isMap(val) or isString(val)
+                return val.length()
+            end
+            return str(val).length()
+        end)
+
+        self.register("reverse", fn(val, args = [])
+            if isNull(val)
+                return ""
+            end
+            if isArray(val)
+                return val.reversed()
+            end
+            return str(val).reverse()
+        end)
+
+        self.register("first", fn(val, args = [])
+            if isNull(val)
+                return Null
+            end
+            if isArray(val)
+                return if val.length() > 0 ? val[0] else Null
+            end
+            let s = str(val)
+            return if s.length() > 0 ? s.slice(0, 1) else ""
+        end)
+
+        self.register("last", fn(val, args = [])
+            if isNull(val)
+                return Null
+            end
+            if isArray(val)
+                return if val.length() > 0 ? val[val.length() - 1] else Null
+            end
+            let s = str(val)
+            return if s.length() > 0 ? s.slice(s.length() - 1, s.length()) else ""
+        end)
+
+        self.register("join", fn(val, args = [])
+            let delimiter = if args.length() > 0 ? str(args[0]) else ", "
+            if isArray(val)
+                let strItems = []
+                for item in val
+                    strItems.append(str(item))
+                end
+                return delimiter.join(strItems)
+            end
+            return if isNull(val) ? "" else str(val)
+        end)
+
+        # Fallback value if empty or null
+        self.register("default", fn(val, args = [])
+            let fallback = if args.length() > 0 ? args[0] else ""
+            if isNull(val) or val == False or val == ""
+                return fallback
+            end
+            if isArray(val) and val.length() == 0
+                return fallback
+            end
+            if isMap(val) and val.length() == 0
+                return fallback
+            end
+            return val
+        end)
+
+        # JSON serialization
+        self.register("json", fn(val, args = [])
+            if isNull(val)
+                return "null"
+            end
+            return json.encode(val)
+        end)
+
+        # String replace
+        self.register("replace", fn(val, args = [])
+            if isNull(val) or args.length() < 2
+                return if isNull(val) ? "" else str(val)
+            end
+            return str(val).replace(str(args[0]), str(args[1]))
+        end)
+
+        # Math helpers
+        self.register("abs", fn(val, args = [])
+            if isNull(val)
+                return 0
+            end
+            return abs(num(val))
+        end)
+
+        self.register("round", fn(val, args = [])
+            if isNull(val)
+                return 0
+            end
+            let digits = if args.length() > 0 ? int(args[0]) else 0
+            return round(float(val), digits)
+        end)
+
+        # Type casts
+        self.register("int", fn(val, args = [])
+            return if isNull(val) ? 0 else int(val)
+        end)
+
+        self.register("float", fn(val, args = [])
+            return if isNull(val) ? 0.0 else float(val)
+        end)
+
+        self.register("str", fn(val, args = [])
+            return if isNull(val) ? "" else str(val)
+        end)
+    end
+
+    # Registers a custom user-defined filter.
+    #
+    # @param name     {String}   Filter identifier name (e.g. "currency")
+    # @param callback {Function} Transformation function `fn(value, args = [])`
+    register(name, callback)
+        self.filtersMap[name] = callback
+    end
+
+    # Checks if a filter is registered.
+    #
+    # @param name {String}  Filter name
+    # @return     {Boolean} True if registered
+    has(name)
+        return self.filtersMap.has(name)
+    end
+
+    # Applies a named filter to an input value with optional arguments.
+    #
+    # @param name  {String} Filter name
+    # @param value {Any}    Input value
+    # @param args  {Array}  Optional arguments passed to filter
+    # @return      {Any}    Filtered value
+    apply(name, value, args = [])
+        if self.filtersMap.has(name)
+            let filterFn = self.filtersMap[name]
+            return filterFn(value, args)
+        end
+        throw "Unknown template filter: '${name}'"
+    end
+end

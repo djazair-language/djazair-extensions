@@ -1,15 +1,16 @@
-﻿# ═══════════════════════════════════════════════════════════════════════════════
-# view.dz — Kasbah View Adapter (Powered by Qalam Template Engine)
+# ═══════════════════════════════════════════════════════════════════════════════
+# view.dz — Universal Kasbah View Adapter (Compatible with All Qalam Versions)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Bridges Kasbah applications with the Qalam AST template engine (similar to
 # how Laravel integrates Blade). Handles view directory resolution,
-# file rendering, and in-memory string rendering.
+# file rendering, and in-memory string rendering across all Qalam releases.
 
 use qalam
 use path
 
 class view
     # Initializes the View renderer with configuration options.
+    # Compatible with any version of the Qalam template engine.
     #
     # @param config {Map} Configuration options:
     #                     - "views" {String} Directory path for template files (default: "views")
@@ -19,7 +20,19 @@ class view
             viewsDir = config["views"]
         end
         self.configMap = config
-        self.engine = new qalam.view({"views": viewsDir})
+
+        # Instantiate Qalam engine checking all exported class signatures (View / view / Engine / engine)
+        if not isNull(qalam.View)
+            self.engine = new qalam.View({"views": viewsDir})
+        elif not isNull(qalam.view)
+            self.engine = new qalam.view({"views": viewsDir})
+        elif not isNull(qalam.Engine)
+            self.engine = new qalam.Engine({"views": viewsDir})
+        elif not isNull(qalam.engine)
+            self.engine = new qalam.engine({"views": viewsDir})
+        else
+            self.engine = Null
+        end
     end
 
     # Renders a template file with a data context.
@@ -28,6 +41,9 @@ class view
     # @param data         {Map}    Template context variables
     # @return             {String} Rendered HTML string
     render(templateName, data = {})
+        if isNull(self.engine)
+            throw "Qalam template engine is not available or could not be initialized"
+        end
         return self.engine.render(templateName, data)
     end
 
@@ -38,7 +54,13 @@ class view
     # @param blocksMap      {Map}    Optional block overrides for inheritance
     # @return               {String} Rendered HTML string
     renderString(templateString, data = {}, blocksMap = {})
-        return self.engine.renderString(templateString, data, blocksMap)
+        if not isNull(self.engine) and not isNull(self.engine.renderString)
+            return self.engine.renderString(templateString, data, blocksMap)
+        end
+        if not isNull(qalam.renderString)
+            return qalam.renderString(templateString, data, blocksMap)
+        end
+        throw "renderString is not supported by the loaded Qalam version"
     end
 
     # Resolves and validates absolute filesystem path for a template file.
@@ -46,6 +68,14 @@ class view
     # @param templateName {String} Template path
     # @return             {String} Absolute normalized filesystem path
     getSafePath(templateName)
-        return self.engine.getSafePath(templateName)
+        if not isNull(self.engine) and not isNull(self.engine.getSafePath)
+            return self.engine.getSafePath(templateName)
+        end
+        let viewsDir = if self.configMap.has("views") ? self.configMap["views"] else "views"
+        let rawPath = "${viewsDir}/${templateName}"
+        if not rawPath.endsWith(".html") and not rawPath.endsWith(".dzhtml")
+            rawPath += ".html"
+        end
+        return path.resolve(rawPath)
     end
 end

@@ -19,6 +19,8 @@ import "middleware/bodyParser.dz" as bodyMod
 import "middleware/logger.dz" as logMod
 import "middleware/session.dz" as sessMod
 import "middleware/static.dz" as staticMod
+import "middleware/cors.dz" as corsMod
+import "middleware/helmet.dz" as helmetMod
 import "helpers/utils.dz" as utilsMod
 
 # ── Core Classes ──────────────────────────────────────────────────────────────
@@ -42,6 +44,8 @@ let logger           = logMod.kasbahLogger
 let kasbahLogger     = logMod.kasbahLogger
 let session          = sessMod.session
 let serveStatic      = staticMod.serveStatic
+let cors             = corsMod.cors
+let helmet           = helmetMod.helmet
 
 # ── Helpers & Utilities ───────────────────────────────────────────────────────
 let setServerConfig   = appMod.setServerConfig

@@ -1,17 +1,26 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qalam — AST-based HTML Template Engine for the Djazair Language
 # ═══════════════════════════════════════════════════════════════════════════════
-# Exports the view class for file-based rendering and the renderString helper
-# for in-memory template rendering without requiring files on disk.
+# Exports the View class for file-based rendering, the renderString helper
+# for in-memory template rendering, and standard HTML escaping utilities.
 
-import "core/engine.dz" as engineMod
+import "core/view.dz" as viewMod
 import "core/escaper.dz" as escaperMod
+import "core/filters.dz" as filtersMod
 
-# ── Core Engine ───────────────────────────────────────────────────────────────
-let view       = engineMod.view
-let escapeHtml = escaperMod.escapeHtml
+# ── Core Classes & Types ───────────────────────────────────────────────────────
+let View           = viewMod.View
+let view           = viewMod.View
+let Engine         = viewMod.View
+let engine         = viewMod.View
 
-# ── Convenience Helper ────────────────────────────────────────────────────────
+# ── HTML Security Utilities ────────────────────────────────────────────────────
+let escapeHtml     = escaperMod.escapeHtml
+
+# ── Global Filter Registry ─────────────────────────────────────────────────────
+let FilterRegistry = filtersMod.FilterRegistry
+
+# ── Convenience Helpers ────────────────────────────────────────────────────────
 
 # Renders a template string in memory without requiring a file on disk.
 #
@@ -20,6 +29,6 @@ let escapeHtml = escaperMod.escapeHtml
 # @param blocksMap      {Map}    Optional block overrides for inheritance
 # @return               {String} Rendered HTML string
 fn renderString(templateString, data = {}, blocksMap = {})
-    let v = new engineMod.view({})
+    let v = new viewMod.View({})
     return v.renderString(templateString, data, blocksMap)
 end
