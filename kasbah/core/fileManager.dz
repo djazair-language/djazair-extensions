@@ -17,16 +17,16 @@ class uploadedFile
     init(info)
         if isMap(info)
             self.fieldName = if info.has("name") ? info["name"] else ""
-            self.filename  = if info.has("filename") ? info["filename"] else ""
-            self.mimeType  = if info.has("type") ? info["type"] else "application/octet-stream"
-            self.tempPath  = if info.has("tempPath") ? info["tempPath"] else ""
-            self.size      = if info.has("size") ? info["size"] else 0
+            self.filename = if info.has("filename") ? info["filename"] else ""
+            self.mimeType = if info.has("type") ? info["type"] else "application/octet-stream"
+            self.tempPath = if info.has("tempPath") ? info["tempPath"] else ""
+            self.size = if info.has("size") ? info["size"] else 0
         else
             self.fieldName = ""
-            self.filename  = path.basename(str(info))
-            self.mimeType  = mimeType(path.extname(str(info)))
-            self.tempPath  = str(info)
-            self.size      = if file.exists(str(info)) ? file.size(str(info)) else 0
+            self.filename = path.basename(str(info))
+            self.mimeType = mimeType(path.extname(str(info)))
+            self.tempPath = str(info)
+            self.size = if file.exists(str(info)) ? file.size(str(info)) else 0
         end
         self.savedPath = Null
     end

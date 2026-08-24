@@ -16,9 +16,9 @@ fn formatTimestamp()
     let yr = str(d.year())
     let mo = str(d.month())
     let da = str(d.day())
-    let h  = str(d.hour())
-    let m  = str(d.minute())
-    let s  = str(d.second())
+    let h = str(d.hour())
+    let m = str(d.minute())
+    let s = str(d.second())
 
     if mo.length() < 2 mo = "0${mo}" end
     if da.length() < 2 da = "0${da}" end
@@ -147,9 +147,9 @@ class kasbahLogger
         end
 
         let elapsed = (datetime.ticks() - start) / 1000
-        let method  = req.get("logMethod")
-        let url     = req.get("logPath")
-        let status  = res.statusCode
+        let method = req.get("logMethod")
+        let url = req.get("logPath")
+        let status = res.statusCode
 
         let msg = ""
         if self.configMap["format"] == "combined"
@@ -165,8 +165,8 @@ class kasbahLogger
     # Lifecycle hook: called on runtime error.
     onError(req, err)
         let method = if not isNull(req) and not isNull(req.get("logMethod")) ? req.get("logMethod") else (if not isNull(req) ? req.method else "UNKNOWN")
-        let url    = if not isNull(req) and not isNull(req.get("logPath")) ? req.get("logPath") else (if not isNull(req) ? req.path else "/")
-        let ip     = if not isNull(req) and not isNull(req.get("logIp")) ? req.get("logIp") else (if not isNull(req) ? req.ip else "127.0.0.1")
+        let url = if not isNull(req) and not isNull(req.get("logPath")) ? req.get("logPath") else (if not isNull(req) ? req.path else "/")
+        let ip = if not isNull(req) and not isNull(req.get("logIp")) ? req.get("logIp") else (if not isNull(req) ? req.ip else "127.0.0.1")
 
         let msg = ""
         if self.configMap["format"] == "combined"
