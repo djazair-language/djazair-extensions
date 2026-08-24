@@ -15,7 +15,7 @@ print("Transaction committed.")
 let res = db.query("SELECT * FROM accounts")
 if !isNull(res)
     let rows = res.fetchAllAssoc()
-    print("Accounts: " + str(rows.length()))
+    print("Accounts: ${rows.length()}")
     res.close()
 end
 

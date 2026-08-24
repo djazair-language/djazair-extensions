@@ -315,7 +315,7 @@ class fileManager
             return {
                 "ok":    False,
                 "file":  Null,
-                "error": "failed to save file: ${str(err)}"
+                "error": "failed to save file: ${err}"
             }
         end
 

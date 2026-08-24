@@ -14,13 +14,13 @@ if db.isConnected()
 
         if db.commit()
             print("Transaction committed successfully")
-            print("Affected rows: " + str(db.affectedRows()))
+            print("Affected rows: ${db.affectedRows()}")
         else
-            print("Commit failed: " + db.error())
+            print("Commit failed: ${db.error()}")
             db.rollback()
         end
     else
-        print("Begin transaction failed: " + db.error())
+        print("Begin transaction failed: ${db.error()}")
     end
 
     # Case 2: Failed transaction with rollback
@@ -32,7 +32,7 @@ if db.isConnected()
         if db.rollback()
             print("Rollback successful — Charlie was not inserted")
         else
-            print("Rollback failed: " + db.error())
+            print("Rollback failed: ${db.error()}")
         end
     end
 
@@ -40,11 +40,11 @@ if db.isConnected()
     let res = db.query("SELECT COUNT(*) as cnt FROM accounts")
     if !isNull(res)
         let row = res.fetchAssoc()
-        print("Total accounts after rollback: " + str(row["cnt"]))
+        print("Total accounts after rollback: ${row[\"cnt\"]}")
         res.close()
     end
 
     db.close()
 else
-    print("Connection failed: " + db.error())
+    print("Connection failed: ${db.error()}")
 end

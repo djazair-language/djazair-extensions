@@ -35,7 +35,7 @@ end)
 # ── Global 500 Error Handler ──────────────────────────────────────────────────
 # Executed automatically when any unhandled error occurs during request execution
 app.onError(fn(err, req, res)
-    print("[ERROR] Unhandled exception on ${req.method} ${req.path} -> ${str(err)}")
+    print("[ERROR] Unhandled exception on ${req.method} ${req.path} -> ${err}")
 
     # Guard: do not re-send if response headers are already dispatched
     if res.sentFlag

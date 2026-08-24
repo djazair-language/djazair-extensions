@@ -4,19 +4,19 @@ use clipboard
 print("=== Clipboard Demo ===")
 
 let original = clipboard.paste()
-print("Original clipboard: '" + original + "'")
+print("Original clipboard: '${original}'")
 
 clipboard.copy("Djazair Programming Language")
 print("Copied!")
-print("Has: " + str(clipboard.has()))
-print("Paste: '" + clipboard.paste() + "'")
+print("Has: ${clipboard.has()}")
+print("Paste: '${clipboard.paste()}'")
 
 clipboard.clear()
-print("Has after clear: " + str(clipboard.has()))
+print("Has after clear: ${clipboard.has()}")
 
 if original != ""
     clipboard.copy(original)
-    print("Restored: '" + clipboard.paste() + "'")
+    print("Restored: '${clipboard.paste()}'")
 end
 
 print("=== Done ===")

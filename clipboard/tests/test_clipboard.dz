@@ -11,10 +11,10 @@ let failed = 0
 
 fn test(name, condition)
     if condition
-        print("  [PASS] " + name)
+        print("  [PASS] ${name}")
         passed += 1
     else
-        print("  [FAIL] " + name)
+        print("  [FAIL] ${name}")
         failed += 1
     end
 end
@@ -142,9 +142,9 @@ else
 end
 
 print("\n==============================================")
-print("Test Results: " + str(passed) + " PASSED, " + str(failed) + " FAILED")
+print("Test Results: ${passed} PASSED, ${failed} FAILED")
 print("==============================================")
 
 if failed > 0
-    throw "Test suite failed with " + str(failed) + " failure(s)."
+    throw "Test suite failed with ${failed} failure(s)."
 end

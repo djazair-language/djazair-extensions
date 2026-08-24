@@ -19,7 +19,7 @@ if db.isConnected()
         print("Products over $100:")
         let products = res.fetchAllAssoc()
         for p in products
-            print("  " + p["name"] + " — $" + str(p["price"]))
+            print("  ${p[\"name\"]} — $${p[\"price\"]}")
         end
         res.close()
     end
@@ -30,7 +30,7 @@ if db.isConnected()
         print("Products between $50-$500 with stock > 10:")
         let products = res.fetchAllAssoc()
         for p in products
-            print("  " + p["name"] + " (" + str(p["qty"]) + " in stock)")
+            print("  ${p[\"name\"]} (${p[\"qty\"]} in stock)")
         end
         res.close()
     end
@@ -38,18 +38,18 @@ if db.isConnected()
     # Update with parameters
     let ok = db.safeExecute("UPDATE products SET qty = qty + ? WHERE name = ?", [5, "Mouse"])
     if ok
-        print("Updated Mouse stock, affected: " + str(db.affectedRows()))
+        print("Updated Mouse stock, affected: ${db.affectedRows()}")
     end
 
     # Query with LIKE and parameter
     res = db.safeQuery("SELECT * FROM products WHERE name LIKE ?", ["%key%"])
     if !isNull(res)
         let rows = res.fetchAll()
-        print("Products matching '%key%': " + str(rows.length()))
+        print("Products matching '%key%': ${rows.length()}")
         res.close()
     end
 
     db.close()
 else
-    print("Connection failed: " + db.error())
+    print("Connection failed: ${db.error()}")
 end

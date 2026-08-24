@@ -87,7 +87,7 @@ class Packer
         if total > 0
             pct = (step * 100) / total
         end
-        print("[" + bar + "] " + str(pct) + "% " + label)
+        print("[${bar}] ${pct}% ${label}")
     end
 
     # ── Public API ─────────────────────────────────────────────────────────
@@ -208,22 +208,22 @@ class Packer
                 let exeSize = file.size(outputPath)
                 let sizeStr = ""
                 if exeSize < 1024
-                    sizeStr = str(exeSize) + " B"
+                    sizeStr = "${exeSize} B"
                 elif exeSize < 1048576
-                    sizeStr = str(math.floor(exeSize / 1024)) + " KB"
+                    sizeStr = "${math.floor(exeSize / 1024)} KB"
                 else
-                    sizeStr = str(math.floor(exeSize / 1048576)) + " MB"
+                    sizeStr = "${math.floor(exeSize / 1048576)} MB"
                 end
-                let timeStr = str(elapsed) + "s"
+                let timeStr = "${elapsed}s"
                 let extStr  = if extensions.length() > 0 ? extensions.join(", ") else "none"
                 let outName = path.basename(outputPath)
                 print("")
-                print("  ✓  " + outName + " built successfully")
+                print("  ✓  ${outName} built successfully")
                 print("  ─────────────────────────────────")
-                print("  Size:       " + sizeStr)
-                print("  Extensions: " + extStr)
-                print("  Assets:     " + str(bundledAssetCount) + " file(s)")
-                print("  Time:       " + timeStr)
+                print("  Size:       ${sizeStr}")
+                print("  Extensions: ${extStr}")
+                print("  Assets:     ${bundledAssetCount} file(s)")
+                print("  Time:       ${timeStr}")
                 print("")
             end
         catch err
@@ -261,11 +261,11 @@ class Packer
         # Copy entry script as __main__.dz
         let mainDest = path.join(stageDir, "__main__.dz")
         file.copy(scriptPath, mainDest)
-        self.log("  Bundling: " + path.basename(scriptPath) + " → __main__.dz")
+        self.log("  Bundling: ${path.basename(scriptPath)} → __main__.dz")
 
         # Copy interpreter into a bin/ directory
         let interpDest = path.join(stageDir, "bin", self.interpName)
-        self.log("  Bundling: interpreter (" + self.interpName + ")")
+        self.log("  Bundling: interpreter (${self.interpName})")
         self.copyFileTo(self.interpBin, interpDest)
 
         # Copy std/ library
@@ -295,12 +295,12 @@ class Packer
             end
 
             if !isNull(extSrc)
-                self.log("  Bundling: extension/" + extName)
+                self.log("  Bundling: extension/${extName}")
                 let extDest = path.join(stageDir, "extensions", extName)
                 dir.createAll(path.dirname(extDest))
                 self.copyDirTo(extSrc, extDest)
             else
-                print("  Warning: Extension '" + extName + "' not found locally or globally, skipping.")
+                print("  Warning: Extension '${extName}' not found locally or globally, skipping.")
             end
         end
 
@@ -343,7 +343,7 @@ class Packer
                     end
                     assetCount += 1
                 else
-                    print("  Warning: Asset '" + asset + "' not found — skipping.")
+                    print("  Warning: Asset '${asset}' not found — skipping.")
                 end
             end
         end
@@ -435,7 +435,7 @@ class Packer
 
         let outHandle = file.open(outputPath, "wb")
         if isNull(outHandle) or !outHandle.isOpen()
-            throw "dpack: Failed to open output file for writing: " + outputPath
+            throw "dpack: Failed to open output file for writing: ${outputPath}"
         end
 
         outHandle.writeBytes(stubBytes)

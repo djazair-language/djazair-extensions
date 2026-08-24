@@ -58,8 +58,8 @@ while win.isOpen()
 
     # HUD
     rl.drawText("A/D/W/S: move camera, Q/E: zoom, R: rotate", 10, 10, 16, rl.WHITE)
-    rl.drawText("World: [" + str(int(wx)) + ", " + str(int(wy)) + "]", 10, 30, 16, rl.SKYBLUE)
-    rl.drawText("Zoom: " + str(camera.zoom), 10, 50, 16, rl.SKYBLUE)
+    rl.drawText("World: [${int(wx)}, ${int(wy)}]", 10, 30, 16, rl.SKYBLUE)
+    rl.drawText("Zoom: ${camera.zoom}", 10, 50, 16, rl.SKYBLUE)
 
     win.finish()
 end

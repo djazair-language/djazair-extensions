@@ -5,7 +5,7 @@ let db = sqlite.connect("test.db")
 # Invalid SQL
 let ok = db.execute("INVALID SQL")
 if !ok
-    print("Error: " + db.error())
+    print("Error: ${db.error()}")
 end
 
 # Query on non-existent table

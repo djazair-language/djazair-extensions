@@ -69,7 +69,7 @@ fn pack(scriptPath = Null, outputPath = Null, options = {})
                 end
             end
         catch err
-            print("  Warning: Failed to parse dpack.json: " + str(err))
+            print("  Warning: Failed to parse dpack.json: ${err}")
         end
     end
 
@@ -147,13 +147,13 @@ fn cleanCache()
 
     let szStr = ""
     if cleanedBytes < 1048576
-        szStr = str(math.floor(cleanedBytes / 1024)) + " KB"
+        szStr = "${math.floor(cleanedBytes / 1024)} KB"
     else
-        szStr = str(math.floor(cleanedBytes / 1048576)) + " MB"
+        szStr = "${math.floor(cleanedBytes / 1048576)} MB"
     end
 
     print("")
-    print("  ✓  Cleaned " + str(cleanedCount) + " cached dpack folder(s) (" + szStr + " freed)")
+    print("  ✓  Cleaned ${cleanedCount} cached dpack folder(s) (${szStr} freed)")
     print("")
 end
 
@@ -173,22 +173,22 @@ fn inspect(exePath)
     let fileList = Inspector.inspect(exePath)
 
     print("")
-    print("  Contents of: " + path.basename(exePath))
+    print("  Contents of: ${path.basename(exePath)}")
     print("  ------------------------------------")
     for f in fileList
         let sz = f["size"]
         let szStr = ""
         if sz < 1024
-            szStr = str(sz) + " B"
+            szStr = "${sz} B"
         elif sz < 1048576
-            szStr = str(math.floor(sz / 1024)) + " KB"
+            szStr = "${math.floor(sz / 1024)} KB"
         else
-            szStr = str(math.floor(sz / 1048576)) + " MB"
+            szStr = "${math.floor(sz / 1048576)} MB"
         end
-        print("  " + f["path"] + "  (" + szStr + ")")
+        print("  ${f[\"path\"]}  (${szStr})")
     end
     print("  ------------------------------------")
-    print("  Total: " + str(fileList.length()) + " files")
+    print("  Total: ${fileList.length()} files")
     print("")
     return fileList
 end

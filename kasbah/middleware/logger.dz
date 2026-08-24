@@ -170,9 +170,9 @@ class kasbahLogger
 
         let msg = ""
         if self.configMap["format"] == "combined"
-            msg = "${ip} - \"${method} ${url}\" -> ${str(err)}"
+            msg = "${ip} - \"${method} ${url}\" -> ${err}"
         else
-            msg = "\"${method} ${url}\" -> ${str(err)}"
+            msg = "\"${method} ${url}\" -> ${err}"
         end
 
         self.logMsg("error", 40, msg)

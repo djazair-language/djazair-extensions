@@ -87,15 +87,15 @@ end
 fn inspect(exePath)
     let check = verify(exePath)
     if !check["valid"]
-        throw "dpack inspect: " + check["reason"]
+        throw "dpack inspect: ${check[\"reason\"]}"
     end
 
     # Extract the ZIP to a temp dir and list contents
     let tmpDir = ""
     if os.isWindows()
-        tmpDir = path.join(env.getOr("TEMP", "C:\\Windows\\Temp"), "dpack_inspect_" + str(random.int(10000, 99999)))
+        tmpDir = path.join(env.getOr("TEMP", "C:\\Windows\\Temp"), "dpack_inspect_${random.int(10000, 99999)}")
     else
-        tmpDir = "/tmp/dpack_inspect_" + str(random.int(10000, 99999))
+        tmpDir = "/tmp/dpack_inspect_${random.int(10000, 99999)}"
     end
 
     dir.createAll(tmpDir)

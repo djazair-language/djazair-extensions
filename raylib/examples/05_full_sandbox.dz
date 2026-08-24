@@ -54,10 +54,10 @@ while win.isOpen()
     rl.drawCircleLines(ballX, ballY, ballRadius, rl.WHITE)
 
     # HUD
-    rl.drawText("Score: " + str(score), 10, 10, 20, rl.WHITE)
+    rl.drawText("Score: ${score}", 10, 10, 20, rl.WHITE)
     rl.drawText("Click the ball to score!", 10, 40, 16, rl.LIME)
     rl.drawText("Arrow keys to move", 10, 60, 16, rl.GRAY)
-    rl.drawText("FPS: " + str(win.getFPS()), 720, 10, 16, rl.GOLD)
+    rl.drawText("FPS: ${win.getFPS()}", 720, 10, 16, rl.GOLD)
 
     win.finish()
 end

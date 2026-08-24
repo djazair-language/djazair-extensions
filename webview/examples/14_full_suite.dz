@@ -12,7 +12,7 @@ let app = webview.createWindow({
 })
 
 app.onError(fn(err)
-    print("[ERROR] " + err)
+    print("[ERROR] ${err}")
 end)
 
 app.onReady(fn()
@@ -38,7 +38,7 @@ app.onReady(fn()
         tray = webview.trayCreate("Djazair Suite", "")
         webview.traySetTooltip(tray, "Djazair Desktop Suite")
     catch err
-        print("Tray not available: " + err)
+        print("Tray not available: ${err}")
     end
 
     # Bridge Handlers

@@ -11,7 +11,7 @@ app.onQuit(fn()
 end)
 
 app.onError(fn(err)
-    print("Error: " + err)
+    print("Error: ${err}")
 end)
 
 app.run()

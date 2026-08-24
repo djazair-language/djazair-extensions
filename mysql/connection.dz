@@ -97,11 +97,11 @@ class Connection
             if i > 0
                 let paramIdx = i - 1
                 if paramIdx < params.length()
-                    built = built + "'" + _m.escape(self.conn, str(params[paramIdx])) + "'"
+                    built = "${built}'${_m.escape(self.conn, "${params[paramIdx]}")}'"
                 else
-                    built = built + "?"
+                    built = "${built}?"
                 end
-                built = built + part
+                built = "${built}${part}"
             end
         end
 
@@ -153,11 +153,11 @@ class Connection
             if i > 0
                 let paramIdx = i - 1
                 if paramIdx < params.length()
-                    built = built + "'" + _m.escape(self.conn, str(params[paramIdx])) + "'"
+                    built = "${built}'${_m.escape(self.conn, "${params[paramIdx]}")}'"
                 else
-                    built = built + "?"
+                    built = "${built}?"
                 end
-                built = built + part
+                built = "${built}${part}"
             end
         end
 

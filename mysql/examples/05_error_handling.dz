@@ -8,8 +8,8 @@ if db.isConnected()
     print("Connected (unexpected)")
 else
     print("Connection failed as expected")
-    print("Error: " + db.error())
-    print("Errno: " + str(db.errno()))
+    print("Error: ${db.error()}")
+    print("Errno: ${db.errno()}")
 end
 
 db.close()
@@ -18,7 +18,7 @@ print("--- Valid connection with error handling ---")
 db = new mysql.Connection("localhost", "root", "mysql", "test", 3306)
 
 if db.isConnected()
-    print("Connected: " + db.serverInfo())
+    print("Connected: ${db.serverInfo()}")
 
     # Ping check
     if db.ping()
@@ -33,15 +33,15 @@ if db.isConnected()
         print("Query succeeded (unexpected)")
     else
         print("Query failed as expected")
-        print("Error: " + db.error())
-        print("Errno: " + str(db.errno()))
+        print("Error: ${db.error()}")
+        print("Errno: ${db.errno()}")
     end
 
     # safeQuery on a non-existent table
     let res = db.safeQuery("SELECT * FROM nonexistent_table WHERE id = ?", [1])
     if isNull(res)
         print("safeQuery returned Null — table does not exist")
-        print("Error: " + db.error())
+        print("Error: ${db.error()}")
     end
 
     # isConnected after error
@@ -53,8 +53,8 @@ if db.isConnected()
 
     # Operations on closed connection
     if !db.isConnected()
-        print("Connection closed, ping returns: " + str(db.ping()))
+        print("Connection closed, ping returns: ${db.ping()}")
     end
 else
-    print("Connection failed: " + db.error())
+    print("Connection failed: ${db.error()}")
 end

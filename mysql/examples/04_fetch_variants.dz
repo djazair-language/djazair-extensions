@@ -15,16 +15,16 @@ if db.isConnected()
     let res = db.query("SELECT * FROM employees ORDER BY id")
 
     if !isNull(res)
-        print("Total rows: " + str(res.numRows()))
-        print("Total fields: " + str(res.numFields()))
-        print("Column names: " + str(res.columns()))
+        print("Total rows: ${res.numRows()}")
+        print("Total fields: ${res.numFields()}")
+        print("Column names: ${res.columns()}")
 
         # fetchRow — indexed array
         print("--- fetchRow (indexed arrays) ---")
         res.seek(0)
         let row = res.fetchRow()
         while !isNull(row)
-            print("Row: " + str(row))
+            print("Row: ${row}")
             row = res.fetchRow()
         end
 
@@ -33,7 +33,7 @@ if db.isConnected()
         res.seek(0)
         let emp = res.fetchAssoc()
         while !isNull(emp)
-            print(emp["name"] + " — " + emp["department"])
+            print("${emp[\"name\"]} — ${emp[\"department\"]}")
             emp = res.fetchAssoc()
         end
 
@@ -42,7 +42,7 @@ if db.isConnected()
         res.seek(0)
         let all = res.fetchAll()
         for item in all
-            print(str(item))
+            print(item)
         end
 
         # fetchAllAssoc — all rows as array of maps
@@ -50,7 +50,7 @@ if db.isConnected()
         res.seek(0)
         let allAssoc = res.fetchAllAssoc()
         for item in allAssoc
-            print(item["name"] + " — " + item["department"])
+            print("${item[\"name\"]} — ${item[\"department\"]}")
         end
 
         res.close()
@@ -58,5 +58,5 @@ if db.isConnected()
 
     db.close()
 else
-    print("Connection failed: " + db.error())
+    print("Connection failed: ${db.error()}")
 end
