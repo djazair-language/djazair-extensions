@@ -1,8 +1,72 @@
-# init.dz — Clipboard Extension for Djazair
+# init.dz — Clipboard Standard Extension for Djazair
+# Provides cross-platform system clipboard access with defensive type checking.
+
 use assert
+
 let _cb = __dynamic("clipboard")
 
-let paste = _cb.paste
-let copy  = _cb.copy
-let clear = _cb.clear
-let has   = _cb.has
+# ============================================================
+# Core Clipboard Operations
+# ============================================================
+
+# Copies a UTF-8 string to the system clipboard.
+# Throws a TypeError if text is not a string.
+# Returns True on success, False otherwise.
+fn copy(text)
+    assert.string(text, "clipboard.copy()")
+    return _cb.copy(text)
+end
+
+# Retrieves the current UTF-8 text from the system clipboard.
+# Returns an empty string if the clipboard is empty or non-text.
+fn paste()
+    return _cb.paste()
+end
+
+# Clears all content from the system clipboard.
+# Returns True on success, False otherwise.
+fn clear()
+    return _cb.clear()
+end
+
+# Checks whether the clipboard currently contains text data.
+# Returns True if text is available, False otherwise.
+fn has()
+    return _cb.has()
+end
+
+# ============================================================
+# Advanced Introspection & Tracking
+# ============================================================
+
+# Returns a sequence number (counter) that increments on every clipboard modification.
+# Provides O(1) change detection without reading or copying entire clipboard payloads.
+fn sequenceNumber()
+    return _cb.sequenceNumber()
+end
+
+# Returns an array of human-readable format names currently available on the clipboard.
+# Example: ["unicode", "text", "bitmap", "files"]
+fn formats()
+    return _cb.formats()
+end
+
+# ============================================================
+# Standard Semantic Aliases
+# ============================================================
+
+# Semantic alias for copy(text)
+fn setText(text)
+    return copy(text)
+end
+
+# Semantic alias for paste()
+fn getText()
+    return paste()
+end
+
+# Semantic alias for has()
+fn hasText()
+    return has()
+end
+

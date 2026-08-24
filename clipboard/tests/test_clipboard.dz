@@ -1,0 +1,150 @@
+# test_clipboard.dz — Comprehensive Test Suite for Djazair Clipboard Extension
+# Tests: basic strings, unicode, multi-line, clear, sequenceNumber, formats, aliases, and type checking
+
+use clipboard
+use assert
+
+print("=== Starting Djazair Clipboard Test Suite ===\n")
+
+let passed = 0
+let failed = 0
+
+fn test(name, condition)
+    if condition
+        print("  [PASS] " + name)
+        passed += 1
+    else
+        print("  [FAIL] " + name)
+        failed += 1
+    end
+end
+
+# Preserve original clipboard content to restore after tests
+let originalContent = clipboard.paste()
+
+# ------------------------------------------------------------
+# 1. Basic String Copy & Paste
+# ------------------------------------------------------------
+print("--- 1. Basic Copy / Paste ---")
+let testStr = "Hello from Djazair Language!"
+let copyOk = clipboard.copy(testStr)
+test("copy() returns True", copyOk == True)
+test("paste() returns matching string", clipboard.paste() == testStr)
+test("has() returns True when text is present", clipboard.has() == True)
+
+# ------------------------------------------------------------
+# 2. Semantic Aliases
+# ------------------------------------------------------------
+print("\n--- 2. Semantic Aliases (setText, getText, hasText) ---")
+let aliasStr = "Testing semantic aliases"
+clipboard.setText(aliasStr)
+test("getText() matches setText()", clipboard.getText() == aliasStr)
+test("hasText() returns True", clipboard.hasText() == True)
+
+# ------------------------------------------------------------
+# 3. Unicode & Multi-lingual Support
+# ------------------------------------------------------------
+print("\n--- 3. Unicode & Multi-lingual Support ---")
+let unicodeStr = "مرحبا بالعالم — Djazair 🇩🇿 — 日本語 — 🚀✨"
+clipboard.copy(unicodeStr)
+test("paste() handles complex Unicode correctly", clipboard.paste() == unicodeStr)
+
+# ------------------------------------------------------------
+# 4. Multi-line Strings with Various Linebreaks
+# ------------------------------------------------------------
+print("\n--- 4. Multi-line Strings ---")
+let multilineStr = "Line 1\nLine 2\r\nLine 3\nLine 4"
+clipboard.copy(multilineStr)
+test("paste() preserves multi-line text exactly", clipboard.paste() == multilineStr)
+
+# ------------------------------------------------------------
+# 5. Empty String Handling
+# ------------------------------------------------------------
+print("\n--- 5. Empty String Handling ---")
+clipboard.copy("")
+test("paste() returns empty string for empty input", clipboard.paste() == "")
+
+# ------------------------------------------------------------
+# 6. Clipboard Clear
+# ------------------------------------------------------------
+print("\n--- 6. Clipboard Clear ---")
+clipboard.copy("Temporary text before clear")
+test("has() is True before clear", clipboard.has() == True)
+let clearOk = clipboard.clear()
+test("clear() returns True", clearOk == True)
+test("paste() is empty after clear", clipboard.paste() == "")
+test("has() is False after clear", clipboard.has() == False)
+
+# ------------------------------------------------------------
+# 7. Sequence Number Tracking (O(1) Change Detection)
+# ------------------------------------------------------------
+print("\n--- 7. Sequence Number Tracking ---")
+let seq1 = clipboard.sequenceNumber()
+clipboard.copy("Payload change 1")
+let seq2 = clipboard.sequenceNumber()
+clipboard.copy("Payload change 2")
+let seq3 = clipboard.sequenceNumber()
+
+test("sequenceNumber() is a number", isNumber(seq1))
+test("sequenceNumber() increments on modification (seq2 > seq1)", seq2 > seq1)
+test("sequenceNumber() increments on next modification (seq3 > seq2)", seq3 > seq2)
+
+# ------------------------------------------------------------
+# 8. Available Formats Enumeration
+# ------------------------------------------------------------
+print("\n--- 8. Formats Enumeration ---")
+clipboard.copy("Checking format enumeration")
+let formatList = clipboard.formats()
+test("formats() returns an array", isArray(formatList))
+test("formats() contains 'unicode' or 'text'", formatList.contains("unicode") or formatList.contains("text"))
+
+# ------------------------------------------------------------
+# 9. Large Payload Stress Test (50 KB)
+# ------------------------------------------------------------
+print("\n--- 9. Large Payload Stress Test ---")
+let chunk = "Djazair_Clipboard_Stress_Test_1234567890_\n"
+let largeStr = ""
+for i in 0..1200
+    largeStr = largeStr + chunk
+end
+clipboard.copy(largeStr)
+let retrievedLarge = clipboard.paste()
+test("large payload size matches (approx 50KB)", retrievedLarge.length() == largeStr.length())
+test("large payload content matches exactly", retrievedLarge == largeStr)
+
+# ------------------------------------------------------------
+# 10. Type Checking & Defensive Exceptions
+# ------------------------------------------------------------
+print("\n--- 10. Defensive Type Checking ---")
+let caughtTypeError = False
+try
+    clipboard.copy(12345)
+catch err
+    caughtTypeError = True
+end
+test("copy(number) throws TypeError", caughtTypeError == True)
+
+let caughtNullError = False
+try
+    clipboard.copy(Null)
+catch err
+    caughtNullError = True
+end
+test("copy(Null) throws TypeError", caughtNullError == True)
+
+# ------------------------------------------------------------
+# Clean-up & Restore
+# ------------------------------------------------------------
+if originalContent != ""
+    clipboard.copy(originalContent)
+else
+    clipboard.clear()
+end
+
+print("\n==============================================")
+print("Test Results: " + str(passed) + " PASSED, " + str(failed) + " FAILED")
+print("==============================================")
+
+if failed > 0
+    throw "Test suite failed with " + str(failed) + " failure(s)."
+end

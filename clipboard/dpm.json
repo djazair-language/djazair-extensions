@@ -1,8 +1,8 @@
 {
   "name": "clipboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "source": "github:djazair-language/djazair-extensions/clipboard",
-  "description": "Clipboard read/write extension for Djazair (Windows)",
+  "description": "Production-grade cross-platform system clipboard extension for Djazair with resilient Win32 locking, Unicode UTF-8, format introspection, and change tracking.",
   "developer": {
     "name": "Harizi Riyadh",
     "email": "hariziriyadh@gmail.com"

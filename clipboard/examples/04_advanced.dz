@@ -1,0 +1,27 @@
+# 04_advanced.dz — Advanced Clipboard Features (Formats & Change Detection)
+use clipboard
+
+print("=== Advanced Clipboard Demonstration ===")
+
+# 1. Setting and Getting via Semantic Aliases
+clipboard.setText("Advanced Djazair Clipboard Demo 🇩🇿")
+print("Has Text : " + str(clipboard.hasText()))
+print("Get Text : '" + clipboard.getText() + "'")
+
+# 2. Sequence Number (O(1) Change Detection)
+let initialSeq = clipboard.sequenceNumber()
+print("Initial Sequence Number : " + str(initialSeq))
+
+clipboard.setText("New text content payload")
+let updatedSeq = clipboard.sequenceNumber()
+print("Updated Sequence Number : " + str(updatedSeq))
+print("Sequence incremented   : " + str(updatedSeq > initialSeq))
+
+# 3. Available Formats Enumeration
+let formatList = clipboard.formats()
+print("Available Clipboard Formats:")
+for fmt in formatList
+    print("  - " + fmt)
+end
+
+print("=== Demo Completed Successfully ===")
