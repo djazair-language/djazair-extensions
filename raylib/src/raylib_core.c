@@ -32,22 +32,22 @@ DJAZAIR_FUNC(raylibSetTargetFPSNative) {
 
 DJAZAIR_FUNC(raylibGetFPSNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetFPS());
+    return djazair_int(GetFPS());
 }
 
 DJAZAIR_FUNC(raylibGetFrameTimeNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetFrameTime());
+    return djazair_float(GetFrameTime());
 }
 
 DJAZAIR_FUNC(raylibGetScreenWidthNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetScreenWidth());
+    return djazair_int(GetScreenWidth());
 }
 
 DJAZAIR_FUNC(raylibGetScreenHeightNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetScreenHeight());
+    return djazair_int(GetScreenHeight());
 }
 
 DJAZAIR_FUNC(raylibSetWindowTitleNative) {
@@ -94,8 +94,8 @@ DJAZAIR_FUNC(raylibDrawTextNative) {
 
 DJAZAIR_FUNC(raylibMeasureTextNative) {
     djazair_check_args(2, argCount);
-    if (!djazair_is_string(args[0]) || !djazair_is_number(args[1])) return djazair_num(0);
-    return djazair_num(MeasureText(djazair_get_str(args, 0), (int)djazair_get_num(args, 1)));
+    if (!djazair_is_string(args[0]) || !djazair_is_number(args[1])) return djazair_int(0);
+    return djazair_int(MeasureText(djazair_get_str(args, 0), (int)djazair_get_num(args, 1)));
 }
 
 // Input: Keyboard
@@ -125,23 +125,23 @@ DJAZAIR_FUNC(raylibIsKeyUpNative) {
 
 DJAZAIR_FUNC(raylibGetKeyPressedNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetKeyPressed());
+    return djazair_int(GetKeyPressed());
 }
 
 DJAZAIR_FUNC(raylibGetCharPressedNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetCharPressed());
+    return djazair_int(GetCharPressed());
 }
 
 // Input: Mouse
 DJAZAIR_FUNC(raylibGetMouseXNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetMouseX());
+    return djazair_int(GetMouseX());
 }
 
 DJAZAIR_FUNC(raylibGetMouseYNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetMouseY());
+    return djazair_int(GetMouseY());
 }
 
 DJAZAIR_FUNC(raylibIsMouseButtonPressedNative) {
@@ -170,7 +170,7 @@ DJAZAIR_FUNC(raylibIsMouseButtonUpNative) {
 
 DJAZAIR_FUNC(raylibGetMouseWheelMoveNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetMouseWheelMove());
+    return djazair_float(GetMouseWheelMove());
 }
 
 // Collision Detection
@@ -211,8 +211,8 @@ DJAZAIR_FUNC(raylibCheckCollisionPointRecNative) {
 // Utility
 DJAZAIR_FUNC(raylibGetRandomValueNative) {
     djazair_check_args(2, argCount);
-    return djazair_num(GetRandomValue((int)djazair_get_num(args, 0),
-                                     (int)djazair_get_num(args, 1)));
+    return djazair_int(GetRandomValue((int)djazair_get_num(args, 0),
+                                      (int)djazair_get_num(args, 1)));
 }
 
 DJAZAIR_FUNC(raylibHideCursorNative) {
@@ -229,7 +229,7 @@ DJAZAIR_FUNC(raylibShowCursorNative) {
 
 DJAZAIR_FUNC(raylibGetTimeNative) {
     (void)argCount; (void)args;
-    return djazair_num(GetTime());
+    return djazair_float(GetTime());
 }
 
 DJAZAIR_FUNC(raylibToggleFullscreenNative) {

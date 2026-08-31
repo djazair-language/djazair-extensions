@@ -100,7 +100,7 @@ Limits the frame rate.
 win.setFPS(60)
 ```
 
-### `getFPS()` → Number
+### `getFPS()` → Int
 Returns the current frames per second.
 
 ```dz

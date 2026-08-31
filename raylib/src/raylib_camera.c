@@ -34,8 +34,8 @@ DJAZAIR_FUNC(raylibGetScreenToWorld2DNative) {
     Vector2 worldPos = GetScreenToWorld2D(position, camera);
     
     djazair_value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num(worldPos.x));
-    djazair_array_push(vm, arr, djazair_num(worldPos.y));
+    djazair_array_push(vm, arr, djazair_float(worldPos.x));
+    djazair_array_push(vm, arr, djazair_float(worldPos.y));
     return arr;
 }
 
@@ -53,7 +53,7 @@ DJAZAIR_FUNC(raylibGetWorldToScreen2DNative) {
     Vector2 screenPos = GetWorldToScreen2D(position, camera);
     
     djazair_value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num(screenPos.x));
-    djazair_array_push(vm, arr, djazair_num(screenPos.y));
+    djazair_array_push(vm, arr, djazair_float(screenPos.x));
+    djazair_array_push(vm, arr, djazair_float(screenPos.y));
     return arr;
 }

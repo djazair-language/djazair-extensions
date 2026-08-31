@@ -160,8 +160,8 @@ static void invoke_callback_2(WindowContext* c, Value cb, double a, double b) {
         int targetFrame = c->vm->frameCount;
         int savedHandlerCount = c->vm->handlerCount;
         push(c->vm, cb);
-        push(c->vm, djazair_num(a));
-        push(c->vm, djazair_num(b));
+        push(c->vm, djazair_float(a));
+        push(c->vm, djazair_float(b));
         if (callValue(c->vm, cb, 2)) {
             run(c->vm, targetFrame);
         }
@@ -433,7 +433,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     }
     hook_window_close(c);
 
-    return djazair_num((double)c->id);
+    return djazair_int(c->id);
 }
 
 static void menu_cleanup(WindowContext* c) {
@@ -602,8 +602,8 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetSize) {
     gtk_window_get_size(GTK_WINDOW(webview_get_window((webview_t)wc->wv)), &w, &h);
 #endif
     Value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num((double)w));
-    djazair_array_push(vm, arr, djazair_num((double)h));
+    djazair_array_push(vm, arr, djazair_int(w));
+    djazair_array_push(vm, arr, djazair_int(h));
     return arr;
 }
 
@@ -635,8 +635,8 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetPosition) {
     gtk_window_get_position(GTK_WINDOW(webview_get_window((webview_t)wc->wv)), &x, &y);
 #endif
     Value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num((double)x));
-    djazair_array_push(vm, arr, djazair_num((double)y));
+    djazair_array_push(vm, arr, djazair_int(x));
+    djazair_array_push(vm, arr, djazair_int(y));
     return arr;
 }
 
@@ -947,8 +947,8 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetScreenSize) {
     int w = 1024, h = 768;
 #endif
     Value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num((double)w));
-    djazair_array_push(vm, arr, djazair_num((double)h));
+    djazair_array_push(vm, arr, djazair_int(w));
+    djazair_array_push(vm, arr, djazair_int(h));
     return arr;
 }
 
@@ -963,8 +963,8 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetAvailableSize) {
     int w = 1024, h = 768;
 #endif
     Value arr = djazair_new_array(vm);
-    djazair_array_push(vm, arr, djazair_num((double)w));
-    djazair_array_push(vm, arr, djazair_num((double)h));
+    djazair_array_push(vm, arr, djazair_int(w));
+    djazair_array_push(vm, arr, djazair_int(h));
     return arr;
 }
 
@@ -1148,7 +1148,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetZoomLevel) {
 extern "C" DJAZAIR_FUNC(nativeWindowGetZoomLevel) {
     djazair_check_args(1, argCount);
     GET_WINDOW(0);
-    return djazair_num(wc->zoom_level);
+    return djazair_float(wc->zoom_level);
 }
 
 extern "C" DJAZAIR_FUNC(nativeWindowOpenDevTools) {
@@ -1636,10 +1636,10 @@ extern "C" DJAZAIR_FUNC(nativeDialogPickColor) {
     cc.Flags = CC_RGBINIT | CC_FULLOPEN;
     if (ChooseColorA(&cc)) {
         Value result = djazair_new_map(vm);
-        djazair_map_set(vm, result, djazair_str(vm, "r"), djazair_num(GetRValue(cc.rgbResult)));
-        djazair_map_set(vm, result, djazair_str(vm, "g"), djazair_num(GetGValue(cc.rgbResult)));
-        djazair_map_set(vm, result, djazair_str(vm, "b"), djazair_num(GetBValue(cc.rgbResult)));
-        djazair_map_set(vm, result, djazair_str(vm, "a"), djazair_num(255));
+        djazair_map_set(vm, result, djazair_str(vm, "r"), djazair_int(GetRValue(cc.rgbResult)));
+        djazair_map_set(vm, result, djazair_str(vm, "g"), djazair_int(GetGValue(cc.rgbResult)));
+        djazair_map_set(vm, result, djazair_str(vm, "b"), djazair_int(GetBValue(cc.rgbResult)));
+        djazair_map_set(vm, result, djazair_str(vm, "a"), djazair_int(255));
         return result;
     }
 #endif
@@ -1657,7 +1657,7 @@ extern "C" DJAZAIR_FUNC(nativeMenuCreate) {
     djazair_check_str(0);
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     HMENU hmenu = CreatePopupMenu();
-    return djazair_num((double)(intptr_t)hmenu);
+    return djazair_float((double)(intptr_t)hmenu);
 #else
     return djazair_null();
 #endif
@@ -1670,7 +1670,7 @@ extern "C" DJAZAIR_FUNC(nativeMenuCreateSubmenu) {
     HMENU parent = (HMENU)(intptr_t)AS_NUMBER(args[0]);
     HMENU sub = CreatePopupMenu();
     AppendMenuA(parent, MF_STRING | MF_POPUP, (UINT_PTR)sub, AS_CSTRING(args[1]));
-    return djazair_num((double)(intptr_t)sub);
+    return djazair_float((double)(intptr_t)sub);
 #else
     return djazair_null();
 #endif
@@ -1782,7 +1782,7 @@ extern "C" DJAZAIR_FUNC(nativeNotificationShow) {
 extern "C" DJAZAIR_FUNC(nativeTrayCreate) {
     djazair_check_args(2, argCount);
     djazair_check_str(0); djazair_check_str(1);
-    return djazair_num(1.0);
+    return djazair_int(1);
 }
 
 extern "C" DJAZAIR_FUNC(nativeTraySetIcon) {

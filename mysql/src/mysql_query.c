@@ -15,18 +15,18 @@ DJAZAIR_FUNC(mysqlQueryNative) {
 
 DJAZAIR_FUNC(mysqlAffectedRowsNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
-    if (!conn) return djazair_num(0);
-    return djazair_num((double)mysql_affected_rows(conn));
+    if (!conn) return djazair_int(0);
+    return djazair_float((double)mysql_affected_rows(conn));
 }
 
 DJAZAIR_FUNC(mysqlInsertIdNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
-    if (!conn) return djazair_num(0);
-    return djazair_num((double)mysql_insert_id(conn));
+    if (!conn) return djazair_int(0);
+    return djazair_float((double)mysql_insert_id(conn));
 }
 
 DJAZAIR_FUNC(mysqlEscapeStringNative) {

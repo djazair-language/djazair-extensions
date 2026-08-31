@@ -99,7 +99,7 @@ Returns the last error message.
 print(db.error())
 ```
 
-### `errno()` → Number
+### `errno()` → Int
 Returns the last MySQL error code.
 
 ```dz
@@ -155,7 +155,7 @@ Executes a parameterized non-SELECT statement.
 let ok = db.safeExecute("INSERT INTO users (name, age) VALUES (?, ?)", ["Anis", 25])
 ```
 
-### `affectedRows()` → Number
+### `affectedRows()` → Float
 Rows affected by the last INSERT, UPDATE, or DELETE.
 
 ```dz
@@ -163,7 +163,7 @@ db.safeExecute("UPDATE users SET age = ? WHERE id = ?", [26, 1])
 print("Updated " + str(db.affectedRows()) + " rows")
 ```
 
-### `insertId()` → Number
+### `insertId()` → Float
 The AUTO_INCREMENT ID from the last INSERT.
 
 ```dz
@@ -212,14 +212,14 @@ db.close()
 
 Manages records returned by `query()` or `safeQuery()`.
 
-### `numRows()` → Number
+### `numRows()` → Float
 Number of rows in the result set.
 
 ```dz
 print("Rows: " + str(res.numRows()))
 ```
 
-### `numFields()` → Number
+### `numFields()` → Int
 Number of columns per row.
 
 ```dz

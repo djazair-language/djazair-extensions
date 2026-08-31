@@ -92,7 +92,7 @@ clipboard.clear()
 
 | Function | Arguments | Returns | Description |
 | :--- | :--- | :--- | :--- |
-| `sequenceNumber()` | *None* | `Number` | Returns a serial counter incremented on every clipboard change ($O(1)$ check). |
+| `sequenceNumber()` | *None* | `Int` / `Float` | Returns a serial counter incremented on every clipboard change ($O(1)$ check). It is `Int` while it fits the language's signed 32-bit range, otherwise `Float`. |
 | `formats()` | *None* | `Array` | Returns array of available format names (e.g., `["unicode", "text", "bitmap", "files"]`). |
 
 ### Standard Semantic Aliases
@@ -181,4 +181,3 @@ All examples are executable in the `examples/` directory.
 ## 📄 License
 
 This extension is licensed under the MIT License.
-

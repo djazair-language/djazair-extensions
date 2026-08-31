@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -470,11 +471,12 @@ DJAZAIR_FUNC(clipboardSequenceNumber)
 
 #ifdef _WIN32
     DWORD seq = GetClipboardSequenceNumber();
-    return djazair_num((double)seq);
+    return seq <= INT32_MAX ? djazair_int((int32_t)seq) : djazair_float((double)seq);
 #else
     // POSIX fallback: maintain a local monotonic counter
     static unsigned long fallback_seq = 1;
-    return djazair_num((double)(fallback_seq++));
+    unsigned long seq = fallback_seq++;
+    return seq <= INT32_MAX ? djazair_int((int32_t)seq) : djazair_float((double)seq);
 #endif
 }
 

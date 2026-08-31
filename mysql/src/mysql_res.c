@@ -14,18 +14,18 @@ DJAZAIR_FUNC(mysqlStoreResultNative) {
 
 DJAZAIR_FUNC(mysqlNumRowsNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL_RES *res = (MYSQL_RES *)djazair_get_resource(vm, args[0]);
-    if (!res) return djazair_num(0);
-    return djazair_num((double)mysql_num_rows(res));
+    if (!res) return djazair_int(0);
+    return djazair_float((double)mysql_num_rows(res));
 }
 
 DJAZAIR_FUNC(mysqlNumFieldsNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL_RES *res = (MYSQL_RES *)djazair_get_resource(vm, args[0]);
-    if (!res) return djazair_num(0);
-    return djazair_num((double)mysql_num_fields(res));
+    if (!res) return djazair_int(0);
+    return djazair_int((int32_t)mysql_num_fields(res));
 }
 
 DJAZAIR_FUNC(mysqlGetColumnNamesNative) {

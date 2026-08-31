@@ -21,10 +21,10 @@ DJAZAIR_FUNC(sqlitePrepareNative) {
 
 DJAZAIR_FUNC(sqliteStepNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(SQLITE_ERROR);
+    if (!djazair_is_resource(args[0])) return djazair_int(SQLITE_ERROR);
     sqlite3_stmt *stmt = (sqlite3_stmt *)djazair_get_resource(vm, args[0]);
-    if (!stmt) return djazair_num(SQLITE_ERROR);
-    return djazair_num((double)sqlite3_step(stmt));
+    if (!stmt) return djazair_int(SQLITE_ERROR);
+    return djazair_int(sqlite3_step(stmt));
 }
 
 DJAZAIR_FUNC(sqliteFetchRowNative) {
@@ -44,10 +44,10 @@ DJAZAIR_FUNC(sqliteFetchRowNative) {
         int type = sqlite3_column_type(stmt, i);
         switch (type) {
             case SQLITE_INTEGER:
-                val = djazair_num((double)sqlite3_column_int64(stmt, i));
+                val = djazair_float((double)sqlite3_column_int64(stmt, i));
                 break;
             case SQLITE_FLOAT:
-                val = djazair_num(sqlite3_column_double(stmt, i));
+                val = djazair_float(sqlite3_column_double(stmt, i));
                 break;
             case SQLITE_TEXT:
                 val = djazair_str(vm, (const char *)sqlite3_column_text(stmt, i));

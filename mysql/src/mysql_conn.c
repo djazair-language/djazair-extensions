@@ -58,10 +58,10 @@ DJAZAIR_FUNC(mysqlErrorNative) {
 
 DJAZAIR_FUNC(mysqlErrnoNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
-    if (!conn) return djazair_num(0);
-    return djazair_num((double)mysql_errno(conn));
+    if (!conn) return djazair_int(0);
+    return djazair_int((int32_t)mysql_errno(conn));
 }
 
 DJAZAIR_FUNC(mysqlPingNative) {
@@ -83,18 +83,18 @@ DJAZAIR_FUNC(mysqlStatNative) {
 
 DJAZAIR_FUNC(mysqlGetProtoInfoNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
-    if (!conn) return djazair_num(0);
-    return djazair_num((double)mysql_get_proto_info(conn));
+    if (!conn) return djazair_int(0);
+    return djazair_int((int32_t)mysql_get_proto_info(conn));
 }
 
 DJAZAIR_FUNC(mysqlThreadIdNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
-    if (!conn) return djazair_num(0);
-    return djazair_num((double)mysql_thread_id(conn));
+    if (!conn) return djazair_int(0);
+    return djazair_float((double)mysql_thread_id(conn));
 }
 
 DJAZAIR_FUNC(mysqlInfoNative) {

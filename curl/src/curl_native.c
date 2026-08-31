@@ -280,7 +280,7 @@ DJAZAIR_FUNC(curlGetInfoNative) {
     if (type == CURLINFO_LONG) {
         long v;
         if (curl_easy_getinfo(ctx->curl, info, &v) == CURLE_OK)
-            return djazair_num((double)v);
+            return djazair_float((double)v);
     } else if (type == CURLINFO_STRING) {
         char *v;
         if (curl_easy_getinfo(ctx->curl, info, &v) == CURLE_OK && v)
@@ -288,7 +288,7 @@ DJAZAIR_FUNC(curlGetInfoNative) {
     } else if (type == CURLINFO_DOUBLE) {
         double v;
         if (curl_easy_getinfo(ctx->curl, info, &v) == CURLE_OK)
-            return djazair_num(v);
+            return djazair_float(v);
     }
     return djazair_null();
 }

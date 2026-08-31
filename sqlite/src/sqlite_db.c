@@ -43,18 +43,18 @@ DJAZAIR_FUNC(sqliteErrorNative) {
 
 DJAZAIR_FUNC(sqliteLastInsertIdNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     sqlite3 *db = (sqlite3 *)djazair_get_resource(vm, args[0]);
-    if (!db) return djazair_num(0);
-    return djazair_num((double)sqlite3_last_insert_rowid(db));
+    if (!db) return djazair_int(0);
+    return djazair_float((double)sqlite3_last_insert_rowid(db));
 }
 
 DJAZAIR_FUNC(sqliteChangesNative) {
     djazair_check_args(1, argCount);
-    if (!djazair_is_resource(args[0])) return djazair_num(0);
+    if (!djazair_is_resource(args[0])) return djazair_int(0);
     sqlite3 *db = (sqlite3 *)djazair_get_resource(vm, args[0]);
-    if (!db) return djazair_num(0);
-    return djazair_num((double)sqlite3_changes(db));
+    if (!db) return djazair_int(0);
+    return djazair_int(sqlite3_changes(db));
 }
 
 DJAZAIR_FUNC(sqliteEscapeNative) {
