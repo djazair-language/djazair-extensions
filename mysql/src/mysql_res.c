@@ -17,7 +17,7 @@ DJAZAIR_FUNC(mysqlNumRowsNative) {
     if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL_RES *res = (MYSQL_RES *)djazair_get_resource(vm, args[0]);
     if (!res) return djazair_int(0);
-    return djazair_float((double)mysql_num_rows(res));
+    return djazair_int64(vm, (int64_t)mysql_num_rows(res));
 }
 
 DJAZAIR_FUNC(mysqlNumFieldsNative) {
@@ -89,7 +89,7 @@ DJAZAIR_FUNC(mysqlDataSeekNative) {
         return djazair_null();
     MYSQL_RES *res = (MYSQL_RES *)djazair_get_resource(vm, args[0]);
     if (!res) return djazair_null();
-    mysql_data_seek(res, (my_ulonglong)djazair_get_num(args, 1));
+    mysql_data_seek(res, (my_ulonglong)djazair_get_int64(args, 1));
     return djazair_null();
 }
 

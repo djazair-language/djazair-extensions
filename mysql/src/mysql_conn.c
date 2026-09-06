@@ -94,7 +94,7 @@ DJAZAIR_FUNC(mysqlThreadIdNative) {
     if (!djazair_is_resource(args[0])) return djazair_int(0);
     MYSQL *conn = (MYSQL *)djazair_get_resource(vm, args[0]);
     if (!conn) return djazair_int(0);
-    return djazair_float((double)mysql_thread_id(conn));
+    return djazair_int64(vm, (int64_t)mysql_thread_id(conn));
 }
 
 DJAZAIR_FUNC(mysqlInfoNative) {

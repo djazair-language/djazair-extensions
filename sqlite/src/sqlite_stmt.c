@@ -44,7 +44,7 @@ DJAZAIR_FUNC(sqliteFetchRowNative) {
         int type = sqlite3_column_type(stmt, i);
         switch (type) {
             case SQLITE_INTEGER:
-                val = djazair_float((double)sqlite3_column_int64(stmt, i));
+                val = djazair_int64(vm, sqlite3_column_int64(stmt, i));
                 break;
             case SQLITE_FLOAT:
                 val = djazair_float(sqlite3_column_double(stmt, i));

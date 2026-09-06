@@ -46,7 +46,7 @@ DJAZAIR_FUNC(sqliteLastInsertIdNative) {
     if (!djazair_is_resource(args[0])) return djazair_int(0);
     sqlite3 *db = (sqlite3 *)djazair_get_resource(vm, args[0]);
     if (!db) return djazair_int(0);
-    return djazair_float((double)sqlite3_last_insert_rowid(db));
+    return djazair_int64(vm, sqlite3_last_insert_rowid(db));
 }
 
 DJAZAIR_FUNC(sqliteChangesNative) {
