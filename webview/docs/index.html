@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Djazair WebView Framework | Official Documentation</title>
+  <title>Djazair WebView Framework | Complete 100% API Reference &amp; Docs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -18,12 +18,12 @@
     <div class="logo-area">
       <div class="logo-icon"><i class="fas fa-feather"></i></div>
       <div class="logo-text">Djazair <span>WebView</span></div>
-      <span class="badge-version">v1.0.0 Production</span>
+      <span class="badge-version">v1.0.0 100% Complete</span>
     </div>
 
     <div class="search-container">
       <i class="fas fa-search search-icon"></i>
-      <input type="text" id="apiSearch" class="search-input" placeholder="Search methods, events, options (e.g. flash, drag, singleInstance, tray, bridge)..." autocomplete="off" />
+      <input type="text" id="apiSearch" class="search-input" placeholder="Search 60+ APIs: flash, drag, singleInstance, zoom, cache, tray, protocol..." autocomplete="off" />
     </div>
 
     <div class="header-actions">
@@ -40,7 +40,7 @@
     <div class="nav-group">
       <div class="nav-title"><i class="fas fa-compass"></i> Getting Started</div>
       <ul class="nav-links">
-        <li><a href="#overview" class="nav-item active"><span>Overview & Architecture</span></a></li>
+        <li><a href="#overview" class="nav-item active"><span>Overview &amp; Architecture</span></a></li>
         <li><a href="#quickstart" class="nav-item"><span>Quick Start Guide</span></a></li>
         <li><a href="#simulator" class="nav-item"><span>Window Playground</span> <span class="nav-tag">Live</span></a></li>
       </ul>
@@ -49,7 +49,7 @@
     <div class="nav-group">
       <div class="nav-title"><i class="fas fa-layer-group"></i> Core Application</div>
       <ul class="nav-links">
-        <li><a href="#app-lifecycle" class="nav-item"><span>App Lifecycle & Mutex</span> <span class="nav-tag">New</span></a></li>
+        <li><a href="#app-lifecycle" class="nav-item"><span>App Lifecycle &amp; Mutex</span> <span class="nav-tag">New</span></a></li>
         <li><a href="#create-window" class="nav-item"><span>createWindow Options</span></a></li>
       </ul>
     </div>
@@ -57,21 +57,23 @@
     <div class="nav-group">
       <div class="nav-title"><i class="fas fa-window-maximize"></i> Window Management</div>
       <ul class="nav-links">
-        <li><a href="#window-geometry" class="nav-item"><span>Geometry & Position</span></a></li>
-        <li><a href="#window-state" class="nav-item"><span>State & Fullscreen</span></a></li>
-        <li><a href="#window-frameless" class="nav-item"><span>Frameless & Dragging</span> <span class="nav-tag">New</span></a></li>
-        <li><a href="#window-visuals" class="nav-item"><span>Visuals, Title & Focus</span> <span class="nav-tag">New</span></a></li>
-        <li><a href="#window-content" class="nav-item"><span>Content & Navigation</span></a></li>
-        <li><a href="#window-events" class="nav-item"><span>Window Events & Callbacks</span></a></li>
+        <li><a href="#window-geometry" class="nav-item"><span>Geometry &amp; Position</span></a></li>
+        <li><a href="#window-state" class="nav-item"><span>State, Fullscreen &amp; Flash</span> <span class="nav-tag">New</span></a></li>
+        <li><a href="#window-frameless" class="nav-item"><span>Frameless &amp; Dragging</span> <span class="nav-tag">New</span></a></li>
+        <li><a href="#window-visuals" class="nav-item"><span>Visuals, Title &amp; Focus</span> <span class="nav-tag">New</span></a></li>
+        <li><a href="#window-content" class="nav-item"><span>Content &amp; Navigation</span></a></li>
+        <li><a href="#window-display" class="nav-item"><span>Display, Screen &amp; Zoom</span></a></li>
+        <li><a href="#window-storage" class="nav-item"><span>Cache, Cookies &amp; Printing</span></a></li>
+        <li><a href="#window-events" class="nav-item"><span>Window Event Callbacks</span></a></li>
       </ul>
     </div>
 
     <div class="nav-group">
-      <div class="nav-title"><i class="fas fa-network-wired"></i> IPC & JS Bridge</div>
+      <div class="nav-title"><i class="fas fa-network-wired"></i> IPC &amp; JS Bridge</div>
       <ul class="nav-links">
         <li><a href="#bridge-overview" class="nav-item"><span>Two-Way IPC Architecture</span></a></li>
-        <li><a href="#bridge-djazair" class="nav-item"><span>Djazair Backend API</span></a></li>
-        <li><a href="#bridge-js" class="nav-item"><span>JavaScript Frontend API</span></a></li>
+        <li><a href="#bridge-djazair" class="nav-item"><span>Djazair Backend Bridge</span></a></li>
+        <li><a href="#bridge-js" class="nav-item"><span>JavaScript Frontend Bridge</span></a></li>
       </ul>
     </div>
 
@@ -79,16 +81,18 @@
       <div class="nav-title"><i class="fas fa-desktop"></i> Native Desktop Features</div>
       <ul class="nav-links">
         <li><a href="#native-dialogs" class="nav-item"><span>Native Dialogs</span></a></li>
-        <li><a href="#native-menus" class="nav-item"><span>Menus & Accelerators</span></a></li>
-        <li><a href="#system-tray" class="nav-item"><span>System Tray & Toasts</span></a></li>
+        <li><a href="#native-menus" class="nav-item"><span>Menus &amp; Accelerators</span></a></li>
+        <li><a href="#system-tray" class="nav-item"><span>System Tray &amp; Notifications</span></a></li>
+        <li><a href="#custom-protocols" class="nav-item"><span>Custom Protocol Schemes</span></a></li>
+        <li><a href="#logging-utils" class="nav-item"><span>Logging &amp; Diagnostics</span></a></li>
       </ul>
     </div>
 
     <div class="nav-group">
-      <div class="nav-title"><i class="fas fa-book-open"></i> Guides & Reference</div>
+      <div class="nav-title"><i class="fas fa-book-open"></i> Guides &amp; Reference</div>
       <ul class="nav-links">
         <li><a href="#custom-titlebar" class="nav-item"><span>Frameless App Tutorial</span></a></li>
-        <li><a href="#troubleshooting" class="nav-item"><span>Debugging & Diagnostics</span></a></li>
+        <li><a href="#troubleshooting" class="nav-item"><span>Deployment &amp; Troubleshooting</span></a></li>
       </ul>
     </div>
   </aside>
@@ -152,7 +156,7 @@
 
       <!-- Section: Overview & Architecture -->
       <section id="overview" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-sitemap"></i> Overview & Architecture</h2>
+        <h2 class="section-title"><i class="fas fa-sitemap"></i> Overview &amp; Architecture</h2>
         <p class="section-desc">
           The Djazair <code>webview</code> module provides full native desktop GUI capabilities to Djazair programs without bundling bloated browser runtimes.
         </p>
@@ -169,18 +173,18 @@
             <tbody>
               <tr>
                 <td><strong>High-Level Djazair API</strong></td>
-                <td><code>webview.dz</code> / <code>init.dz</code></td>
+                <td><code>init.dz</code> / <code>application.dz</code> / <code>window.dz</code></td>
                 <td>Object-Oriented classes (<code>App</code>, <code>Window</code>, <code>Bridge</code>, <code>Menu</code>, <code>Tray</code>, <code>Notification</code>).</td>
               </tr>
               <tr>
                 <td><strong>Native C++ Extension</strong></td>
-                <td><code>webview_ext.cpp</code> / Win32</td>
+                <td><code>webview_native.cc</code> / Win32</td>
                 <td>Window creation, message pump, DWM dark mode, named mutexes, Win32 events, FlashWindowEx.</td>
               </tr>
               <tr>
                 <td><strong>Rendering Engine</strong></td>
                 <td>Microsoft Edge WebView2</td>
-                <td>Hardware-accelerated web rendering, WebAssembly, modern DOM, DevTools.</td>
+                <td>Hardware-accelerated web rendering, WebAssembly, modern DOM, DevTools, protocols.</td>
               </tr>
               <tr>
                 <td><strong>Frontend Injected Bridge</strong></td>
@@ -345,7 +349,7 @@ app.run()</code></pre>
 
       <!-- Section: Core Application & Lifecycle -->
       <section id="app-lifecycle" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-layer-group"></i> Application Lifecycle & Mutex</h2>
+        <h2 class="section-title"><i class="fas fa-layer-group"></i> Application Lifecycle &amp; Mutex</h2>
         <p class="section-desc">
           The <code>App</code> class manages the primary operating system message loop, window hierarchy, and single-instance mutex enforcement.
         </p>
@@ -367,6 +371,16 @@ app.run()</code></pre>
           </div>
           <div class="method-desc">
             Gracefully closes all windows managed by the application, dispatches the <code>onQuit</code> handler, frees WebView2 environment controllers, and terminates the event loop.
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">app.<span class="method-name">isValid</span>() &rarr; Boolean</span>
+            <span class="method-badge">Core</span>
+          </div>
+          <div class="method-desc">
+            Checks if the primary window handle is valid, open, and has not yet been destroyed.
           </div>
         </div>
 
@@ -397,6 +411,16 @@ app.run()</code></pre>
           </div>
           <div class="method-desc">
             Registers a global handler receiving uncaught WebView2 native exceptions and initialization errors.
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">app.<span class="method-name">setDebug</span>(enable)</span>
+            <span class="method-badge">Diagnostics</span>
+          </div>
+          <div class="method-desc">
+            Dynamically toggles developer mode, console forwarding, and F12 DevTools inspection.
           </div>
         </div>
 
@@ -439,6 +463,26 @@ app.run()</code></pre>
             </div>
           </div>
         </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">app.<span class="method-name">requestSingleInstanceLock</span>(appId) &rarr; Boolean</span>
+            <span class="method-badge">Mutex</span>
+          </div>
+          <div class="method-desc">
+            Low-level programmatic query attempting to acquire the Named Mutex lock for a specified application identifier. Returns <code>True</code> if this process is the primary owner.
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">app.<span class="method-name">focusExistingInstance</span>(title) &rarr; Boolean</span>
+            <span class="method-badge">Mutex</span>
+          </div>
+          <div class="method-desc">
+            Finds an existing running window instance matching the caption title and restores, unminimizes, and focuses it in the foreground.
+          </div>
+        </div>
       </section>
 
       <!-- Section: createWindow Options -->
@@ -478,6 +522,12 @@ app.run()</code></pre>
                 <td>Initial window height in pixels.</td>
               </tr>
               <tr>
+                <td><code>x</code>, <code>y</code></td>
+                <td>Number</td>
+                <td><code>-1</code></td>
+                <td>Initial screen position coordinates (<code>-1</code> indicates OS default).</td>
+              </tr>
+              <tr>
                 <td><code>minWidth</code></td>
                 <td>Number</td>
                 <td><code>400</code></td>
@@ -512,6 +562,12 @@ app.run()</code></pre>
                 <td>Boolean</td>
                 <td><code>False</code></td>
                 <td>Removes OS standard titlebar and borders for custom UI.</td>
+              </tr>
+              <tr>
+                <td><code>closable</code></td>
+                <td>Boolean</td>
+                <td><code>True</code></td>
+                <td>Whether standard window close buttons and shortcuts are enabled.</td>
               </tr>
               <tr>
                 <td><code>center</code></td>
@@ -556,10 +612,22 @@ app.run()</code></pre>
                 <td>Unique application identifier used for mutex naming.</td>
               </tr>
               <tr>
+                <td><code>userDataDir</code></td>
+                <td>String</td>
+                <td><code>""</code></td>
+                <td>Custom directory for browser cookies, cache, and localStorage.</td>
+              </tr>
+              <tr>
                 <td><code>url</code></td>
                 <td>String</td>
                 <td><code>""</code></td>
                 <td>URL loaded immediately upon window creation.</td>
+              </tr>
+              <tr>
+                <td><code>html</code></td>
+                <td>String</td>
+                <td><code>""</code></td>
+                <td>Inline HTML string loaded into document surface.</td>
               </tr>
             </tbody>
           </table>
@@ -568,7 +636,7 @@ app.run()</code></pre>
 
       <!-- Section: Window Geometry & Position -->
       <section id="window-geometry" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-arrows-alt"></i> Window Geometry & Positioning</h2>
+        <h2 class="section-title"><i class="fas fa-arrows-alt"></i> Window Geometry &amp; Positioning</h2>
         <p class="section-desc">
           Methods to control window dimensions, screen coordinates, and visibility via <code>app.window</code>.
         </p>
@@ -623,16 +691,24 @@ app.run()</code></pre>
 
         <div class="method-card">
           <div class="method-header">
-            <span class="method-sig">window.<span class="method-name">setMinSize</span>(width, height) / window.<span class="method-name">setMaxSize</span>(width, height)</span>
+            <span class="method-sig">window.<span class="method-name">setMinimumSize</span>(width, height) / window.<span class="method-name">setMaximumSize</span>(width, height)</span>
             <span class="method-badge">Geometry</span>
           </div>
-          <div class="method-desc">Defines boundary constraints for window resizing via Win32 <code>WM_GETMINMAXINFO</code>.</div>
+          <div class="method-desc">Defines boundary constraints for window resizing via Win32 <code>WM_GETMINMAXINFO</code>. (Aliases: <code>setMinSize</code>, <code>setMaxSize</code>).</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">setResizable</span>(resizable)</span>
+            <span class="method-badge">Geometry</span>
+          </div>
+          <div class="method-desc">Enables or disables interactive user window resizing via border handles.</div>
         </div>
       </section>
 
-      <!-- Section: Window State & Attention -->
+      <!-- Section: Window State, Fullscreen & Flash -->
       <section id="window-state" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-expand-arrows-alt"></i> Window State & Attention</h2>
+        <h2 class="section-title"><i class="fas fa-expand-arrows-alt"></i> Window State, Fullscreen &amp; Flash</h2>
         <p class="section-desc">
           Manage minimization, maximization, fullscreen, taskbar flashing, and focus inspection.
         </p>
@@ -651,6 +727,14 @@ app.run()</code></pre>
             <span class="method-badge">State</span>
           </div>
           <div class="method-desc">Checks whether the window is currently maximized or minimized.</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">isVisible</span>() &rarr; Boolean</span>
+            <span class="method-badge">State</span>
+          </div>
+          <div class="method-desc">Checks whether the window is currently displayed on screen.</div>
         </div>
 
         <div class="method-card">
@@ -709,7 +793,7 @@ app.window.requestAttention(True)</code></pre>
 
       <!-- Section: Frameless & Dragging -->
       <section id="window-frameless" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-hand-rock"></i> Frameless Windows & Native Dragging</h2>
+        <h2 class="section-title"><i class="fas fa-hand-rock"></i> Frameless Windows &amp; Native Dragging</h2>
         <p class="section-desc">
           Build modern apps with seamless custom titlebars (like Spotify, Discord, or VS Code) using native dragging.
         </p>
@@ -822,17 +906,17 @@ app.run()</code></pre>
 
       <!-- Section: Visuals, Title & Focus -->
       <section id="window-visuals" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-palette"></i> Visuals, Titlebar & Focus</h2>
+        <h2 class="section-title"><i class="fas fa-palette"></i> Visuals, Titlebar &amp; Focus</h2>
         <p class="section-desc">
           Customize window title, chrome aesthetics, background color, opacity, and window focus.
         </p>
 
         <div class="method-card">
           <div class="method-header">
-            <span class="method-sig">window.<span class="method-name">setTitle</span>(title) / window.<span class="method-name">getTitle</span>() &rarr; String</span>
+            <span class="method-sig">window.<span class="method-name">setTitle</span>(title) / window.<span class="method-name">title</span>(title)</span>
             <span class="method-badge">Visuals</span>
           </div>
-          <div class="method-desc">Dynamically updates or retrieves the OS window caption bar title.</div>
+          <div class="method-desc">Dynamically updates the OS window caption bar title.</div>
         </div>
 
         <div class="method-card">
@@ -888,7 +972,7 @@ app.run()</code></pre>
 
       <!-- Section: Content & Navigation -->
       <section id="window-content" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-globe"></i> Content, Navigation & Script Execution</h2>
+        <h2 class="section-title"><i class="fas fa-globe"></i> Content, Navigation &amp; Script Execution</h2>
         <p class="section-desc">
           Navigate between URLs, load raw HTML strings, execute JavaScript, and toggle Developer Tools.
         </p>
@@ -939,10 +1023,34 @@ app.run()</code></pre>
 
         <div class="method-card">
           <div class="method-header">
-            <span class="method-sig">window.<span class="method-name">goBack</span>() / window.<span class="method-name">goForward</span>() / window.<span class="method-name">getUrl</span>()</span>
+            <span class="method-sig">window.<span class="method-name">goBack</span>() / window.<span class="method-name">goForward</span>()</span>
             <span class="method-badge">Navigation</span>
           </div>
-          <div class="method-desc">Standard browser history navigation and current URL query.</div>
+          <div class="method-desc">Navigates back or forward across session navigation history.</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">canGoBack</span>() &rarr; Bool / window.<span class="method-name">canGoForward</span>() &rarr; Bool</span>
+            <span class="method-badge">Navigation</span>
+          </div>
+          <div class="method-desc">Checks whether backward or forward navigation steps are possible.</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">getUrl</span>() &rarr; String</span>
+            <span class="method-badge">Navigation</span>
+          </div>
+          <div class="method-desc">Retrieves the current URL or location string of the web document.</div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">isLoaded</span>() &rarr; Boolean</span>
+            <span class="method-badge">Content</span>
+          </div>
+          <div class="method-desc">Returns <code>True</code> if the initial page content has finished loading completely.</div>
         </div>
 
         <div class="method-card">
@@ -952,11 +1060,105 @@ app.run()</code></pre>
           </div>
           <div class="method-desc">Opens Microsoft Edge F12 Developer Tools for inspecting elements, console logs, and network traffic.</div>
         </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">setContextMenuEnabled</span>(enabled)</span>
+            <span class="method-badge">Content</span>
+          </div>
+          <div class="method-desc">Enables or disables standard browser right-click context inspection menus.</div>
+        </div>
       </section>
 
-      <!-- Section: Window Events & Callbacks -->
+      <!-- Section: Display, Screen & Zoom -->
+      <section id="window-display" class="doc-section">
+        <h2 class="section-title"><i class="fas fa-search-plus"></i> Display, Screen Size &amp; Zoom</h2>
+        <p class="section-desc">
+          Methods to query display resolution, monitor work areas, and control browser zoom magnification.
+        </p>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">setZoomLevel</span>(level) / window.<span class="method-name">zoomLevel</span>() &rarr; Float</span>
+            <span class="method-badge">Display</span>
+          </div>
+          <div class="method-desc">
+            Sets or retrieves the zoom magnification factor (e.g. <code>1.0</code> is 100%, <code>1.25</code> is 125%, <code>0.8</code> is 80%).
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">getScreenSize</span>() &rarr; [width, height]</span>
+            <span class="method-badge">Screen</span>
+          </div>
+          <div class="method-desc">
+            Returns the overall display screen resolution in pixels (e.g. <code>[1920, 1080]</code>).
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">getAvailableSize</span>() &rarr; [width, height]</span>
+            <span class="method-badge">Screen</span>
+          </div>
+          <div class="method-desc">
+            Returns available working screen resolution excluding the Windows taskbar and docked toolbars.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Cache, Cookies & Printing -->
+      <section id="window-storage" class="doc-section">
+        <h2 class="section-title"><i class="fas fa-cookie-bite"></i> Cache, Cookies, User-Agent &amp; Printing</h2>
+        <p class="section-desc">
+          Manage browser storage, session cookies, custom User-Agent strings, and invoke native printing.
+        </p>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">setUserAgent</span>(userAgent)</span>
+            <span class="method-badge">Network</span>
+          </div>
+          <div class="method-desc">
+            Overrides standard HTTP User-Agent header string sent to web servers.
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">clearCache</span>()</span>
+            <span class="method-badge">Storage</span>
+          </div>
+          <div class="method-desc">
+            Flushes disk and in-memory HTTP cache stored by the WebView2 rendering profile.
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">clearCookies</span>()</span>
+            <span class="method-badge">Storage</span>
+          </div>
+          <div class="method-desc">
+            Clears all stored session and persistent cookies via DevTools Protocol (<code>Network.clearBrowserCookies</code>).
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">window.<span class="method-name">print</span>()</span>
+            <span class="method-badge">Printing</span>
+          </div>
+          <div class="method-desc">
+            Triggers native browser document print preview dialog (<code>window.print()</code>).
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Window Event Callbacks -->
       <section id="window-events" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-bell"></i> Window Lifecycle Events & Callbacks</h2>
+        <h2 class="section-title"><i class="fas fa-bell"></i> Window Lifecycle Events &amp; Callbacks</h2>
         <p class="section-desc">
           Subscribe to native window events using dedicated callback setters on <code>app.window</code>.
         </p>
@@ -1067,6 +1269,11 @@ app.bridge.on("getUserProfile", fn(payload)
     }
 end)
 
+# Expose direct binding callable on window
+app.bridge.expose("nativeCalculator", fn(args)
+    return args[0] * args[1]
+end)
+
 # Push events to JavaScript
 app.onReady(fn()
     app.bridge.send("system-status", { "online": True, "ping": 12 })
@@ -1124,6 +1331,41 @@ end)</code></pre>
           </div>
         </div>
 
+        <h3 id="bridge-djazair" style="margin-top:32px;margin-bottom:12px;font-size:1.3rem;">Bridge Methods (`app.bridge`)</h3>
+        <div class="table-wrapper">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Signature</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>on</code></td>
+                <td><code>bridge.on(channel, handler)</code></td>
+                <td>Registers a callback function handling incoming invoke messages from JS.</td>
+              </tr>
+              <tr>
+                <td><code>send</code></td>
+                <td><code>bridge.send(channel, data)</code></td>
+                <td>Pushes an asynchronous event and JSON payload to JavaScript.</td>
+              </tr>
+              <tr>
+                <td><code>invoke</code></td>
+                <td><code>bridge.invoke(jsCode)</code></td>
+                <td>Evaluates an expression in JavaScript and emits the result.</td>
+              </tr>
+              <tr>
+                <td><code>expose</code></td>
+                <td><code>bridge.expose(name, handler)</code></td>
+                <td>Exposes a native Djazair function directly as <code>window[name]</code> in JS.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <h3 id="bridge-js" style="margin-top:32px;margin-bottom:12px;font-size:1.3rem;">The <code>window.djazair</code> Global Object</h3>
         <p>Every web page rendered in Djazair automatically has access to the <code>window.djazair</code> bridge:</p>
 
@@ -1175,7 +1417,7 @@ end)</code></pre>
             <span class="method-badge">Dialogs</span>
           </div>
           <div class="method-desc">
-            Displays native Windows MessageBox. Options: <code>title</code>, <code>message</code>, <code>type</code> ("info", "warning", "error", "question"), <code>buttons</code> ("ok", "okcancel", "yesno").
+            Displays native Windows MessageBox. Options: <code>title</code>, <code>message</code>, <code>detail</code>, <code>type</code> ("info", "warning", "error", "question"), <code>buttons</code> ("ok", "okcancel", "yesno"), <code>defaultId</code>, <code>cancelId</code>.
           </div>
           <div class="code-wrapper">
             <div class="code-header">
@@ -1258,7 +1500,7 @@ if answer == "yes" {
       <section id="native-menus" class="doc-section">
         <h2 class="section-title"><i class="fas fa-bars"></i> Native Menus &amp; Context Menus</h2>
         <p class="section-desc">
-          Build native popup and context menus using the <code>Menu</code> class.
+          Build native popup and context menus using the <code>Menu</code> class and procedural functions.
         </p>
 
         <div class="code-wrapper">
@@ -1293,9 +1535,43 @@ app.bridge.on("showContextMenu", fn(_)
 end)</code></pre>
           </div>
         </div>
+
+        <div class="table-wrapper">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Method / Function</th>
+                <th>Signature</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>addItem</code></td>
+                <td><code>menu.addItem(label, callback)</code></td>
+                <td>Appends a clickable action item to the menu.</td>
+              </tr>
+              <tr>
+                <td><code>addSeparator</code></td>
+                <td><code>menu.addSeparator()</code></td>
+                <td>Appends a visual horizontal divider line.</td>
+              </tr>
+              <tr>
+                <td><code>addSubmenu</code></td>
+                <td><code>menu.addSubmenu(label) &rarr; Menu</code></td>
+                <td>Creates and appends a nested cascading child submenu.</td>
+              </tr>
+              <tr>
+                <td><code>popup</code></td>
+                <td><code>menu.popup(window)</code></td>
+                <td>Pops up the context menu at the current mouse cursor location.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      <!-- Section: System Tray & Toasts -->
+      <!-- Section: System Tray & Notifications -->
       <section id="system-tray" class="doc-section">
         <h2 class="section-title"><i class="fas fa-tray"></i> System Tray &amp; Notifications</h2>
         <p class="section-desc">
@@ -1333,6 +1609,137 @@ tray.showBalloon("Djazair Background Service", "Application minimized to tray.",
 # Or show native desktop toast notification
 webview.Notification.show("Sync Completed", "All files backed up successfully.")</code></pre>
           </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Method / Function</th>
+                <th>Signature</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>setIcon</code></td>
+                <td><code>tray.setIcon(iconPath)</code></td>
+                <td>Updates the icon displayed in the taskbar notification tray.</td>
+              </tr>
+              <tr>
+                <td><code>setMenu</code></td>
+                <td><code>tray.setMenu(menu)</code></td>
+                <td>Attaches a context menu shown when right-clicking the tray icon.</td>
+              </tr>
+              <tr>
+                <td><code>setTooltip</code></td>
+                <td><code>tray.setTooltip(tooltip)</code></td>
+                <td>Updates hover tooltip text displayed over the tray icon.</td>
+              </tr>
+              <tr>
+                <td><code>showBalloon</code></td>
+                <td><code>tray.showBalloon(title, message, timeout = 5)</code></td>
+                <td>Displays an OS balloon notification tip near the tray icon.</td>
+              </tr>
+              <tr>
+                <td><code>destroy</code></td>
+                <td><code>tray.destroy()</code></td>
+                <td>Removes the icon from the system tray and releases resources.</td>
+              </tr>
+              <tr>
+                <td><code>Notification.show</code></td>
+                <td><code>Notification.show(title, message, subtitle, sound, icon, timeout)</code></td>
+                <td>Displays a system desktop notification balloon or banner.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Custom Protocol Schemes -->
+      <section id="custom-protocols" class="doc-section">
+        <h2 class="section-title"><i class="fas fa-shield-alt"></i> Custom Protocol Schemes</h2>
+        <p class="section-desc">
+          Register custom URI schemes (such as <code>app://</code>, <code>asset://</code>, or <code>djazair://</code>) to intercept network requests and serve generated or local assets securely.
+        </p>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">webview.<span class="method-name">protocolRegister</span>(scheme, handler)</span>
+            <span class="method-badge">Protocols</span>
+          </div>
+          <div class="method-desc">
+            Registers a custom URI protocol handler to intercept web requests made by the page.
+          </div>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>webview.protocolRegister("djazair", fn(uri)
+    print("Intercepted request to: " + uri)
+    return "Hello from custom protocol!"
+end)</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <span class="method-sig">webview.<span class="method-name">protocolUnregister</span>(scheme)</span>
+            <span class="method-badge">Protocols</span>
+          </div>
+          <div class="method-desc">
+            Unregisters a previously attached custom protocol scheme.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Logging & Diagnostic Utilities -->
+      <section id="logging-utils" class="doc-section">
+        <h2 class="section-title"><i class="fas fa-terminal"></i> Logging &amp; Diagnostic Utilities</h2>
+        <p class="section-desc">
+          Configure output verbosity, terminal colors, timestamps, and persistent log files for debugging.
+        </p>
+
+        <div class="table-wrapper">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Function</th>
+                <th>Accepted Values</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>webview.setLogLevel(level)</code></td>
+                <td><code>"none"</code> (0), <code>"error"</code> (1), <code>"warn"</code> (2), <code>"info"</code> (3), <code>"debug"</code> (4)</td>
+                <td>Configures global log message filtering threshold.</td>
+              </tr>
+              <tr>
+                <td><code>webview.setLogColors(enable)</code></td>
+                <td><code>True</code> / <code>False</code></td>
+                <td>Toggles ANSI terminal color highlighting in console output.</td>
+              </tr>
+              <tr>
+                <td><code>webview.setLogFile(filePath)</code></td>
+                <td>String (file path) or <code>Null</code></td>
+                <td>Redirects and appends all log records to a persistent disk file.</td>
+              </tr>
+              <tr>
+                <td><code>webview.setLogTimeFormat(format)</code></td>
+                <td>Format string (e.g. <code>"%H:%M:%S"</code>)</td>
+                <td>Configures the timestamp representation prepended to log entries.</td>
+              </tr>
+              <tr>
+                <td><code>webview.log(message, level = "info")</code></td>
+                <td>String message, level</td>
+                <td>Logs a custom message through the centralized webview logging pipeline.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -1409,7 +1816,7 @@ app.run()</code></pre>
 
       <!-- Section: Debugging & Diagnostics -->
       <section id="troubleshooting" class="doc-section">
-        <h2 class="section-title"><i class="fas fa-bug"></i> Debugging &amp; Diagnostics</h2>
+        <h2 class="section-title"><i class="fas fa-bug"></i> Deployment &amp; Troubleshooting</h2>
         <p class="section-desc">
           Tips for troubleshooting, remote debugging, and ensuring seamless deployment.
         </p>
@@ -1442,6 +1849,14 @@ app.run()</code></pre>
               <tr>
                 <td><strong>Seamless Dragging for Custom Titlebars</strong></td>
                 <td>Attach <code>onmousedown="window.djazair.startDragging()"</code> to the titlebar element.</td>
+              </tr>
+              <tr>
+                <td><strong>Zoom Scaling on High-DPI Displays</strong></td>
+                <td>Use <code>window.setZoomLevel(1.25)</code> and query screen constraints with <code>window.getScreenSize()</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Custom Protocol Asset Security</strong></td>
+                <td>Register internal protocol handler via <code>webview.protocolRegister()</code>.</td>
               </tr>
             </tbody>
           </table>
