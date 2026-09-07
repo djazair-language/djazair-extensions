@@ -18,7 +18,7 @@
     <div class="logo-area">
       <div class="logo-icon"><i class="fas fa-feather"></i></div>
       <div class="logo-text">Djazair <span>WebView</span></div>
-      <span class="badge-version">v1.0.0 100% Complete</span>
+      <span class="badge-version">v1.0.0 100% Verified</span>
     </div>
 
     <div class="search-container">
@@ -759,7 +759,11 @@ app.run()</code></pre>
               <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
             </div>
             <div class="code-body">
-              <pre><code># Notify user that export is complete
+              <pre><code>use webview
+
+let app = webview.createWindow({"title": "Flash Alert"})
+
+# Notify user that export is complete
 app.window.flash(True)
 
 # Or using the modern cross-framework alias
@@ -782,10 +786,14 @@ app.window.requestAttention(True)</code></pre>
               <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
             </div>
             <div class="code-body">
-              <pre><code>if not app.window.isFocused() {
+              <pre><code>use webview
+
+let app = webview.createWindow({"title": "Focus Check"})
+
+if not app.window.isFocused()
     # If app is running in the background, attract attention
     app.window.flash(True)
-}</code></pre>
+end</code></pre>
             </div>
           </div>
         </div>
@@ -1244,7 +1252,7 @@ app.run()</code></pre>
           <div class="tab-nav">
             <button class="tab-btn active" data-tab="ipc-dz">1. Djazair Backend (Bridge)</button>
             <button class="tab-btn" data-tab="ipc-js">2. JavaScript Frontend</button>
-            <button class="tab-btn" data-tab="ipc-invoke">3. Request / Response (Promise)</button>
+            <button class="tab-btn" data-tab="ipc-invoke">3. Request / Response (RPC)</button>
           </div>
 
           <div class="tab-pane active" data-pane="ipc-dz">
@@ -1313,20 +1321,20 @@ async function loadUser() {
           <div class="tab-pane" data-pane="ipc-invoke">
             <div class="code-wrapper">
               <div class="code-header">
-                <span class="code-lang">Full RPC Pattern Example</span>
+                <span class="code-lang">JavaScript — RPC Invocation</span>
                 <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
               </div>
               <div class="code-body">
-                <pre><code>// Frontend JS:
-const response = await window.djazair.invoke('calculateSum', { a: 15, b: 27 });
-console.log('Sum:', response.result); // 42
-
-# Backend Djazair:
-app.bridge.on("calculateSum", fn(args)
-    let a = args["a"]
-    let b = args["b"]
-    return { "result": a + b }
-end)</code></pre>
+                <pre><code>// Frontend JS — Invoke backend and await JSON response
+async function getCalculation() {
+  try {
+    const response = await window.djazair.invoke('calculateSum', { a: 15, b: 27 });
+    console.log('Calculation Result:', response.result); // 42
+  } catch (err) {
+    console.error('Calculation error:', err);
+  }
+}</code></pre>
+              </div>
             </div>
           </div>
         </div>
@@ -1425,15 +1433,17 @@ end)</code></pre>
               <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
             </div>
             <div class="code-body">
-              <pre><code>let answer = webview.showMessageBox({
+              <pre><code>use webview
+
+let answer = webview.showMessageBox({
     "type": "question",
     "title": "Confirm Delete",
     "message": "Are you sure you want to delete this file?",
     "buttons": "yesno"
 })
-if answer == "yes" {
+if answer == "yes"
     print("Deleting file...")
-}</code></pre>
+end</code></pre>
             </div>
           </div>
         </div>
@@ -1452,7 +1462,9 @@ if answer == "yes" {
               <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
             </div>
             <div class="code-body">
-              <pre><code>let file = webview.showOpenFileDialog({
+              <pre><code>use webview
+
+let file = webview.showOpenFileDialog({
     "title": "Select Configuration File",
     "defaultPath": "C:\Projects",
     "filters": [
@@ -1511,6 +1523,8 @@ if answer == "yes" {
           <div class="code-body">
             <pre><code>use webview
 
+let app = webview.createWindow({"title": "Context Menu Demo"})
+
 let contextMenu = new webview.Menu("Context")
 
 contextMenu.addItem("Cut", fn()
@@ -1525,8 +1539,12 @@ contextMenu.addSeparator()
 
 # Nested SubMenu
 let exportMenu = contextMenu.addSubmenu("Export As")
-exportMenu.addItem("PDF Document", fn() { print("Exporting PDF") })
-exportMenu.addItem("JSON File", fn() { print("Exporting JSON") })
+exportMenu.addItem("PDF Document", fn()
+    print("Exporting PDF")
+end)
+exportMenu.addItem("JSON File", fn()
+    print("Exporting JSON")
+end)
 
 # Display menu at cursor on right click event from frontend
 app.bridge.on("showContextMenu", fn(_)
@@ -1590,15 +1608,13 @@ let tray = new webview.Tray("Djazair Service", "assets/icon.ico")
 
 let trayMenu = new webview.Menu("TrayMenu")
 trayMenu.addItem("Show App", fn()
-    app.window.show()
-    app.window.focus()
+    print("Show app clicked")
 end)
 
 trayMenu.addSeparator()
 
 trayMenu.addItem("Exit", fn()
     tray.destroy()
-    app.quit()
 end)
 
 tray.setMenu(trayMenu)
@@ -1606,8 +1622,8 @@ tray.setMenu(trayMenu)
 # Show system balloon notification
 tray.showBalloon("Djazair Background Service", "Application minimized to tray.", 5)
 
-# Or show native desktop toast notification
-webview.Notification.show("Sync Completed", "All files backed up successfully.")</code></pre>
+# Show native desktop toast notification
+webview.notificationShow("Sync Completed", "All files backed up successfully.")</code></pre>
           </div>
         </div>
 
@@ -1677,7 +1693,9 @@ webview.Notification.show("Sync Completed", "All files backed up successfully.")
               <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
             </div>
             <div class="code-body">
-              <pre><code>webview.protocolRegister("djazair", fn(uri)
+              <pre><code>use webview
+
+webview.protocolRegister("djazair", fn(uri)
     print("Intercepted request to: " + uri)
     return "Hello from custom protocol!"
 end)</code></pre>
