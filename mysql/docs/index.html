@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Djazair MySQL Extension | Complete Official Documentation &amp; API Reference</title>
+  
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="docs.css" />
+  
+  <!-- jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <!-- Documentation & Simulator Script -->
+  <script src="docs.js"></script>
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="top-header">
+    <div class="logo-area">
+      <div class="logo-icon"><i class="fas fa-database"></i></div>
+      <div class="logo-text">Djazair <span>MySQL</span></div>
+      <span class="badge-version">v0.1.0 Native &amp; Hybrid</span>
+    </div>
+
+    <div class="search-container">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" id="apiSearch" class="search-input" placeholder="Search 30+ APIs: connect, safeQuery, transaction, fetchAssoc, ping..." autocomplete="off" />
+    </div>
+
+    <div class="header-actions">
+      <a href="#quickstart" class="btn-header"><i class="fas fa-bolt"></i> Quick Start</a>
+      <a href="#playground" class="btn-header highlight"><i class="fas fa-terminal"></i> Playground</a>
+      <a href="https://github.com/djazair-language/djazair-extensions" target="_blank" class="btn-header"><i class="fab fa-github"></i> GitHub</a>
+      <button class="btn-header" id="themeToggleBtn" title="Toggle Theme"><i class="fas fa-sun"></i></button>
+      <button class="btn-header" id="mobileMenuBtn" title="Toggle Menu"><i class="fas fa-bars"></i></button>
+    </div>
+  </header>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-compass"></i> Getting Started</div>
+      <ul class="nav-links">
+        <li><a href="#overview" class="nav-item active"><span>Overview &amp; Architecture</span></a></li>
+        <li><a href="#installation" class="nav-item"><span>Installation &amp; Build</span></a></li>
+        <li><a href="#quickstart" class="nav-item"><span>Quick Start Guide</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-flask"></i> Interactive Lab</div>
+      <ul class="nav-links">
+        <li><a href="#playground" class="nav-item"><span>Query Simulator &amp; Sandbox</span> <span class="nav-tag live">Live</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-plug"></i> Connection API</div>
+      <ul class="nav-links">
+        <li><a href="#conn-init" class="nav-item"><span>Connection() / connect()</span> <span class="nav-tag core">Core</span></a></li>
+        <li><a href="#conn-status" class="nav-item"><span>isConnected() &amp; ping()</span></a></li>
+        <li><a href="#conn-info" class="nav-item"><span>serverInfo() &amp; hostInfo()</span></a></li>
+        <li><a href="#conn-charset" class="nav-item"><span>setCharset() (Encoding)</span></a></li>
+        <li><a href="#conn-diagnostics" class="nav-item"><span>Diagnostics &amp; Threads</span></a></li>
+        <li><a href="#conn-close" class="nav-item"><span>close() &amp; Memory</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-shield-alt"></i> Queries &amp; Security</div>
+      <ul class="nav-links">
+        <li><a href="#query-safequery" class="nav-item"><span>safeQuery() (Safe SELECT)</span> <span class="nav-tag safe">Safe</span></a></li>
+        <li><a href="#query-safeexecute" class="nav-item"><span>safeExecute() (Safe DML)</span> <span class="nav-tag safe">Safe</span></a></li>
+        <li><a href="#query-raw" class="nav-item"><span>query() &amp; execute() (Raw)</span></a></li>
+        <li><a href="#query-escape" class="nav-item"><span>escape() (Sanitizer)</span></a></li>
+        <li><a href="#query-metadata" class="nav-item"><span>affectedRows() &amp; insertId()</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-sync-alt"></i> ACID Transactions</div>
+      <ul class="nav-links">
+        <li><a href="#trans-lifecycle" class="nav-item"><span>Begin, Commit &amp; Rollback</span> <span class="nav-tag acid">ACID</span></a></li>
+        <li><a href="#trans-patterns" class="nav-item"><span>Safe Transaction Patterns</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-table"></i> ResultSet Traversal</div>
+      <ul class="nav-links">
+        <li><a href="#res-inspect" class="nav-item"><span>numRows(), numFields(), cols</span></a></li>
+        <li><a href="#res-fetch" class="nav-item"><span>fetchRow() &amp; fetchAssoc()</span></a></li>
+        <li><a href="#res-fetchall" class="nav-item"><span>fetchAll() &amp; fetchAllAssoc()</span></a></li>
+        <li><a href="#res-seek" class="nav-item"><span>seek() &amp; Cursor Control</span></a></li>
+        <li><a href="#res-close" class="nav-item"><span>close() &amp; Buffer Cleanup</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-microchip"></i> Low-Level C Engine</div>
+      <ul class="nav-links">
+        <li><a href="#native-engine" class="nav-item"><span>C Architecture &amp; libmysql</span></a></li>
+        <li><a href="#native-safety" class="nav-item"><span>Memory Safety &amp; GC</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-book-reader"></i> Guides &amp; Reference</div>
+      <ul class="nav-links">
+        <li><a href="#guide-crud" class="nav-item"><span>Complete CRUD Workflow</span></a></li>
+        <li><a href="#guide-injection" class="nav-item"><span>SQL Injection Defense</span></a></li>
+        <li><a href="#guide-errors" class="nav-item"><span>MySQL Error Codes Guide</span></a></li>
+        <li><a href="#guide-matrix" class="nav-item"><span>MySQL vs SQLite Matrix</span></a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+    <div id="contentArea" class="content-container">
+
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-badges">
+          <span class="hero-badge highlight"><i class="fas fa-bolt"></i> C99 Native Speed</span>
+          <span class="hero-badge orange"><i class="fas fa-database"></i> MySQL 8.x &amp; MariaDB 10.x</span>
+          <span class="hero-badge"><i class="fas fa-shield-alt"></i> Zero SQL-Injection Risk</span>
+          <span class="hero-badge"><i class="fas fa-font"></i> Full utf8mb4 Support</span>
+        </div>
+
+        <h1 class="hero-title">High-Performance <span>MySQL Driver</span> for Djazair</h1>
+        <p class="hero-lead">
+          Connect your Djazair applications directly to MySQL and MariaDB database servers. Featuring zero-copy C resource management, safe parameterized queries, full ACID transaction control, multi-format result set streaming, and automatic Unicode encoding.
+        </p>
+
+        <div class="hero-features">
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-microchip"></i></div>
+            <div>
+              <h4>C99 Native Bindings</h4>
+              <p>Directly links against <code>libmysqlclient</code> using the high-performance Djazair C API.</p>
+            </div>
+          </div>
+
+          <div class="feature-pill orange">
+            <div class="icon"><i class="fas fa-shield-virus"></i></div>
+            <div>
+              <h4>Safe Parameterization</h4>
+              <p>Built-in <code>?</code> placeholder substitution with type-safe escaping and <code>NULL</code> handling.</p>
+            </div>
+          </div>
+
+          <div class="feature-pill emerald">
+            <div class="icon"><i class="fas fa-lock"></i></div>
+            <div>
+              <h4>ACID Transactions</h4>
+              <p>Complete transaction isolation with autocommit controls, rollback safeguards, and crash safety.</p>
+            </div>
+          </div>
+
+          <div class="feature-pill purple">
+            <div class="icon"><i class="fas fa-memory"></i></div>
+            <div>
+              <h4>Zero Memory Leaks</h4>
+              <p>Safe resource pointer management invalidating C handles upon close to prevent use-after-free bugs.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. Overview & Architecture -->
+      <section id="overview" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-sitemap"></i> Overview &amp; Architecture</h2>
+          <p class="section-desc">Understand how the Djazair MySQL hybrid extension bridges high-level Djazair scripts with the raw C MySQL client engine.</p>
+        </div>
+
+        <p class="method-desc">
+          The <strong>Djazair MySQL Extension</strong> follows a hybrid two-tier architectural pattern. The upper tier consists of high-level Djazair object-oriented classes (<code>Connection</code> and <code>ResultSet</code>), while the bottom tier is a compiled C99 dynamic library (<code>mysql.dll</code> / <code>mysql.so</code>) compiled against the standard <code>libmysqlclient</code> or MariaDB Connector/C.
+        </p>
+
+        <div class="arch-grid">
+          <div class="arch-card">
+            <h3><i class="fas fa-code"></i> High-Level Djazair Layer</h3>
+            <p>
+              Provides clean, modern syntax with runtime assertions (<code>assert.string</code>, <code>assert.array</code>), automatic <code>utf8mb4</code> character set configuration, safe parameterized query construction, and associative map conversion.
+            </p>
+          </div>
+
+          <div class="arch-card">
+            <h3><i class="fas fa-network-wired"></i> C Native Bridge</h3>
+            <p>
+              Provides direct C socket communication through <code>mysql_real_connect</code>, <code>mysql_real_query</code>, and <code>mysql_store_result</code>. Resources are encapsulated in Djazair VM native resource objects (<code>MYSQLConn</code> and <code>MYSQLRes</code>).
+            </p>
+          </div>
+
+          <div class="arch-card">
+            <h3><i class="fas fa-shield-alt"></i> Security Layer</h3>
+            <p>
+              All parameterized inputs passed to <code>safeQuery()</code> or <code>safeExecute()</code> are processed through <code>mysql_real_escape_string</code> using the active connection's character set, completely neutralizing SQL injection vectors.
+            </p>
+          </div>
+        </div>
+
+        <div class="alert-box info">
+          <i class="fas fa-info-circle"></i>
+          <div>
+            <strong>Automatic UTF-8 Multibyte Encoding (utf8mb4):</strong> Immediately upon successful connection, the driver automatically executes <code>mysql_set_character_set(conn, "utf8mb4")</code>. This ensures 100% full support for international languages, Arabic characters, and modern 4-byte emojis without any character corruption or truncation.
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Installation & Build -->
+      <section id="installation" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-tools"></i> Installation &amp; Compiling</h2>
+          <p class="section-desc">How to compile and deploy the MySQL extension from source on Windows and Linux.</p>
+        </div>
+
+        <p class="method-desc">
+          The extension can be built effortlessly using the provided build scripts. It automatically locates MySQL or MariaDB include headers and client libraries on your machine.
+        </p>
+
+        <div class="tab-container">
+          <div class="tab-nav">
+            <button class="tab-btn active" data-tab="win-build"><i class="fab fa-windows"></i> Windows (MinGW / MSYS2)</button>
+            <button class="tab-btn" data-tab="linux-build"><i class="fab fa-linux"></i> Linux / macOS</button>
+            <button class="tab-btn" data-tab="dpm-config"><i class="fas fa-box"></i> dpm.json Package</button>
+          </div>
+
+          <div class="tab-pane active" data-pane="win-build">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span class="code-lang"><i class="fas fa-terminal"></i> Command Prompt / PowerShell</span>
+                <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code>:: Navigate to the mysql extension directory
+cd extensions\mysql
+
+:: Run the build batch script pointing to your Djazair core installation:
+.\build.bat "..\..\djazair-language"
+
+:: Optional: Explicitly specify MySQL include directory if not auto-detected:
+.\build.bat "..\..\djazair-language" "C:\Program Files\MySQL\MySQL Server 8.0\include"</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" data-pane="linux-build">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span class="code-lang"><i class="fas fa-terminal"></i> Bash Terminal</span>
+                <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code># Ensure development packages are installed (Ubuntu/Debian)
+sudo apt-get install default-libmysqlclient-dev build-essential
+
+# Build the shared object (.so)
+cd extensions/mysql
+chmod +x build.sh
+./build.sh "../../djazair-language"</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" data-pane="dpm-config">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span class="code-lang"><i class="fas fa-file-code"></i> dpm.json</span>
+                <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code>{
+  "name": "mysql",
+  "version": "0.1.0",
+  "source": "github:djazair-language/djazair-extensions/mysql",
+  "description": "MySQL database connectivity extension for Djazair",
+  "developer": {
+    "name": "Harizi Riyadh",
+    "email": "hariziriyadh@gmail.com"
+  },
+  "type": "hybrid"
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Quick Start Guide -->
+      <section id="quickstart" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-bolt"></i> Quick Start Guide</h2>
+          <p class="section-desc">Connect to a MySQL instance, create a table, insert records safely, and read data in under 20 lines of Djazair code.</p>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span class="code-lang"><i class="fas fa-feather-alt"></i> quickstart.dz</span>
+            <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+          </div>
+          <div class="code-body">
+            <pre><code>use mysql
+
+# 1. Establish connection to local or remote MySQL/MariaDB server
+let db = mysql.connect("localhost", "root", "secret123", "testdb", 3306)
+
+if db.isConnected()
+    print("Successfully connected to MySQL: " + db.serverInfo())
+
+    # 2. Execute DDL statement
+    db.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), balance DECIMAL(10,2))")
+
+    # 3. Insert record using safe parameterization (Anti-SQL Injection)
+    let ok = db.safeExecute("INSERT INTO users (name, balance) VALUES (?, ?)", ["Riad Harizi", 1500.50])
+    if ok
+        print("Inserted user ID: " + str(db.insertId()))
+        print("Affected rows: " + str(db.affectedRows()))
+    end
+
+    # 4. Query records and fetch as associative maps
+    let res = db.safeQuery("SELECT * FROM users WHERE balance >= ?", [1000.0])
+    if !isNull(res)
+        let rows = res.fetchAllAssoc()
+        for user in rows
+            print("User: " + user["name"] + " | Balance: $" + str(user["balance"]))
+        end
+        res.close() # Free result memory buffer
+    end
+
+    # 5. Gracefully close connection socket
+    db.close()
+else
+    print("Database connection error: " + db.error())
+    print("Error code: " + str(db.errno()))
+end</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Interactive Simulator / Playground -->
+      <section id="playground" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-terminal"></i> Interactive Query Simulator &amp; Sandbox</h2>
+          <p class="section-desc">Experience real-time query execution, parameter safety, transaction cycles, and table visualization right in the browser.</p>
+        </div>
+
+        <div class="playground-box">
+          <div class="playground-header">
+            <div class="playground-title">
+              <i class="fas fa-server" style="color:var(--accent-mysql-light);"></i>
+              <span>Djazair MySQL Sandbox Environment</span>
+            </div>
+
+            <div class="playground-controls">
+              <label style="font-size:12.5px; color:var(--text-muted);">Scenario:</label>
+              <select id="simScenario" class="sim-select">
+                <option value="select_filter">SELECT: Parameterized Filter (WHERE >= ?)</option>
+                <option value="safe_insert">INSERT: Parameterized Insert (safeExecute)</option>
+                <option value="safe_update">UPDATE: Balance Increment (safeExecute)</option>
+                <option value="injection_defense">SECURITY: SQL Injection Attack Neutralization</option>
+                <option value="transaction_flow">TRANSACTION: ACID Staging &amp; Commit</option>
+                <option value="server_diagnostics">DIAGNOSTICS: Ping, Version &amp; Threads</option>
+              </select>
+
+              <button id="simRunBtn" class="sim-btn-run">
+                <i class="fas fa-play"></i> Run Query
+              </button>
+            </div>
+          </div>
+
+          <div class="sim-input-area">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; display:block;">
+              SQL Query Statement:
+            </label>
+            <textarea id="simSql" class="sim-sql-editor" spellcheck="false"></textarea>
+
+            <div class="sim-params-row">
+              <span style="font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; min-width:130px;">
+                Parameters (JSON):
+              </span>
+              <input type="text" id="simParams" class="sim-params-input" spellcheck="false" placeholder='[100, "Active"]' />
+            </div>
+          </div>
+
+          <!-- Execution Metrics Bar -->
+          <div class="sim-stat-bar">
+            <div class="sim-stat-item">Status: <span id="statStatus">Query OK</span></div>
+            <div class="sim-stat-item">Affected Rows: <span id="statAffected">0</span></div>
+            <div class="sim-stat-item">Last Insert ID: <span id="statInsertId">0</span></div>
+            <div class="sim-stat-item">Latency: <span id="statDuration">0.00 ms</span></div>
+          </div>
+
+          <!-- Tabbed Output Results -->
+          <div class="tab-container" style="margin-top:20px;">
+            <div class="tab-nav">
+              <button class="tab-btn active" data-tab="out-table"><i class="fas fa-table"></i> Result Table</button>
+              <button class="tab-btn" data-tab="out-json"><i class="fas fa-code"></i> Associative Map (JSON)</button>
+              <button class="tab-btn" data-tab="out-dz"><i class="fas fa-feather-alt"></i> Equivalent Djazair Code</button>
+            </div>
+
+            <div class="tab-pane active" data-pane="out-table">
+              <div id="simResultTableWrap" class="sim-result-table-wrap">
+                <!-- Dynamically populated via jQuery -->
+              </div>
+            </div>
+
+            <div class="tab-pane" data-pane="out-json">
+              <div class="code-wrapper" style="margin:0;">
+                <div class="code-body">
+                  <pre><code id="simJsonOutput">[]</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-pane" data-pane="out-dz">
+              <div class="code-wrapper" style="margin:0;">
+                <div class="code-body">
+                  <pre><code id="simDzCode"># Djazair code equivalent</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Connection API -->
+      <section id="conn-init" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-plug"></i> Connection Class API</h2>
+          <p class="section-desc">Manage database session connections, credential configuration, socket states, and connection metadata.</p>
+        </div>
+
+        <!-- Connection constructor / connect -->
+        <div class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="prefix">class</span> <span class="func">Connection</span>(<span class="param">host, user, password, db, port = 3306</span>)
+              </div>
+            </div>
+            <span class="return-badge">Connection</span>
+          </div>
+          <p class="method-desc">
+            Instantiates and opens a new connection to a MySQL or MariaDB database server. Validates that all arguments are of expected types using <code>assert</code>, initializes the underlying C <code>MYSQL*</code> pointer, establishes the connection socket, and immediately sets the connection charset to <code>utf8mb4</code>. You can also use the shorthand factory function <code>mysql.connect(...)</code>.
+          </p>
+
+          <div class="api-table-wrapper">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Default</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>host</code></td>
+                  <td><code>String</code></td>
+                  <td><em>Required</em></td>
+                  <td>Hostname or IP address (e.g. <code>"localhost"</code>, <code>"127.0.0.1"</code>, <code>"db.casbah.dz"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code>user</code></td>
+                  <td><code>String</code></td>
+                  <td><em>Required</em></td>
+                  <td>Database authentication username.</td>
+                </tr>
+                <tr>
+                  <td><code>password</code></td>
+                  <td><code>String</code></td>
+                  <td><em>Required</em></td>
+                  <td>User authentication password (or empty string <code>""</code>).</td>
+                </tr>
+                <tr>
+                  <td><code>db</code></td>
+                  <td><code>String</code></td>
+                  <td><em>Required</em></td>
+                  <td>Target database catalog name.</td>
+                </tr>
+                <tr>
+                  <td><code>port</code></td>
+                  <td><code>Number</code></td>
+                  <td><code>3306</code></td>
+                  <td>TCP port number on which MySQL daemon is listening.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use mysql
+
+# Style A: Explicit constructor instantiation
+let db1 = new mysql.Connection("localhost", "root", "rootpass", "ecommerce", 3306)
+
+# Style B: Shorthand helper factory
+let db2 = mysql.connect("192.168.1.50", "admin", "P@ssw0rd!", "analytics", 3307)</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- isConnected & ping -->
+        <div id="conn-status" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">isConnected</span>() &nbsp;|&nbsp; <span class="func">ping</span>()
+              </div>
+            </div>
+            <span class="return-badge">Bool</span>
+          </div>
+          <p class="method-desc">
+            <code>isConnected()</code> returns <code>True</code> if the internal socket connection flag is currently active. <code>ping()</code> transmits a live test ping packet to the server via <code>mysql_ping()</code>; if the server connection is still responsive, it returns <code>True</code>.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>if db.isConnected()
+    if db.ping()
+        print("Database server connection is active and responsive.")
+    else
+        print("Database server dropped connection.")
+    end
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- error & errno -->
+        <div class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">error</span>() &nbsp;|&nbsp; <span class="func">errno</span>()
+              </div>
+            </div>
+            <span class="return-badge">String / Number</span>
+          </div>
+          <p class="method-desc">
+            <code>error()</code> returns the last error string reported by the MySQL client or server. If the connection failed during initialization, it returns the startup diagnostic message. <code>errno()</code> returns the numeric MySQL error code (e.g. <code>1045</code> for Access Denied, <code>1062</code> for Duplicate Key).
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let ok = db.execute("INVALID SQL STATEMENT")
+if !ok
+    print("MySQL Error (" + str(db.errno()) + "): " + db.error())
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- serverInfo, hostInfo, stat, threadId, clientInfo, protocolInfo -->
+        <div id="conn-info" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">serverInfo</span>() &nbsp;|&nbsp; <span class="func">hostInfo</span>()
+              </div>
+            </div>
+            <span class="return-badge">String</span>
+          </div>
+          <p class="method-desc">
+            <code>serverInfo()</code> returns the version string of the connected MySQL server (e.g. <code>"8.0.35"</code>, <code>"10.11.4-MariaDB"</code>). <code>hostInfo()</code> returns a string describing the connection type and endpoint (e.g. <code>"localhost via TCP/IP"</code> or <code>"Localhost via UNIX socket"</code>).
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>print("Server Version : " + db.serverInfo())
+print("Host Transport : " + db.hostInfo())</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- setCharset -->
+        <div id="conn-charset" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">setCharset</span>(<span class="param">charset</span>)
+              </div>
+            </div>
+            <span class="return-badge">Bool</span>
+          </div>
+          <p class="method-desc">
+            Sets the default character set for the current connection socket via <code>mysql_set_character_set()</code> (for example, <code>"utf8mb4"</code>, <code>"utf8"</code>, or <code>"latin1"</code>). Note that <code>Connection.init()</code> automatically initializes the charset to <code>utf8mb4</code> upon successful connection. Returns <code>True</code> if the charset was updated successfully.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let ok = db.setCharset("utf8mb4")
+if ok
+    print("Charset successfully switched to utf8mb4")
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diagnostics & Threads -->
+        <div id="conn-diagnostics" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">stat</span>(), <span class="func">threadId</span>(), <span class="func">clientInfo</span>(), <span class="func">protocolInfo</span>()
+              </div>
+            </div>
+            <span class="return-badge">String / Number</span>
+          </div>
+          <p class="method-desc">
+            Provides comprehensive low-level diagnostic insights into the active MySQL socket and client library:
+          </p>
+          <ul style="margin-left: 24px; color: var(--text-secondary); margin-bottom: 14px; font-size: 14px;">
+            <li><code>stat()</code>: Returns a formatted status string containing server uptime, active threads, total queries, and memory statistics.</li>
+            <li><code>threadId()</code>: Returns the unique server-assigned thread ID for the current connection session.</li>
+            <li><code>clientInfo()</code>: Returns the client library compilation version (e.g. <code>"8.0.35"</code>).</li>
+            <li><code>protocolInfo()</code>: Returns the MySQL client/server communication protocol version number (typically <code>10</code>).</li>
+          </ul>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>print("Connection Thread ID: " + str(db.threadId()))
+print("Protocol Version    : " + str(db.protocolInfo()))
+print("Client Version      : " + db.clientInfo())
+print("Server Stats        :\n" + db.stat())</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- close -->
+        <div id="conn-close" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">close</span>()
+              </div>
+            </div>
+            <span class="return-badge null">Void</span>
+          </div>
+          <p class="method-desc">
+            Gracefully terminates the connection with the MySQL server, closes the underlying TCP socket, releases all allocated native memory buffers, and sets the internal C pointer to <code>NULL</code> to prevent double-free or use-after-free conditions. Safe to call multiple times.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code># Always close connection when finished to free server socket resources
+db.close()
+print("Connection closed: " + str(!db.isConnected()))</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Queries & Security -->
+      <section id="query-safequery" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-shield-alt"></i> Queries &amp; Parameterized Execution</h2>
+          <p class="section-desc">Execute safe parameterized statements, raw queries, prevent SQL injection, and read execution metadata.</p>
+        </div>
+
+        <!-- safeQuery -->
+        <div class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">safeQuery</span>(<span class="param">sql, params = []</span>)
+              </div>
+            </div>
+            <span class="return-badge">ResultSet | Null</span>
+          </div>
+          <p class="method-desc">
+            Executes a parameterized <strong>SELECT</strong> query. Replaces all question mark (<code>?</code>) placeholders in the SQL string with properly escaped parameter values. Automatically handles <code>Null</code> as SQL <code>NULL</code>, numbers as unquoted or escaped numerals, and strings safely escaped using <code>mysql_real_escape_string</code>. Returns a new <code>ResultSet</code> on success, or <code>Null</code> on failure.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let minPrice = 150.0
+let category = "Electronics"
+
+let res = db.safeQuery(
+    "SELECT id, title, price FROM products WHERE price >= ? AND category = ? ORDER BY price ASC",
+    [minPrice, category]
+)
+
+if !isNull(res)
+    let products = res.fetchAllAssoc()
+    for p in products
+        print(p["title"] + " - $" + str(p["price"]))
+    end
+    res.close()
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- safeExecute -->
+        <div id="query-safeexecute" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">safeExecute</span>(<span class="param">sql, params = []</span>)
+              </div>
+            </div>
+            <span class="return-badge">Bool</span>
+          </div>
+          <p class="method-desc">
+            Executes a parameterized non-SELECT statement (<strong>INSERT</strong>, <strong>UPDATE</strong>, <strong>DELETE</strong>, <strong>REPLACE</strong>, <strong>DDL</strong>). Substitutes <code>?</code> placeholders with sanitized parameters, updates the internal affected rows count, and returns <code>True</code> if the query succeeded, or <code>False</code> if an error occurred.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code># Insert new employee record safely
+let ok = db.safeExecute(
+    "INSERT INTO employees (name, department, salary, notes) VALUES (?, ?, ?, ?)",
+    ["Amine Brahimi", "Engineering", 3200.0, Null]
+)
+
+if ok
+    print("New Employee ID: " + str(db.insertId()))
+    print("Rows affected  : " + str(db.affectedRows()))
+else
+    print("Failed to insert: " + db.error())
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw query & execute -->
+        <div id="query-raw" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">query</span>(<span class="param">sql</span>) &nbsp;|&nbsp; <span class="func">execute</span>(<span class="param">sql</span>)
+              </div>
+            </div>
+            <span class="return-badge">ResultSet / Bool</span>
+          </div>
+          <p class="method-desc">
+            Executes a raw SQL string without parameter replacement. Use <code>query(sql)</code> for SELECT queries returning a <code>ResultSet</code>, and <code>execute(sql)</code> for non-returning statements (DDL schema definitions, TRUNCATE, ALTER TABLE, etc.).
+          </p>
+
+          <div class="alert-box warn">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>Security Warning:</strong> Never concatenate unsanitized user inputs into <code>query()</code> or <code>execute()</code>. Always use <code>safeQuery()</code> or <code>safeExecute()</code> to protect your database against SQL Injection attacks.
+            </div>
+          </div>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code># Schema creation via raw execute
+db.execute("CREATE TABLE IF NOT EXISTS audit_log (id INT AUTO_INCREMENT PRIMARY KEY, action TEXT, ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+
+# Fetch system variables via raw query
+let res = db.query("SHOW VARIABLES LIKE 'version%'")
+if !isNull(res)
+    let vars = res.fetchAllAssoc()
+    for v in vars
+        print(v["Variable_name"] + " = " + v["Value"])
+    end
+    res.close()
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- escape -->
+        <div id="query-escape" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">escape</span>(<span class="param">s</span>)
+              </div>
+            </div>
+            <span class="return-badge">String</span>
+          </div>
+          <p class="method-desc">
+            Directly invokes <code>mysql_real_escape_string</code> using the active connection socket. Escapes special SQL characters including null byte (<code>\0</code>), newline (<code>\n</code>), carriage return (<code>\r</code>), backslash (<code>\\</code>), single quote (<code>\'</code>), double quote (<code>\"</code>), and Control-Z.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let rawInput = "O'Connor and Sons \x00 \"Enterprise\""
+let sanitized = db.escape(rawInput)
+# Returns: "O\'Connor and Sons \\0 \\\"Enterprise\\\""</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- affectedRows & insertId & raw -->
+        <div id="query-metadata" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">affectedRows</span>(), <span class="func">insertId</span>(), <span class="func">raw</span>()
+              </div>
+            </div>
+            <span class="return-badge">Number / Resource</span>
+          </div>
+          <p class="method-desc">
+            Provides metadata after statement execution:
+          </p>
+          <ul style="margin-left: 24px; color: var(--text-secondary); margin-bottom: 14px; font-size: 14px;">
+            <li><code>affectedRows()</code>: Returns the number of rows changed, deleted, or inserted by the last DML statement.</li>
+            <li><code>insertId()</code>: Returns the <code>AUTO_INCREMENT</code> primary key ID generated by the most recent <code>INSERT</code> statement.</li>
+            <li><code>raw()</code>: Returns the underlying C <code>MYSQL*</code> resource handle for advanced native C interop or extension plugins.</li>
+          </ul>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>db.safeExecute("UPDATE accounts SET status = 'Archived' WHERE balance = 0")
+print("Archived accounts: " + str(db.affectedRows()))</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. ACID Transactions -->
+      <section id="trans-lifecycle" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-sync-alt"></i> ACID Transaction Management</h2>
+          <p class="section-desc">Guarantee data integrity, atomicity, consistency, and durability using transaction blocks.</p>
+        </div>
+
+        <div class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">beginTransaction</span>(), <span class="func">commit</span>(), <span class="func">rollback</span>()
+              </div>
+            </div>
+            <span class="return-badge">Bool</span>
+          </div>
+          <p class="method-desc">
+            <code>beginTransaction()</code> disables MySQL autocommit mode (<code>mysql_autocommit(conn, 0)</code>), initiating an atomic transaction block. Multiple statements can then be executed sequentially. Calling <code>commit()</code> persists all changes permanently and restores autocommit. Calling <code>rollback()</code> cancels and discards all pending changes in the transaction.
+          </p>
+
+          <div id="trans-patterns" class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Production Bank Transfer Pattern</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use mysql
+
+let db = mysql.connect("localhost", "root", "", "banking", 3306)
+
+if db.isConnected()
+    let senderId = 101
+    let receiverId = 202
+    let transferAmount = 350.0
+
+    # 1. Begin atomic transaction block
+    if db.beginTransaction()
+        # Deduct from sender
+        let step1 = db.safeExecute("UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?", [transferAmount, senderId, transferAmount])
+        
+        # Credit to receiver
+        let step2 = db.safeExecute("UPDATE accounts SET balance = balance + ? WHERE id = ?", [transferAmount, receiverId])
+
+        # Record audit log
+        let step3 = db.safeExecute("INSERT INTO transfer_logs (from_id, to_id, amount) VALUES (?, ?, ?)", [senderId, receiverId, transferAmount])
+
+        # Verify all steps succeeded and affected exactly expected rows
+        if step1 and step2 and step3 and db.affectedRows() > 0
+            if db.commit()
+                print("Transfer successfully committed! Total: $" + str(transferAmount))
+            else
+                print("Commit failed, rolling back: " + db.error())
+                db.rollback()
+            end
+        else
+            print("Transaction aborted due to insufficient balance or error. Rolling back.")
+            db.rollback()
+        end
+    else
+        print("Could not begin transaction: " + db.error())
+    end
+
+    db.close()
+end</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. ResultSet Traversal -->
+      <section id="res-inspect" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-table"></i> ResultSet Class API</h2>
+          <p class="section-desc">Stream, traverse, seek, and convert query records into Djazair Arrays and Associative Maps.</p>
+        </div>
+
+        <!-- Dimensions and Column Names -->
+        <div class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">numRows</span>(), <span class="func">numFields</span>(), <span class="func">columns</span>()
+              </div>
+            </div>
+            <span class="return-badge">Number / Array</span>
+          </div>
+          <p class="method-desc">
+            <code>numRows()</code> returns total record count stored in the result buffer. <code>numFields()</code> returns the number of columns in the schema. <code>columns()</code> returns an array of column name strings (e.g. <code>["id", "name", "email"]</code>).
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let res = db.query("SELECT id, name, email, role FROM users")
+if !isNull(res)
+    print("Total Rows   : " + str(res.numRows()))
+    print("Total Columns: " + str(res.numFields()))
+    print("Column Names : " + str(res.columns()))
+    res.close()
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- fetchRow vs fetchAssoc -->
+        <div id="res-fetch" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">fetchRow</span>() &nbsp;|&nbsp; <span class="func">fetchAssoc</span>()
+              </div>
+            </div>
+            <span class="return-badge">Array / Map | Null</span>
+          </div>
+          <p class="method-desc">
+            <code>fetchRow()</code> advances the internal cursor and returns the next record as a 0-indexed Djazair Array (<code>[val0, val1, ...]</code>). <code>fetchAssoc()</code> returns the next record as an associative map indexed by column name (<code>{"id": "1", "name": "Riad"}</code>). Returns <code>Null</code> when cursor reaches the end.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let res = db.query("SELECT id, name, balance FROM users")
+
+# 1. Fetch individual rows sequentially with fetchAssoc()
+let user = res.fetchAssoc()
+while !isNull(user)
+    print("User: " + user["name"] + " has balance $" + str(user["balance"]))
+    user = res.fetchAssoc()
+end
+
+res.close()</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- fetchAll vs fetchAllAssoc -->
+        <div id="res-fetchall" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">fetchAll</span>() &nbsp;|&nbsp; <span class="func">fetchAllAssoc</span>()
+              </div>
+            </div>
+            <span class="return-badge">Array</span>
+          </div>
+          <p class="method-desc">
+            Iterates through all remaining records in the buffer. <code>fetchAll()</code> returns an array of row arrays (<code>[[1, "A"], [2, "B"]]</code>). <code>fetchAllAssoc()</code> returns an array of associative maps. Perfect for returning API datasets or JSON serialization.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let res = db.query("SELECT id, name FROM users LIMIT 10")
+let allUsers = res.fetchAllAssoc()
+
+for u in allUsers
+    print("#" + str(u["id"]) + " -> " + u["name"])
+end
+
+res.close()</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- seek & close -->
+        <div id="res-seek" class="method-card">
+          <div class="method-header">
+            <div class="method-name-wrap">
+              <div class="method-signature">
+                <span class="func">seek</span>(<span class="param">offset</span>) &nbsp;|&nbsp; <span id="res-close" class="func">close</span>()
+              </div>
+            </div>
+            <span class="return-badge null">Void</span>
+          </div>
+          <p class="method-desc">
+            <code>seek(offset)</code> moves the internal row cursor to a 0-based row index, enabling instant rewind (<code>seek(0)</code>) or jumping to arbitrary offsets. <code>close()</code> invokes <code>mysql_free_result</code> on the C engine, freeing buffer memory and nullifying the internal handle.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang"><i class="fas fa-code"></i> Example</span>
+              <button class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>let res = db.query("SELECT name FROM items")
+
+# Pass 1: Print items
+let rows = res.fetchAll()
+
+# Rewind cursor back to start
+res.seek(0)
+
+# Pass 2: Re-read first row
+let first = res.fetchRow()
+print("First item was: " + str(first[0]))
+
+# Free C memory buffer
+res.close()</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. Low-Level Native C Engine -->
+      <section id="native-engine" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-microchip"></i> Low-Level C Engine Architecture</h2>
+          <p class="section-desc">Internal implementation details of the C99 native bridge and C resource memory lifecycles.</p>
+        </div>
+
+        <p class="method-desc">
+          The C engine source resides in <code>extensions/mysql/src/</code>. All entrypoints communicate with the Djazair Virtual Machine through the <code>djazair_api.h</code> C header:
+        </p>
+
+        <div class="api-table-wrapper">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>C Source File</th>
+                <th>Responsibility</th>
+                <th>Core Native Functions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>mysql.c</code></td>
+                <td>Module registration &amp; dispatch table</td>
+                <td><code>DJAZAIR_EXTENSION(mysql, mysql_module_funcs)</code></td>
+              </tr>
+              <tr>
+                <td><code>mysql_conn.c</code></td>
+                <td>Connection lifecycle &amp; socket diagnostics</td>
+                <td><code>mysqlInitNative</code>, <code>mysqlRealConnectNative</code>, <code>mysqlSetCharsetNative</code>, <code>mysqlCloseNative</code>, <code>mysqlPingNative</code>, <code>mysqlStatNative</code>, <code>mysqlThreadIdNative</code></td>
+              </tr>
+              <tr>
+                <td><code>mysql_query.c</code></td>
+                <td>Query execution, transactions, escaping</td>
+                <td><code>mysqlQueryNative</code>, <code>mysqlEscapeStringNative</code>, <code>mysqlAffectedRowsNative</code>, <code>mysqlInsertIdNative</code>, <code>mysqlBeginTransactionNative</code>, <code>mysqlCommitNative</code>, <code>mysqlRollbackNative</code></td>
+              </tr>
+              <tr>
+                <td><code>mysql_res.c</code></td>
+                <td>Result set buffering, associative maps, cursor seek</td>
+                <td><code>mysqlStoreResultNative</code>, <code>mysqlNumRowsNative</code>, <code>mysqlNumFieldsNative</code>, <code>mysqlGetColumnNamesNative</code>, <code>mysqlFetchRowNative</code>, <code>mysqlFetchRowAssocNative</code>, <code>mysqlDataSeekNative</code>, <code>mysqlFreeResultNative</code></td>
+              </tr>
+              <tr>
+                <td><code>mysql_common.h</code></td>
+                <td>Shared type definitions &amp; function prototypes</td>
+                <td>C headers, <code>#include &lt;mysql.h&gt;</code>, <code>#include "djazair_api.h"</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="native-safety" class="alert-box success">
+          <i class="fas fa-check-circle"></i>
+          <div>
+            <strong>Memory Safety &amp; GC Protection:</strong> When <code>db.close()</code> or <code>res.close()</code> is called, the C bridge not only frees the underlying <code>MYSQL*</code> or <code>MYSQL_RES*</code> pointer via <code>mysql_close()</code> and <code>mysql_free_result()</code>, but also immediately sets <code>AS_RESOURCE(arg)->ptr = NULL</code>. This makes subsequent calls safely detect that the handle is closed rather than causing a segmentation fault.
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. Production Guides -->
+      <section id="guide-crud" class="doc-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-book"></i> Production Guides &amp; Best Practices</h2>
+          <p class="section-desc">Practical recipes, security defense deep dive, common error troubleshooting, and database comparison.</p>
+        </div>
+
+        <!-- SQL Injection Defense -->
+        <div id="guide-injection" class="method-card">
+          <h3 style="margin-bottom:12px; font-size:1.15rem; color:var(--accent-orange);">
+            <i class="fas fa-user-shield"></i> SQL Injection Defense: Vulnerability vs. Protection
+          </h3>
+          <p class="method-desc">
+            SQL Injection occurs when untrusted user input is concatenated directly into an SQL string. Below is a direct comparison between dangerous raw string concatenation and Djazair's built-in <code>safeQuery()</code> protection:
+          </p>
+
+          <div class="tab-container">
+            <div class="tab-nav">
+              <button class="tab-btn active" data-tab="sec-safe"><i class="fas fa-check" style="color:var(--accent-emerald);"></i> Safe Pattern (Djazair Recommended)</button>
+              <button class="tab-btn" data-tab="sec-unsafe"><i class="fas fa-times" style="color:var(--accent-rose);"></i> Vulnerable Pattern (Never Use!)</button>
+            </div>
+
+            <div class="tab-pane active" data-pane="sec-safe">
+              <div class="code-wrapper">
+                <div class="code-body">
+                  <pre><code># User provides malicious payload:
+let userInput = "admin' OR '1'='1"
+
+# SAFE: Using safeQuery with placeholder ?
+let res = db.safeQuery("SELECT * FROM users WHERE username = ? AND is_active = 1", [userInput])
+
+# Under the hood, Djazair safely escapes the quote:
+# SELECT * FROM users WHERE username = 'admin\' OR \'1\'=\'1' AND is_active = 1
+# The database treats the whole string as a literal username. Zero injection!</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-pane" data-pane="sec-unsafe">
+              <div class="code-wrapper">
+                <div class="code-body">
+                  <pre><code># User provides malicious payload:
+let userInput = "admin' OR '1'='1"
+
+# DANGEROUS: String concatenation into raw query()
+let badSql = "SELECT * FROM users WHERE username = '" + userInput + "' AND is_active = 1"
+let res = db.query(badSql)
+
+# Resulting executed SQL:
+# SELECT * FROM users WHERE username = 'admin' OR '1'='1' AND is_active = 1
+# The attacker bypasses authentication and logs in as admin!</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Codes Reference Table -->
+        <div id="guide-errors" class="method-card">
+          <h3 style="margin-bottom:12px; font-size:1.15rem; color:var(--accent-mysql-light);">
+            <i class="fas fa-exclamation-triangle"></i> Common MySQL Error Codes &amp; Resolutions
+          </h3>
+          <div class="api-table-wrapper">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Error Code</th>
+                  <th>Symbolic Name</th>
+                  <th>Root Cause</th>
+                  <th>Recommended Resolution</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>1045</code></td>
+                  <td><code>ER_ACCESS_DENIED_ERROR</code></td>
+                  <td>Invalid password or user not granted permissions for the host.</td>
+                  <td>Verify credentials; run <code>GRANT ALL PRIVILEGES ON db.* TO 'user'@'%'</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>2002</code></td>
+                  <td><code>CR_CONNECTION_ERROR</code></td>
+                  <td>Cannot connect to MySQL server socket (service stopped or wrong port).</td>
+                  <td>Ensure MySQL service is running; verify port (default <code>3306</code>) and host firewall.</td>
+                </tr>
+                <tr>
+                  <td><code>2006</code></td>
+                  <td><code>CR_SERVER_GONE_ERROR</code></td>
+                  <td>Connection timed out or packet exceeded <code>max_allowed_packet</code>.</td>
+                  <td>Check <code>db.ping()</code> before long-running queries; increase <code>wait_timeout</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>1062</code></td>
+                  <td><code>ER_DUP_ENTRY</code></td>
+                  <td>Attempted to insert duplicate value into UNIQUE or PRIMARY key column.</td>
+                  <td>Handle conflict with <code>ON DUPLICATE KEY UPDATE</code> or check existence before insert.</td>
+                </tr>
+                <tr>
+                  <td><code>1146</code></td>
+                  <td><code>ER_NO_SUCH_TABLE</code></td>
+                  <td>Table does not exist in the selected database catalog.</td>
+                  <td>Verify database name in connection string and ensure migrations or DDL ran.</td>
+                </tr>
+                <tr>
+                  <td><code>1205</code></td>
+                  <td><code>ER_LOCK_WAIT_TIMEOUT</code></td>
+                  <td>Transaction lock wait timeout exceeded due to another active transaction.</td>
+                  <td>Keep transactions brief; call <code>commit()</code> or <code>rollback()</code> promptly.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MySQL vs SQLite Matrix -->
+        <div id="guide-matrix" class="method-card">
+          <h3 style="margin-bottom:12px; font-size:1.15rem; color:var(--accent-purple);">
+            <i class="fas fa-balance-scale"></i> Comparison: Djazair MySQL vs. Djazair SQLite
+          </h3>
+          <div class="api-table-wrapper">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>MySQL Extension (<code>use mysql</code>)</th>
+                  <th>SQLite Extension (<code>use sqlite</code>)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Architecture</strong></td>
+                  <td>Client/Server over TCP/IP or UNIX sockets</td>
+                  <td>Embedded single-file or in-memory (<code>:memory:</code>)</td>
+                </tr>
+                <tr>
+                  <td><strong>Concurrency</strong></td>
+                  <td>High concurrent read/write (Row-level locking via InnoDB)</td>
+                  <td>Single writer lock (Best for local applications / embedded)</td>
+                </tr>
+                <tr>
+                  <td><strong>Data Volume</strong></td>
+                  <td>Terabytes+, distributed clusters, replication</td>
+                  <td>Gigabytes, self-contained desktop data store</td>
+                </tr>
+                <tr>
+                  <td><strong>Parameterization</strong></td>
+                  <td><code>safeQuery("...?...", [params])</code></td>
+                  <td><code>safeQuery("...?...", [params])</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Transactions</strong></td>
+                  <td><code>beginTransaction()</code>, <code>commit()</code>, <code>rollback()</code></td>
+                  <td><code>beginTransaction()</code>, <code>commit()</code>, <code>rollback()</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Best Used For</strong></td>
+                  <td>Web APIs, microservices, multi-user platforms, ERPs</td>
+                  <td>Desktop apps (WebView), local caching, mobile tools</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="docs-footer">
+        <div>
+          &copy; 2026 <strong>Djazair Language Project</strong>. Author: <strong>Harizi Riyadh</strong> (<a href="mailto:hariziriyadh@gmail.com" style="color:var(--accent-mysql-light);">hariziriyadh@gmail.com</a>).
+        </div>
+        <div class="footer-links">
+          <a href="#overview"><i class="fas fa-arrow-up"></i> Back to top</a>
+          <a href="https://github.com/djazair-language/djazair-extensions" target="_blank"><i class="fab fa-github"></i> Repository</a>
+          <a href="#playground"><i class="fas fa-terminal"></i> Simulator</a>
+        </div>
+      </footer>
+
+    </div>
+  </main>
+
+</body>
+</html>

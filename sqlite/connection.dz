@@ -145,6 +145,11 @@ class Connection
         return self.db
     end
 
+    # Return SQLite engine version string
+    libversion()
+        return _s.libversion()
+    end
+
     close()
         if !isNull(self.db)
             _s.close(self.db)
@@ -156,4 +161,8 @@ end
 
 fn connect(path)
     return new Connection(path)
+end
+
+fn libversion()
+    return _s.libversion()
 end

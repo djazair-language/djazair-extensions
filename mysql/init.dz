@@ -4,4 +4,5 @@ import "connection.dz" as conn
 
 let ResultSet = rs.ResultSet
 let Connection = conn.Connection
+let connect = conn.connect
 

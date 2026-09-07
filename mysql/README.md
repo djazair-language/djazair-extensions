@@ -5,13 +5,26 @@ The **MySQL** extension provides database connectivity to MySQL and MariaDB serv
 ---
 
 ## Table of Contents
-1. [Installation](#1-installation)
-2. [Quick Start](#2-quick-start)
-3. [Connection Class API](#3-connection-class-api)
-4. [ResultSet Class API](#4-resultset-class-api)
-5. [Transactions](#5-transactions)
-6. [Error Handling](#6-error-handling)
-7. [Complete Examples](#7-complete-examples)
+1. [Interactive HTML Documentation & Explorer](#interactive-html-documentation--explorer)
+2. [Installation](#1-installation)
+3. [Quick Start](#2-quick-start)
+4. [Connection Class API](#3-connection-class-api)
+5. [ResultSet Class API](#4-resultset-class-api)
+6. [Transactions](#5-transactions)
+7. [Error Handling](#6-error-handling)
+8. [Complete Examples](#7-complete-examples)
+
+---
+
+## Interactive HTML Documentation & Explorer
+
+A full interactive documentation suite with a live SQL simulator, instant API search, dark/light theme, and code copy tools is available in the `docs/` folder:
+
+- **Browser**: Open `docs/index.html` directly in your browser.
+- **Desktop Application (WebView)**:
+  ```bash
+  djazair docs/run_docs.dz
+  ```
 
 ---
 

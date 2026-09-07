@@ -1,13 +1,13 @@
-# media.dz — Raylib Textures, Audio and Text classes for Djazair
-let rl = __native("_raylib")
-use assert
+# ==============================================================================
+# media.dz — Raylib Textures, Audio, Music, and Fonts for Djazair
+#
+# Provides Texture, Sound, Music, Font, and Audio Device wrappers.
+#
+# Author: Harizi Riyadh (hariziriyadh@gmail.com)
+# ==============================================================================
 
-fn _extractColor(c)
-    if rl.isColor(c)
-        return c.raw
-    end
-    return c
-end
+let rl = __dynamic("raylib")
+use assert
 
 class Texture
     init(path)
@@ -16,31 +16,44 @@ class Texture
     end
 
     draw(x, y)
-        rl.drawTexture(self.res, x, y)
+        assert.number(x, "x")
+        assert.number(y, "y")
+        rl.drawTexture(self.res, int(x), int(y))
     end
 
-    drawRec(srcX, srcY, srcW, srcH, destX, destY, color)
-        rl.drawTextureRec(self.res, srcX, srcY, srcW, srcH, destX, destY, _extractColor(color))
+    drawRec(srcX, srcY, srcW, srcH, destX, destY, color = [255, 255, 255, 255])
+        rl.drawTextureRec(self.res, srcX, srcY, srcW, srcH, destX, destY, color)
     end
 
-    drawEx(destX, destY, rotation, scale, color)
-        rl.drawTextureEx(self.res, destX, destY, rotation, scale, _extractColor(color))
+    drawEx(destX, destY, rotation = 0.0, scale = 1.0, color = [255, 255, 255, 255])
+        rl.drawTextureEx(self.res, destX, destY, rotation, scale, color)
     end
 
     unload()
-        rl.unloadTexture(self.res)
+        if !isNull(self.res)
+            rl.unloadTexture(self.res)
+            self.res = Null
+        end
     end
 end
 
 class Text
-    init(content, size, color)
+    init(content, size = 20, color = [255, 255, 255, 255])
+        assert.string(content, "content")
+        assert.number(size, "size")
         self.content = content
-        self.size = size
+        self.size = int(size)
         self.color = color
     end
 
     draw(x, y)
-        rl.drawText(self.content, x, y, self.size, _extractColor(self.color))
+        assert.number(x, "x")
+        assert.number(y, "y")
+        rl.drawText(self.content, int(x), int(y), self.size, self.color)
+    end
+
+    measure()
+        return rl.measureText(self.content, self.size)
     end
 end
 
@@ -51,11 +64,16 @@ class Sound
     end
 
     play()
-        rl.playSound(self.res)
+        if !isNull(self.res)
+            rl.playSound(self.res)
+        end
     end
 
     unload()
-        rl.unloadSound(self.res)
+        if !isNull(self.res)
+            rl.unloadSound(self.res)
+            self.res = Null
+        end
     end
 end
 
@@ -75,17 +93,20 @@ class Font
         self.res = rl.loadFont(path)
     end
 
-    draw(text, x, y, size, spacing, color)
+    draw(text, x, y, size = 32.0, spacing = 1.0, color = [255, 255, 255, 255])
         assert.string(text, "text")
         assert.number(x, "x")
         assert.number(y, "y")
         assert.number(size, "size")
         assert.number(spacing, "spacing")
-        rl.drawTextEx(self.res, text, x, y, size, spacing, _extractColor(color))
+        rl.drawTextEx(self.res, text, float(x), float(y), float(size), float(spacing), color)
     end
 
     unload()
-        rl.unloadFont(self.res)
+        if !isNull(self.res)
+            rl.unloadFont(self.res)
+            self.res = Null
+        end
     end
 end
 
@@ -96,35 +117,51 @@ class Music
     end
 
     play()
-        rl.playMusicStream(self.res)
+        if !isNull(self.res)
+            rl.playMusicStream(self.res)
+        end
     end
 
     update()
-        rl.updateMusicStream(self.res)
+        if !isNull(self.res)
+            rl.updateMusicStream(self.res)
+        end
     end
 
     stop()
-        rl.stopMusicStream(self.res)
+        if !isNull(self.res)
+            rl.stopMusicStream(self.res)
+        end
     end
 
     pause()
-        rl.pauseMusicStream(self.res)
+        if !isNull(self.res)
+            rl.pauseMusicStream(self.res)
+        end
     end
 
     resume()
-        rl.resumeMusicStream(self.res)
+        if !isNull(self.res)
+            rl.resumeMusicStream(self.res)
+        end
     end
 
     isPlaying()
+        if isNull(self.res) return False end
         return rl.isMusicStreamPlaying(self.res)
     end
 
     setVolume(vol)
         assert.number(vol, "vol")
-        rl.setMusicVolume(self.res, vol)
+        if !isNull(self.res)
+            rl.setMusicVolume(self.res, float(vol))
+        end
     end
 
     unload()
-        rl.unloadMusicStream(self.res)
+        if !isNull(self.res)
+            rl.unloadMusicStream(self.res)
+            self.res = Null
+        end
     end
 end

@@ -1,3 +1,11 @@
+/**
+ * [ Djazair Programming Language - Raylib Extension ]
+ * File: src/raylib_common.h
+ * Description: Common definitions, types, and native method declarations for the Raylib extension.
+ * Role: Bridges Raylib 5.5 C functions with Djazair VM native module interface.
+ * Author: Harizi Riyadh (hariziriyadh@gmail.com)
+ */
+
 #ifndef DJAZAIR_RAYLIB_COMMON_H
 #define DJAZAIR_RAYLIB_COMMON_H
 
@@ -5,11 +13,35 @@
 #include "djazair_api.h"
 #include <string.h>
 
-// Internal helpers
+/* ============================================================
+ * Internal Helper Functions
+ * ============================================================ */
+
+/**
+ * Extracts a Raylib Color from a Djazair value (Array [r, g, b, a], or Color instance).
+ */
 Color getColor(djazairVM *vm, djazair_value val);
+
+/**
+ * Extracts a Raylib Vector2 from a Djazair value (Array [x, y], or Vector2 instance).
+ */
+Vector2 getVector2(djazairVM *vm, djazair_value val);
+
+/**
+ * Extracts a Raylib Rectangle from a Djazair value (Array [x, y, w, h], or Rectangle instance).
+ */
+Rectangle getRectangle(djazairVM *vm, djazair_value val);
+
+/**
+ * Helper to safely extract a float property from an instance field.
+ */
 float getInstanceFloat(djazairVM *vm, djazair_value inst, const char *key, float fallback);
 
-// Window & Core
+/* ============================================================
+ * Native Function Declarations
+ * ============================================================ */
+
+/* Window & Core */
 DJAZAIR_FUNC(raylibInitNative);
 DJAZAIR_FUNC(raylibCloseNative);
 DJAZAIR_FUNC(raylibShouldCloseNative);
@@ -21,14 +53,14 @@ DJAZAIR_FUNC(raylibGetScreenHeightNative);
 DJAZAIR_FUNC(raylibSetWindowTitleNative);
 DJAZAIR_FUNC(raylibSetWindowSizeNative);
 
-// Drawing
+/* Drawing */
 DJAZAIR_FUNC(raylibBeginDrawingNative);
 DJAZAIR_FUNC(raylibEndDrawingNative);
 DJAZAIR_FUNC(raylibClearBackgroundNative);
 DJAZAIR_FUNC(raylibDrawTextNative);
 DJAZAIR_FUNC(raylibMeasureTextNative);
 
-// Shapes
+/* Shapes */
 DJAZAIR_FUNC(raylibDrawRectangleNative);
 DJAZAIR_FUNC(raylibDrawRectangleLinesNative);
 DJAZAIR_FUNC(raylibDrawRectangleGradientVNative);
@@ -42,7 +74,7 @@ DJAZAIR_FUNC(raylibDrawPolyNative);
 DJAZAIR_FUNC(raylibDrawRectangleRoundedNative);
 DJAZAIR_FUNC(raylibDrawEllipseNative);
 
-// Input: Keyboard
+/* Input: Keyboard */
 DJAZAIR_FUNC(raylibIsKeyDownNative);
 DJAZAIR_FUNC(raylibIsKeyPressedNative);
 DJAZAIR_FUNC(raylibIsKeyReleasedNative);
@@ -50,7 +82,7 @@ DJAZAIR_FUNC(raylibIsKeyUpNative);
 DJAZAIR_FUNC(raylibGetKeyPressedNative);
 DJAZAIR_FUNC(raylibGetCharPressedNative);
 
-// Input: Mouse
+/* Input: Mouse */
 DJAZAIR_FUNC(raylibGetMouseXNative);
 DJAZAIR_FUNC(raylibGetMouseYNative);
 DJAZAIR_FUNC(raylibIsMouseButtonPressedNative);
@@ -59,13 +91,13 @@ DJAZAIR_FUNC(raylibIsMouseButtonReleasedNative);
 DJAZAIR_FUNC(raylibIsMouseButtonUpNative);
 DJAZAIR_FUNC(raylibGetMouseWheelMoveNative);
 
-// Collision Detection
+/* Collision Detection */
 DJAZAIR_FUNC(raylibCheckCollisionRecsNative);
 DJAZAIR_FUNC(raylibCheckCollisionCirclesNative);
 DJAZAIR_FUNC(raylibCheckCollisionCircleRecNative);
 DJAZAIR_FUNC(raylibCheckCollisionPointRecNative);
 
-// Utility / Core
+/* Utility & System */
 DJAZAIR_FUNC(raylibGetRandomValueNative);
 DJAZAIR_FUNC(raylibHideCursorNative);
 DJAZAIR_FUNC(raylibShowCursorNative);
@@ -73,14 +105,14 @@ DJAZAIR_FUNC(raylibGetTimeNative);
 DJAZAIR_FUNC(raylibToggleFullscreenNative);
 DJAZAIR_FUNC(raylibIsWindowResizedNative);
 
-// Textures
+/* Textures */
 DJAZAIR_FUNC(raylibLoadTextureNative);
 DJAZAIR_FUNC(raylibDrawTextureNative);
 DJAZAIR_FUNC(raylibUnloadTextureNative);
 DJAZAIR_FUNC(raylibDrawTextureRecNative);
 DJAZAIR_FUNC(raylibDrawTextureExNative);
 
-// Audio
+/* Audio */
 DJAZAIR_FUNC(raylibInitAudioNative);
 DJAZAIR_FUNC(raylibCloseAudioNative);
 DJAZAIR_FUNC(raylibLoadSoundNative);
@@ -96,18 +128,18 @@ DJAZAIR_FUNC(raylibResumeMusicStreamNative);
 DJAZAIR_FUNC(raylibIsMusicStreamPlayingNative);
 DJAZAIR_FUNC(raylibSetMusicVolumeNative);
 
-// Camera2D
+/* Camera2D */
 DJAZAIR_FUNC(raylibBeginMode2DNative);
 DJAZAIR_FUNC(raylibEndMode2DNative);
 DJAZAIR_FUNC(raylibGetScreenToWorld2DNative);
 DJAZAIR_FUNC(raylibGetWorldToScreen2DNative);
 
-// Fonts
+/* Fonts */
 DJAZAIR_FUNC(raylibLoadFontNative);
 DJAZAIR_FUNC(raylibUnloadFontNative);
 DJAZAIR_FUNC(raylibDrawTextExNative);
 
-// Type Helpers
+/* Type Helpers */
 DJAZAIR_FUNC(raylibIsColorNative);
 
-#endif // DJAZAIR_RAYLIB_COMMON_H
+#endif /* DJAZAIR_RAYLIB_COMMON_H */

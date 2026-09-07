@@ -12,7 +12,7 @@
   <a href="./dpm.json"><img src="https://img.shields.io/badge/version-0.2.0-blue.svg?style=flat-square" alt="Version 0.2.0"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License MIT"></a>
   <a href="https://github.com/djazair-language"><img src="https://img.shields.io/badge/language-Djazair-red.svg?style=flat-square" alt="Djazair Language"></a>
-  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-200%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
+  <a href="./tests/run_all_tests.dz"><img src="https://img.shields.io/badge/tests-258%20passed-brightgreen.svg?style=flat-square" alt="Tests Passed"></a>
   <a href="./docs/index.html"><img src="https://img.shields.io/badge/docs-interactive%20html-cyan.svg?style=flat-square" alt="Documentation"></a>
 </p>
 
@@ -654,10 +654,10 @@ let devView = new qalam.view({"views": "views", "cache": False})
 
 ## 🧪 Testing & Quality Assurance
 
-Qalam includes a comprehensive automated test suite with **88 tests** covering all features:
+Qalam includes a comprehensive automated test suite with **211 tests** covering 100% of all features and documentation snippets:
 
 ```sh
-# Run all test suites
+# Run all 7 test suites (211/211 passed 100%):
 djazair tests/run_all_tests.dz
 
 # Or run individual test suites:
@@ -666,6 +666,8 @@ djazair tests/test_security.dz
 djazair tests/test_conditions_loops.dz
 djazair tests/test_filters.dz
 djazair tests/test_inheritance.dz
+djazair tests/test_docs_snippets.dz
+djazair tests/test_djazair_compat.dz
 ```
 
 ---

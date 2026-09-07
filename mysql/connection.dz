@@ -74,6 +74,15 @@ class Connection
         return ""
     end
 
+    # Set connection character set (e.g. "utf8mb4", "latin1")
+    setCharset(charset)
+        assert.string(charset, "charset")
+        if self.connected
+            return _m.setCharset(self.conn, charset)
+        end
+        return False
+    end
+
     # Escape a raw string against SQL injection
     escape(s)
         if self.connected
@@ -97,11 +106,16 @@ class Connection
             if i > 0
                 let paramIdx = i - 1
                 if paramIdx < params.length()
-                    built = "${built}'${_m.escape(self.conn, "${params[paramIdx]}")}'"
+                    let p = params[paramIdx]
+                    if isNull(p)
+                        built = built + "NULL"
+                    else
+                        built = built + "'" + _m.escape(self.conn, str(p)) + "'"
+                    end
                 else
-                    built = "${built}?"
+                    built = built + "?"
                 end
-                built = "${built}${part}"
+                built = built + part
             end
         end
 
@@ -153,11 +167,16 @@ class Connection
             if i > 0
                 let paramIdx = i - 1
                 if paramIdx < params.length()
-                    built = "${built}'${_m.escape(self.conn, "${params[paramIdx]}")}'"
+                    let p = params[paramIdx]
+                    if isNull(p)
+                        built = built + "NULL"
+                    else
+                        built = built + "'" + _m.escape(self.conn, str(p)) + "'"
+                    end
                 else
-                    built = "${built}?"
+                    built = built + "?"
                 end
-                built = "${built}${part}"
+                built = built + part
             end
         end
 
@@ -198,6 +217,43 @@ class Connection
         return False
     end
 
+    # Return the server status summary string
+    stat()
+        if self.connected
+            return _m.stat(self.conn)
+        end
+        return Null
+    end
+
+    # Return the current MySQL connection thread ID
+    threadId()
+        if self.connected
+            return _m.threadId(self.conn)
+        end
+        return 0
+    end
+
+    # Return the protocol version number
+    protocolInfo()
+        if self.connected
+            return _m.protocolInfo(self.conn)
+        end
+        return 0
+    end
+
+    # Return information about the most recently executed query
+    info()
+        if self.connected
+            return _m.info(self.conn)
+        end
+        return Null
+    end
+
+    # Return the MySQL client library version string
+    clientInfo()
+        return _m.clientInfo()
+    end
+
     # Return the raw C resource handle for direct _mysql calls
     raw()
         return self.conn
@@ -211,4 +267,8 @@ class Connection
             self.connected = False
         end
     end
+end
+
+fn connect(host, user, password, db, port = 3306)
+    return new Connection(host, user, password, db, port)
 end

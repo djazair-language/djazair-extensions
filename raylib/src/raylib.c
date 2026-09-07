@@ -1,3 +1,11 @@
+/**
+ * [ Djazair Programming Language - Raylib Extension ]
+ * File: src/raylib.c
+ * Description: Module entry point and registration table for Raylib extension.
+ * Role: Exports native methods and registers the `_raylib` module into Djazair VM.
+ * Author: Harizi Riyadh (hariziriyadh@gmail.com)
+ */
+
 #include "raylib_common.h"
 
 DJAZAIR_FUNC(raylibIsColorNative) {
@@ -22,24 +30,28 @@ static NativeMethod raylib_module_funcs[] = {
     {"getScreenHeight", raylibGetScreenHeightNative, 0},
     {"setWindowTitle",  raylibSetWindowTitleNative,  1},
     {"setWindowSize",   raylibSetWindowSizeNative,   2},
+
     /* Drawing */
     {"beginDrawing",            raylibBeginDrawingNative,           0},
     {"endDrawing",              raylibEndDrawingNative,             0},
     {"clearBackground",         raylibClearBackgroundNative,        1},
     {"drawText",                raylibDrawTextNative,               5},
     {"measureText",             raylibMeasureTextNative,            2},
-    {"drawRectangle",           raylibDrawRectangleNative,          5},
-    {"drawRectangleLines",      raylibDrawRectangleLinesNative,     5},
-    {"drawRectangleGradientV",  raylibDrawRectangleGradientVNative, 6},
-    {"drawRectangleRounded",    raylibDrawRectangleRoundedNative,   7},
-    {"drawCircle",              raylibDrawCircleNative,             4},
-    {"drawCircleLines",         raylibDrawCircleLinesNative,        4},
-    {"drawEllipse",             raylibDrawEllipseNative,            5},
-    {"drawLine",                raylibDrawLineNative,               5},
-    {"drawLineEx",              raylibDrawLineExNative,             6},
-    {"drawTriangle",            raylibDrawTriangleNative,           7},
-    {"drawTriangleLines",       raylibDrawTriangleLinesNative,      7},
-    {"drawPoly",                raylibDrawPolyNative,               6},
+
+    /* Shapes (flexible arity -1 to support polymorphic calls) */
+    {"drawRectangle",           raylibDrawRectangleNative,          -1},
+    {"drawRectangleLines",      raylibDrawRectangleLinesNative,     -1},
+    {"drawRectangleGradientV",  raylibDrawRectangleGradientVNative,  6},
+    {"drawRectangleRounded",    raylibDrawRectangleRoundedNative,   -1},
+    {"drawCircle",              raylibDrawCircleNative,             -1},
+    {"drawCircleLines",         raylibDrawCircleLinesNative,        -1},
+    {"drawEllipse",             raylibDrawEllipseNative,             5},
+    {"drawLine",                raylibDrawLineNative,               -1},
+    {"drawLineEx",              raylibDrawLineExNative,             -1},
+    {"drawTriangle",            raylibDrawTriangleNative,           -1},
+    {"drawTriangleLines",       raylibDrawTriangleLinesNative,      -1},
+    {"drawPoly",                raylibDrawPolyNative,               -1},
+
     /* Input: Keyboard */
     {"isKeyDown",       raylibIsKeyDownNative,       1},
     {"isKeyPressed",    raylibIsKeyPressedNative,    1},
@@ -47,6 +59,7 @@ static NativeMethod raylib_module_funcs[] = {
     {"isKeyUp",         raylibIsKeyUpNative,         1},
     {"getKeyPressed",   raylibGetKeyPressedNative,   0},
     {"getCharPressed",  raylibGetCharPressedNative,  0},
+
     /* Input: Mouse */
     {"getMouseX",             raylibGetMouseXNative,             0},
     {"getMouseY",             raylibGetMouseYNative,             0},
@@ -55,24 +68,28 @@ static NativeMethod raylib_module_funcs[] = {
     {"isMouseButtonReleased", raylibIsMouseButtonReleasedNative, 1},
     {"isMouseButtonUp",       raylibIsMouseButtonUpNative,       1},
     {"getMouseWheelMove",     raylibGetMouseWheelMoveNative,     0},
-    /* Collision */
-    {"checkCollisionRecs",    raylibCheckCollisionRecsNative,    8},
-    {"checkCollisionCircles", raylibCheckCollisionCirclesNative, 6},
-    {"checkCollisionCircleRec",raylibCheckCollisionCircleRecNative, 7},
-    {"checkCollisionPointRec", raylibCheckCollisionPointRecNative,  6},
-    /* Utility */
-    {"getRandomValue",    raylibGetRandomValueNative,   2},
-    {"hideCursor",        raylibHideCursorNative,       0},
-    {"showCursor",        raylibShowCursorNative,       0},
-    {"getTime",           raylibGetTimeNative,          0},
-    {"toggleFullscreen",  raylibToggleFullscreenNative, 0},
-    {"isWindowResized",   raylibIsWindowResizedNative,  0},
+
+    /* Collision Detection */
+    {"checkCollisionRecs",      raylibCheckCollisionRecsNative,      8},
+    {"checkCollisionCircles",   raylibCheckCollisionCirclesNative,   6},
+    {"checkCollisionCircleRec", raylibCheckCollisionCircleRecNative, 7},
+    {"checkCollisionPointRec",  raylibCheckCollisionPointRecNative,  6},
+
+    /* Utility & System */
+    {"getRandomValue",    raylibGetRandomValueNative,    2},
+    {"hideCursor",        raylibHideCursorNative,        0},
+    {"showCursor",        raylibShowCursorNative,        0},
+    {"getTime",           raylibGetTimeNative,           0},
+    {"toggleFullscreen",  raylibToggleFullscreenNative,  0},
+    {"isWindowResized",   raylibIsWindowResizedNative,   0},
+
     /* Textures */
-    {"loadTexture",   raylibLoadTextureNative,   1},
-    {"drawTexture",   raylibDrawTextureNative,   3},
-    {"unloadTexture", raylibUnloadTextureNative, 1},
-    {"drawTextureRec",raylibDrawTextureRecNative,8},
-    {"drawTextureEx", raylibDrawTextureExNative, 6},
+    {"loadTexture",    raylibLoadTextureNative,    1},
+    {"drawTexture",    raylibDrawTextureNative,    3},
+    {"unloadTexture",  raylibUnloadTextureNative,  1},
+    {"drawTextureRec", raylibDrawTextureRecNative, 8},
+    {"drawTextureEx",  raylibDrawTextureExNative,  6},
+
     /* Audio */
     {"initAudio",            raylibInitAudioNative,            0},
     {"closeAudio",           raylibCloseAudioNative,           0},
@@ -88,17 +105,21 @@ static NativeMethod raylib_module_funcs[] = {
     {"resumeMusicStream",    raylibResumeMusicStreamNative,    1},
     {"isMusicStreamPlaying", raylibIsMusicStreamPlayingNative, 1},
     {"setMusicVolume",       raylibSetMusicVolumeNative,       2},
+
     /* Camera2D */
-    {"beginMode2D",       raylibBeginMode2DNative, 1},
-    {"endMode2D",         raylibEndMode2DNative,   0},
-    {"getScreenToWorld2D",raylibGetScreenToWorld2DNative, 3},
-    {"getWorldToScreen2D",raylibGetWorldToScreen2DNative, 3},
+    {"beginMode2D",        raylibBeginMode2DNative,        1},
+    {"endMode2D",          raylibEndMode2DNative,          0},
+    {"getScreenToWorld2D", raylibGetScreenToWorld2DNative, 3},
+    {"getWorldToScreen2D", raylibGetWorldToScreen2DNative, 3},
+
     /* Fonts */
     {"loadFont",    raylibLoadFontNative,    1},
     {"unloadFont",  raylibUnloadFontNative,  1},
     {"drawTextEx",  raylibDrawTextExNative,  7},
+
     /* Type helpers */
     {"isColor",     raylibIsColorNative,     1},
+
     {NULL, NULL, 0}
 };
 

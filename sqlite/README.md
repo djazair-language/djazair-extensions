@@ -2,10 +2,14 @@
 
 A lightweight, local database engine for Djazair. Provides synchronous SQL operations, parameterized queries (SQL injection safe), and full transaction support. Powered by the SQLite C library.
 
+> 📚 **Interactive Documentation & Live Studio Available:**  
+> Open [`docs/index.html`](docs/index.html) in your browser, or launch the desktop documentation app via `djazair docs/run_docs.dz`.
+
 ---
 
 ## Table of Contents
 
+0. [Interactive Documentation & Studio](#interactive-documentation--studio)
 1. [Installation](#1-installation)
 2. [Quick Start](#2-quick-start)
 3. [Connection Methods](#3-connection-methods)
@@ -14,6 +18,17 @@ A lightweight, local database engine for Djazair. Provides synchronous SQL opera
 6. [Error Handling](#6-error-handling)
 7. [Transactions](#7-transactions)
 8. [Complete Examples](#8-complete-examples)
+
+---
+
+## 0. Interactive Documentation & Studio
+
+The extension includes a full-featured, responsive HTML/jQuery documentation suite with a built-in **Live SQLite Studio & Playground**:
+
+- **Web Browser**: Open [`docs/index.html`](docs/index.html) in any modern web browser.
+- **Desktop Window**: Run `djazair docs/run_docs.dz` (uses the `webview` extension).
+
+Features include real-time API search filtering, code copy-to-clipboard, dark/light theme toggle, in-browser SQL simulator with multiple result formatters (Grid, Djazair Assoc Map, Indexed Array), and automatic Djazair code generation.
 
 ---
 
