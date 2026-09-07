@@ -95,6 +95,29 @@ assert.isTrue(!safeCopy(12345), "Snippet 10: number should fail gracefully and r
 assert.isTrue(!safeCopy(Null), "Snippet 10: Null should fail gracefully and return false")
 print("  [OK] Snippet 10 verified.")
 
+# Snippet 11: README Example 1 (Change Detection Loop)
+print("Checking Snippet 11 (README Example 1 - Change Detection)...")
+let r1_lastSeq = clipboard.sequenceNumber()
+clipboard.setText("New copied item")
+let r1_currentSeq = clipboard.sequenceNumber()
+assert.isTrue(r1_currentSeq > r1_lastSeq, "Snippet 11: sequence should increase")
+assert.equal(clipboard.getText(), "New copied item", "Snippet 11: text should match")
+print("  [OK] Snippet 11 verified.")
+
+# Snippet 12: README Example 2 (Format Enumeration)
+print("Checking Snippet 12 (README Example 2 - Formats)...")
+clipboard.setText("Inspect formats test")
+let r2_formats = clipboard.formats()
+assert.isTrue(r2_formats.length() > 0, "Snippet 12: formats should not be empty")
+print("  [OK] Snippet 12 verified.")
+
+# Snippet 13: README Example 3 (Unicode & Multiline Payload)
+print("Checking Snippet 13 (README Example 3 - Multiline Unicode)...")
+let r3_payload = "Algeria (الجزائر)\nCapital: Algiers\nStatus: 🇩🇿 Online"
+clipboard.setText(r3_payload)
+assert.equal(clipboard.getText(), r3_payload, "Snippet 13: payload should match exactly")
+print("  [OK] Snippet 13 verified.")
+
 print("\n=======================================================")
-print("ALL 10 DOCUMENTATION CODE SNIPPETS VERIFIED 100% CLEAN!")
+print("ALL 13 DOCUMENTATION & README SNIPPETS VERIFIED 100% CLEAN!")
 print("=======================================================")
