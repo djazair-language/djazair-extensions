@@ -78,6 +78,19 @@
       if (listeners && listeners.length > 0) {
         listeners.forEach(function(cb) { cb(data); });
       }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // startDragging()
+    //
+    // Initiates native window moving/dragging. Call on mousedown from a
+    // custom frameless HTML/CSS titlebar.
+    //
+    // Example:
+    //   <div class="titlebar" onmousedown="window.djazair.startDragging()"></div>
+    // ─────────────────────────────────────────────────────────────────────
+    startDragging: function() {
+      return this.invoke('__djazair_start_drag');
     }
   };
 })();

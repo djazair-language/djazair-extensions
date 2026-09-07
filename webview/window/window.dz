@@ -201,6 +201,30 @@ class Window
         return _native.windowIsVisible(self._handle)
     end
 
+    # Checks whether the window currently has active system keyboard focus.
+    isFocused()
+        if isNull(self._handle) return False end
+        return _native.windowIsFocused(self._handle)
+    end
+
+    # Initiates native interactive window dragging by mouse.
+    # Typically invoked from custom HTML/CSS titlebars on mousedown.
+    startDragging()
+        if isNull(self._handle) return end
+        _native.windowStartDragging(self._handle)
+    end
+
+    # Flashes the window frame and taskbar button to alert the user.
+    flash(enable = True)
+        if isNull(self._handle) return end
+        _native.windowFlash(self._handle, enable)
+    end
+
+    # Alias adhering to modern desktop conventions (Electron/Tauri style).
+    requestAttention(enable = True)
+        self.flash(enable)
+    end
+
     setFullscreen(fullscreen)
         if isNull(self._handle) return end
         _native.windowSetFullscreen(self._handle, fullscreen)

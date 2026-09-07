@@ -122,6 +122,38 @@ static int g_next_menu_id = 1000;
 static std::mutex g_tray_mtx;
 static std::unordered_map<int, TrayContext*> g_trays;
 static int g_next_tray_id = 500;
+static HANDLE g_single_instance_mutex = NULL;
+
+/**
+ * @brief Converts a UTF-8 encoded string to a Windows wide string (UTF-16).
+ */
+static std::wstring utf8_to_wide(const char* utf8_str) {
+    if (!utf8_str || !*utf8_str) return std::wstring();
+    int len = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, NULL, 0);
+    if (len <= 1) return std::wstring();
+    std::wstring wstr(len - 1, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, &wstr[0], len);
+    return wstr;
+}
+
+struct FocusTarget {
+    std::wstring title;
+    HWND foundHwnd;
+};
+
+static BOOL CALLBACK EnumWindowsFocusProc(HWND hwnd, LPARAM lParam) {
+    FocusTarget* target = (FocusTarget*)lParam;
+    if (!IsWindowVisible(hwnd)) return TRUE;
+    wchar_t windowTitle[512];
+    int len = GetWindowTextW(hwnd, windowTitle, 512);
+    if (len > 0) {
+        if (wcsstr(windowTitle, target->title.c_str()) != NULL) {
+            target->foundHwnd = hwnd;
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 #endif
 
 // ---------------------------------------------------------------------------
@@ -419,9 +451,95 @@ extern "C" DJAZAIR_FUNC(nativeAppQuit) {
         if (wv) wv->terminate();
     }
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
+    if (g_single_instance_mutex != NULL) {
+        CloseHandle(g_single_instance_mutex);
+        g_single_instance_mutex = NULL;
+    }
     PostQuitMessage(0);
 #endif
     return djazair_null();
+}
+
+/**
+ * @brief Requests a single-instance application lock via a Named Mutex on Windows.
+ *
+ * @param vm Active Djazair VM instance.
+ * @param argCount Must be 1 (app identifier string).
+ * @param args Stack pointer.
+ * @return Value BOOL_VAL indicating whether this process successfully acquired the lock.
+ */
+extern "C" DJAZAIR_FUNC(nativeAppRequestSingleInstanceLock) {
+    djazair_check_args(1, argCount);
+    djazair_check_str(0);
+    const char* app_id = AS_CSTRING(args[0]);
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    if (g_single_instance_mutex != NULL) {
+        // Already holding lock in current process
+        return djazair_bool(true);
+    }
+
+    std::wstring sanitized_id;
+    for (const char* p = app_id; *p; ++p) {
+        if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_' || *p == '-') {
+            sanitized_id += (wchar_t)*p;
+        } else {
+            sanitized_id += L'_';
+        }
+    }
+
+    std::wstring mutex_name = L"Local\\DjazairApp_" + sanitized_id;
+    HANDLE hMutex = CreateMutexW(NULL, TRUE, mutex_name.c_str());
+    if (hMutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS) {
+        if (hMutex != NULL) {
+            CloseHandle(hMutex);
+        }
+        return djazair_bool(false);
+    }
+
+    g_single_instance_mutex = hMutex;
+    return djazair_bool(true);
+#else
+    (void)app_id;
+    return djazair_bool(true);
+#endif
+}
+
+/**
+ * @brief Finds and brings to the foreground an existing running instance of the application window.
+ *
+ * @param vm Active Djazair VM instance.
+ * @param argCount Must be 1 (window title or identifier string).
+ * @param args Stack pointer.
+ * @return Value BOOL_VAL indicating whether an existing window was successfully found and focused.
+ */
+extern "C" DJAZAIR_FUNC(nativeAppFocusExistingInstance) {
+    djazair_check_args(1, argCount);
+    djazair_check_str(0);
+    const char* title = AS_CSTRING(args[0]);
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    std::wstring w_title = utf8_to_wide(title);
+    HWND hwnd = FindWindowW(NULL, w_title.c_str());
+    if (!hwnd && !w_title.empty()) {
+        FocusTarget target = { w_title, NULL };
+        EnumWindows(EnumWindowsFocusProc, (LPARAM)&target);
+        hwnd = target.foundHwnd;
+    }
+    if (hwnd) {
+        if (IsIconic(hwnd)) {
+            ShowWindow(hwnd, SW_RESTORE);
+        } else {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
+        return djazair_bool(true);
+    }
+#else
+    (void)title;
+#endif
+    return djazair_bool(false);
 }
 
 // ===========================================================================
@@ -1039,6 +1157,97 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetIcon) {
     }
 #endif
     return djazair_null();
+}
+
+/**
+ * @brief Begins interactive native window dragging by mouse.
+ *
+ * Typically invoked when the user presses mousedown on a custom HTML titlebar
+ * in a frameless window. Sends WM_NCLBUTTONDOWN with HTCAPTION to the native window.
+ *
+ * @param vm Active Djazair VM instance.
+ * @param argCount Must be 1 (window ID).
+ * @param args Stack pointer.
+ * @return Value NULL_VAL.
+ */
+extern "C" DJAZAIR_FUNC(nativeWindowStartDragging) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    HWND hwnd = get_hwnd(wc->wv);
+    if (hwnd) {
+        ReleaseCapture();
+        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    }
+#elif defined(WEBVIEW_PLATFORM_LINUX)
+    GtkWidget* gtk_win = GTK_WIDGET(webview_get_window((webview_t)wc->wv));
+    if (gtk_win) {
+        gtk_window_begin_move_drag(GTK_WINDOW(gtk_win), 1, 0, 0, GDK_CURRENT_TIME);
+    }
+#endif
+    return djazair_null();
+}
+
+/**
+ * @brief Flashes the window frame and taskbar button to alert the user.
+ *
+ * @param vm Active Djazair VM instance.
+ * @param argCount Must be 2 (window ID, bool enable).
+ * @param args Stack pointer.
+ * @return Value NULL_VAL.
+ */
+extern "C" DJAZAIR_FUNC(nativeWindowFlash) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_bool(args[1])) {
+        bool enable = AS_BOOL(args[1]);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        if (hwnd) {
+            FLASHWINFO fi;
+            ZeroMemory(&fi, sizeof(fi));
+            fi.cbSize = sizeof(FLASHWINFO);
+            fi.hwnd = hwnd;
+            fi.dwFlags = enable ? (FLASHW_ALL | FLASHW_TIMERNOFG) : FLASHW_STOP;
+            fi.uCount = 0;
+            fi.dwTimeout = 0;
+            FlashWindowEx(&fi);
+        }
+#elif defined(WEBVIEW_PLATFORM_LINUX)
+        GtkWidget* gtk_win = GTK_WIDGET(webview_get_window((webview_t)wc->wv));
+        if (gtk_win) {
+            gtk_window_set_urgency_hint(GTK_WINDOW(gtk_win), enable ? TRUE : FALSE);
+        }
+#endif
+    }
+    return djazair_null();
+}
+
+/**
+ * @brief Checks if the native window currently has active system keyboard focus.
+ *
+ * @param vm Active Djazair VM instance.
+ * @param argCount Must be 1 (window ID).
+ * @param args Stack pointer.
+ * @return Value BOOL_VAL indicating focus state.
+ */
+extern "C" DJAZAIR_FUNC(nativeWindowIsFocused) {
+    djazair_check_args(1, argCount);
+    GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    HWND hwnd = get_hwnd(wc->wv);
+    if (hwnd) {
+        HWND foreground = GetForegroundWindow();
+        bool focused = (foreground != NULL && (foreground == hwnd || IsChild(hwnd, foreground)));
+        return djazair_bool(focused);
+    }
+#elif defined(WEBVIEW_PLATFORM_LINUX)
+    GtkWidget* gtk_win = GTK_WIDGET(webview_get_window((webview_t)wc->wv));
+    if (gtk_win) {
+        return djazair_bool(gtk_window_is_active(GTK_WINDOW(gtk_win)));
+    }
+#endif
+    return djazair_bool(false);
 }
 
 extern "C" DJAZAIR_FUNC(nativeWindowGetScreenSize) {
@@ -2135,6 +2344,8 @@ static NativeMethod webview_methods[] = {
     // App lifecycle
     {"appRun",                   nativeAppRun,                   0},
     {"appQuit",                  nativeAppQuit,                  0},
+    {"appRequestSingleInstanceLock", nativeAppRequestSingleInstanceLock, 1},
+    {"appFocusExistingInstance",   nativeAppFocusExistingInstance,   1},
 
     // Window management
     {"windowCreate",             nativeWindowCreate,             12},
@@ -2154,6 +2365,7 @@ static NativeMethod webview_methods[] = {
     {"windowIsMaximized",        nativeWindowIsMaximized,        1},
     {"windowIsMinimized",        nativeWindowIsMinimized,        1},
     {"windowIsVisible",          nativeWindowIsVisible,          1},
+    {"windowIsFocused",          nativeWindowIsFocused,          1},
     {"windowSetResizable",       nativeWindowSetResizable,       2},
     {"windowSetMinSize",         nativeWindowSetMinSize,         3},
     {"windowSetMaxSize",         nativeWindowSetMaxSize,         3},
@@ -2165,6 +2377,8 @@ static NativeMethod webview_methods[] = {
     {"windowSetAlwaysOnTop",     nativeWindowSetAlwaysOnTop,     2},
     {"windowCenter",             nativeWindowCenter,             1},
     {"windowSetIcon",            nativeWindowSetIcon,            2},
+    {"windowStartDragging",      nativeWindowStartDragging,      1},
+    {"windowFlash",              nativeWindowFlash,              2},
     {"windowGetScreenSize",      nativeWindowGetScreenSize,      0},
     {"windowGetAvailableSize",   nativeWindowGetAvailableSize,   0},
     {"windowSetOpacity",         nativeWindowSetOpacity,         2},

@@ -102,6 +102,8 @@ Available options with defaults:
 | `maxHeight` | Number | `0` | Maximum height (`0` = unlimited) |
 | `closable` | Bool | `True` | Allow closing via window button |
 | `debug` | Bool | `False` | Enable DevTools + JS console forwarding |
+| `singleInstance` | Bool | `False` | Prevent duplicate instances; focus existing window on launch |
+| `appId` | String | `""` | Unique app identifier for singleInstance lock (defaults to title) |
 
 ### Lifecycle Methods
 
@@ -190,6 +192,29 @@ app.window.focus()
 app.window.isVisible()     # Bool
 app.window.isMaximized()   # Bool
 app.window.isMinimized()   # Bool
+app.window.isFocused()     # Bool: True if active foreground window
+
+# Taskbar attention flash
+app.window.flash(True)           # Flash taskbar icon until focused
+app.window.flash(False)          # Stop flashing
+app.window.requestAttention()    # Convenience alias for flash(True)
+```
+
+### Frameless Window Dragging
+
+When building a custom frameless window (`"frameless": True`), you can initiate native window dragging from either Djazair or frontend HTML/CSS:
+
+**HTML / JavaScript:**
+```html
+<!-- Any HTML element can serve as a draggable titlebar -->
+<div class="titlebar" style="user-select: none;" onmousedown="window.djazair.startDragging()">
+    <span>My App Title</span>
+</div>
+```
+
+**Djazair Backend:**
+```djazair
+app.window.startDragging()
 ```
 
 ### Constraints

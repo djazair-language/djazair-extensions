@@ -27,7 +27,9 @@ class App
             "maxWidth": 0,
             "maxHeight": 0,
             "closable": True,
-            "debug": False
+            "debug": False,
+            "singleInstance": False,
+            "appId": ""
         }
 
         for key in defaults.keys()
@@ -49,6 +51,24 @@ class App
             setLogLevel("warn")
         end
 
+        # Handle Single Instance Lock
+        let singleInstance = defaults["singleInstance"]
+        let appId = defaults["appId"]
+        if appId == ""
+            appId = defaults["title"]
+        end
+
+        if singleInstance
+            let hasLock = _native.appRequestSingleInstanceLock(appId)
+            if !hasLock
+                sysLog("App", "Another instance of '${appId}' is already running. Restoring focus and quitting.", "warn")
+                _native.appFocusExistingInstance(defaults["title"])
+                self._quitting = True
+                self.window = Null
+                return
+            end
+        end
+
         sysLog("App", "Initializing primary window...")
         let win = new Window(self, defaults)
         self.window = win
@@ -56,6 +76,12 @@ class App
 
         sysLog("App", "Attaching IPC bridge to primary window...")
         self.bridge = new Bridge(self, win)
+
+        # Built-in handler for frameless window dragging from frontend
+        self.bridge.on("__djazair_start_drag", fn(_)
+            win.startDragging()
+            return True
+        end)
 
         if self._debug
             sysLog("App", "Debug mode enabled, configuring DevTools and console logger...")
@@ -113,6 +139,7 @@ class App
 
     # Starts the application event loop.
     run()
+        if self._quitting return end
         sysLog("App", "Running application event loop.")
         if !isNull(self._onReady)
             self._onReady()
@@ -178,5 +205,16 @@ class App
             setLogLevel("warn")
             sysLog("App", "Debug mode set to: False")
         end
+    end
+
+    # Requests a single-instance application lock via named mutex.
+    # Returns True if this process successfully acquired the lock.
+    requestSingleInstanceLock(appId)
+        return _native.appRequestSingleInstanceLock(appId)
+    end
+
+    # Finds and brings to foreground an existing instance of the application window.
+    focusExistingInstance(title)
+        return _native.appFocusExistingInstance(title)
     end
 end
