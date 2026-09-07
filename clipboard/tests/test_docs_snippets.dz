@@ -1,0 +1,100 @@
+# test_docs_snippets.dz — Rigorous verification that every single code snippet in docs runs cleanly
+use clipboard
+use assert
+
+print("=== Verifying All Documentation Code Snippets ===\n")
+
+# Snippet 1: Quickstart
+print("Checking Snippet 1 (Quickstart)...")
+clipboard.copy("مرحبا بالعالم — Hello from Djazair 🇩🇿")
+let s1_text = clipboard.paste()
+assert.isTrue(s1_text.contains("مرحبا بالعالم"), "Snippet 1: paste should contain Arabic text")
+assert.isTrue(clipboard.has(), "Snippet 1: has() should be true")
+clipboard.clear()
+assert.isTrue(!clipboard.has(), "Snippet 1: has() should be false after clear")
+print("  [OK] Snippet 1 verified.")
+
+# Snippet 2: copy(text)
+print("Checking Snippet 2 (copy)...")
+let s2_ok = clipboard.copy("Hello, World!")
+assert.isTrue(s2_ok, "Snippet 2: copy() should return true")
+print("  [OK] Snippet 2 verified.")
+
+# Snippet 3: paste()
+print("Checking Snippet 3 (paste)...")
+let s3_content = clipboard.paste()
+assert.equal(s3_content, "Hello, World!", "Snippet 3: paste() should match copied string")
+print("  [OK] Snippet 3 verified.")
+
+# Snippet 4: clear()
+print("Checking Snippet 4 (clear)...")
+clipboard.clear()
+assert.isTrue(!clipboard.hasText(), "Snippet 4: hasText() should be false after clear")
+print("  [OK] Snippet 4 verified.")
+
+# Snippet 5: has()
+print("Checking Snippet 5 (has)...")
+clipboard.copy("Checking has()")
+assert.isTrue(clipboard.has(), "Snippet 5: has() should be true after copy")
+print("  [OK] Snippet 5 verified.")
+
+# Snippet 6: sequenceNumber()
+print("Checking Snippet 6 (sequenceNumber)...")
+let s6_seq1 = clipboard.sequenceNumber()
+clipboard.copy("Payload A")
+let s6_seq2 = clipboard.sequenceNumber()
+assert.isTrue(s6_seq2 > s6_seq1, "Snippet 6: sequence number should increment")
+print("  [OK] Snippet 6 verified.")
+
+# Snippet 7: formats()
+print("Checking Snippet 7 (formats)...")
+clipboard.setText("Testing format detection")
+let s7_formats = clipboard.formats()
+assert.isTrue(isArray(s7_formats), "Snippet 7: formats() should return an array")
+assert.isTrue(s7_formats.length() > 0, "Snippet 7: formats array should not be empty")
+print("  [OK] Snippet 7 verified.")
+
+# Snippet 8: Workflow Monitor
+print("Checking Snippet 8 (Workflow Monitor)...")
+let lastSeq = clipboard.sequenceNumber()
+let monitorDetected = False
+fn onTick()
+    let currentSeq = clipboard.sequenceNumber()
+    if currentSeq != lastSeq
+        lastSeq = currentSeq
+        if clipboard.hasText()
+            monitorDetected = True
+        end
+    end
+end
+clipboard.setText("Trigger update")
+onTick()
+assert.isTrue(monitorDetected, "Snippet 8: monitor should detect change")
+print("  [OK] Snippet 8 verified.")
+
+# Snippet 9: Workflow Unicode
+print("Checking Snippet 9 (Workflow Unicode)...")
+let arabicText = "الجمهورية الجزائرية الديمقراطية الشعبية 🇩🇿"
+clipboard.setText(arabicText)
+let s9_restored = clipboard.getText()
+assert.equal(s9_restored, arabicText, "Snippet 9: restored text should match exactly")
+print("  [OK] Snippet 9 verified.")
+
+# Snippet 10: Workflow Defensive Error Handling
+print("Checking Snippet 10 (Workflow Defensive)...")
+fn safeCopy(input)
+    try
+        clipboard.copy(input)
+        return True
+    catch err
+        return False
+    end
+end
+assert.isTrue(safeCopy("Valid text"), "Snippet 10: valid string should succeed")
+assert.isTrue(!safeCopy(12345), "Snippet 10: number should fail gracefully and return false")
+assert.isTrue(!safeCopy(Null), "Snippet 10: Null should fail gracefully and return false")
+print("  [OK] Snippet 10 verified.")
+
+print("\n=======================================================")
+print("ALL 10 DOCUMENTATION CODE SNIPPETS VERIFIED 100% CLEAN!")
+print("=======================================================")
