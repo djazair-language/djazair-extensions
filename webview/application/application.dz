@@ -1,11 +1,19 @@
+# application.dz
+# Application lifecycle, event loop, and window manager for Djazair Webview
+# Author: Harizi Riyadh (hariziriyadh@gmail.com)
+# Copyright (c) 2026 Djazair Language Project
+
 import "../bridge/bridge.dz" as *
 import "../window/window.dz" as *
 import "../utils/utils.dz" as *
 
 use json as *
+
 let _native = __native("_webview")
 
+# App class: Manages desktop application lifecycle, event loop, and multi-window hierarchy.
 class App
+    # Initializes application instance and creates default primary window.
     init(options = {})
         let defaults = {
             "title": "Djazair App",
@@ -21,30 +29,36 @@ class App
             "closable": True,
             "debug": False
         }
+
         for key in defaults.keys()
             if options.has(key)
                 defaults[key] = options[key]
             end
         end
+
         self._onReady = Null
         self._onQuit = Null
         self._errorCallback = Null
         self._quitting = False
-        self._bridgeHandlers = {}
         self._debug = defaults["debug"]
+        self._windows = []
+
         if self._debug
             setLogLevel("debug")
         else
-            setLogLevel("error")
+            setLogLevel("warn")
         end
-        sysLog("App", "Creating window...")
-        let win = createWindow(self, defaults)
+
+        sysLog("App", "Initializing primary window...")
+        let win = new Window(self, defaults)
         self.window = win
-        sysLog("App", "Initializing bridge...")
-        self.bridge = createBridge(self, win)
-        _initBridge(self, win)
+        self._windows.append(win)
+
+        sysLog("App", "Attaching IPC bridge to primary window...")
+        self.bridge = new Bridge(self, win)
+
         if self._debug
-            sysLog("App", "Debug mode enabled, opening DevTools...")
+            sysLog("App", "Debug mode enabled, configuring DevTools and console logger...")
             win.initJs(readWebviewAsset("debug_console.js"))
             self.bridge.on("__console", fn(args)
                 let typeStr = args[0]
@@ -63,9 +77,41 @@ class App
             end)
             win.openDevTools()
         end
+
         sysLog("App", "Application initialized successfully.")
     end
 
+    # Creates and registers a new additional window managed by this application.
+    createWindow(options = {})
+        sysLog("App", "Spawning new window...")
+        let win = new Window(self, options)
+        self._windows.append(win)
+        return win
+    end
+
+    # Internal hook invoked when an individual window is closed.
+    _onWindowClosed(win)
+        let idx = -1
+        for i in 0..self._windows.length()
+            if self._windows[i] == win
+                idx = i
+                break
+            end
+        end
+
+        if idx != -1
+            self._windows.pop(idx)
+        end
+
+        sysLog("App", "Window closed. Remaining active windows: ${self._windows.length()}", "debug")
+
+        # Automatically terminate application when last window closes
+        if self._windows.length() == 0 and !self._quitting
+            self.quit()
+        end
+    end
+
+    # Starts the application event loop.
     run()
         sysLog("App", "Running application event loop.")
         if !isNull(self._onReady)
@@ -74,42 +120,52 @@ class App
         _native.appRun()
     end
 
+    # Gracefully terminates the application and closes all windows.
     quit()
         if self._quitting return end
         sysLog("App", "Quitting application...")
         self._quitting = True
+
         if !isNull(self._onQuit)
-            self._onQuit()
+            try
+                self._onQuit()
+            catch err
+                sysLog("App", "Error in onQuit handler: ${err}", "error")
+            end
         end
+
         _native.appQuit()
-        use process
-        process.exit(0)
     end
 
-
+    # Closes the primary window.
     close()
-        sysLog("App", "Closing application window...")
+        sysLog("App", "Closing primary application window...")
         if !isNull(self.window)
-            closeWindow(self.window)
+            self.window.close()
         end
     end
 
+    # Checks if the primary window is valid and open.
     isValid()
-        return !isNull(self.window) and !isNull(self.window._handle)
+        return !isNull(self.window) and self.window.isValid()
     end
 
+    # Registers a callback to execute right before the event loop starts.
     onReady(cb)
         self._onReady = cb
     end
 
+    # Registers a callback to execute before application termination.
     onQuit(cb)
         self._onQuit = cb
     end
 
+    # Registers a global error callback.
     onError(cb)
         self._errorCallback = cb
     end
 
+    # Enables or disables runtime debug mode.
     setDebug(enable)
         self._debug = enable
         if enable
@@ -119,7 +175,7 @@ class App
                 self.window.openDevTools()
             end
         else
-            setLogLevel("error")
+            setLogLevel("warn")
             sysLog("App", "Debug mode set to: False")
         end
     end

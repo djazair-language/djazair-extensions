@@ -1,13 +1,27 @@
-use process
+# assets.dz
+# Embedded asset resolver for webview JavaScript client scripts
+# Author: Harizi Riyadh (hariziriyadh@gmail.com)
+# Copyright (c) 2026 Djazair Language Project
+
 use file
 use path
+use process
+use lang
 
-let _baseDir = process.scriptDir()
-
+# Reads a webview embedded asset (e.g. bridge_client.js) reliably
+# by searching across the standard library extension location, local script directory,
+# and common asset paths.
 fn readWebviewAsset(name)
+    let sDir = process.scriptDir()
+    let lDir = lang.libsDir()
     let candidates = [
-        path.normalize(path.join(_baseDir, "js", name)),
-        "assets/js/${name}",
+        path.join(lDir, "webview", "bridge", "js", name),
+        path.join(lDir, "webview", "js", name),
+        path.join(lDir, "webview", name),
+        path.join(sDir, "bridge", "js", name),
+        path.join(sDir, "js", name),
+        path.join(sDir, "assets", "js", name),
+        path.join(sDir, "..", "bridge", "js", name),
         name
     ]
     for candidate in candidates
@@ -15,5 +29,5 @@ fn readWebviewAsset(name)
             return file.read(candidate)
         end
     end
-    throw "WebviewAssetError: cannot find asset '${name}'"
+    throw "WebviewAssetError: cannot find asset '" + name + "'"
 end

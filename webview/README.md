@@ -645,6 +645,25 @@ end)
 
 Complete working example:
 
+### Object-Oriented Style (Recommended)
+
+```djazair
+use webview
+let menu = new webview.Menu("Context Menu")
+menu.addItem("Option A", fn() print("Option A clicked") end)
+menu.addItem("Option B", fn() print("Option B clicked") end)
+menu.addSeparator()
+
+let sub = menu.addSubmenu("More Options")
+sub.addItem("Sub Item 1", fn() print("Sub item clicked") end)
+
+# Display popup on window
+menu.popup(app.window)
+# Or window.popupMenu(menu)
+```
+
+### Procedural Style
+
 ```djazair
 use webview
 
@@ -692,7 +711,7 @@ app.onReady(fn()
     ")
 
     app.bridge.on("showContextMenu", fn(data)
-        webview.menuPopup(app.window._handle, menu)
+        webview.menuPopup(app.window, menu)
         return True
     end)
 end)
@@ -700,22 +719,33 @@ end)
 app.run()
 ```
 
-Menu functions:
+Menu methods and functions:
 
-| Function | Description |
-|----------|-------------|
-| `menuCreate(label)` | Create a new popup menu handle |
-| `menuAddItem(menu, label, callback)` | Add a clickable item |
-| `menuAddSeparator(menu)` | Add a horizontal divider |
-| `menuCreateSubmenu(menu, label)` | Create a nested submenu (returns submenu handle) |
-| `menuSetCallback(menu, index, callback)` | Set/change a menu item callback |
-| `menuPopup(windowHandle, menu)` | Show the menu at cursor position |
+| OOP Method | Procedural Function | Description |
+|---|---|---|
+| `new webview.Menu(label)` | `menuCreate(label)` | Create a new popup menu |
+| `menu.addItem(label, callback)` | `menuAddItem(menu, label, cb)` | Add a clickable item |
+| `menu.addSeparator()` | `menuAddSeparator(menu)` | Add a horizontal divider |
+| `menu.addSubmenu(label)` | `menuCreateSubmenu(menu, label)` | Create a nested submenu |
+| `menu.popup(window)` | `menuPopup(window, menu)` | Show menu at current cursor |
+| `window.popupMenu(menu)` | — | Convenience method on Window |
 
 ---
 
 ## 10. System Tray Icon
 
-Create and manage a system tray icon (near the clock):
+Create and manage a system tray icon (notification area):
+
+### Object-Oriented Style (Recommended)
+
+```djazair
+let tray = new webview.Tray("Djazair Application v1.0", "icon.ico")
+tray.setMenu(menu)
+tray.showBalloon("Title", "Message text", 5)
+tray.destroy()
+```
+
+### Procedural Style
 
 ```djazair
 # Create a tray icon
@@ -731,16 +761,16 @@ webview.trayShowBalloon(tray, "Title", "Message text", 5)  # timeout in seconds
 webview.trayDestroy(tray)
 ```
 
-Tray functions:
+Tray methods and functions:
 
-| Function | Description |
-|----------|-------------|
-| `trayCreate(label, iconPath)` | Create tray icon. Returns handle or Null |
-| `traySetIcon(handle, iconPath)` | Change the tray icon image |
-| `traySetMenu(handle, menuHandle)` | Attach a context menu to the tray icon |
-| `traySetTooltip(handle, tooltip)` | Set hover tooltip text |
-| `trayShowBalloon(handle, title, message, timeout)` | Show a balloon notification |
-| `trayDestroy(handle)` | Remove the tray icon |
+| OOP Method | Procedural Function | Description |
+|---|---|---|
+| `new webview.Tray(tooltip, iconPath)` | `trayCreate(label, iconPath)` | Create tray icon |
+| `tray.setIcon(iconPath)` | `traySetIcon(handle, iconPath)` | Change the tray icon image |
+| `tray.setMenu(menu)` | `traySetMenu(handle, menu)` | Attach a context menu |
+| `tray.setTooltip(tooltip)` | `traySetTooltip(handle, tooltip)` | Set hover tooltip text |
+| `tray.showBalloon(title, msg, timeout)` | `trayShowBalloon(handle, title, msg, timeout)` | Show balloon notification |
+| `tray.destroy()` | `trayDestroy(handle)` | Remove the tray icon |
 
 > **Note:** Tray functionality requires a valid `.ico` file path. On Linux/macOS these are stub implementations.
 

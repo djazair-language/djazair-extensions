@@ -1,12 +1,21 @@
-/*
- * webview_native.cc — Webview Desktop Framework native module
+/**
+ * @file webview_native.cc
+ * @brief Webview Desktop Framework native module for Djazair Programming Language
+ * @author Harizi Riyadh (hariziriyadh@gmail.com)
+ * @copyright Copyright (c) 2026 Djazair Language Project
+ *
+ * Implements high-performance desktop WebView integration powered by Microsoft WebView2 on Windows,
+ * WebKitGTK on Linux, and Cocoa/WebKit on macOS. Provides seamless bidirectional IPC bridging,
+ * window lifecycle management, dialogs, menus, and system tray integration.
  */
+
 #include <string.h>
 #include <stdlib.h>
 #include <string>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 extern "C" {
 #include "djazair_api.h"
@@ -21,20 +30,20 @@ extern "C" {
 #elif defined(__linux__)
     #include <gtk/gtk.h>
 #elif defined(_WIN32)
-    #include <dwmapi.h>
     #include <windows.h>
+    #include <dwmapi.h>
     #include <shlobj.h>
     #include <shellapi.h>
     #include <commdlg.h>
-    #include <dwmapi.h>
 #endif
 
 #define WEBVIEW_IMPLEMENTATION
 #include "webview.h"
 
-// -----------------------------------------------------
-// Per-window context
-// -----------------------------------------------------
+// ---------------------------------------------------------------------------
+// Context Structures
+// ---------------------------------------------------------------------------
+
 struct WindowContext {
     webview::webview* wv;
     djazairVM*        vm;
@@ -57,20 +66,15 @@ struct WindowContext {
     bool              has_navigated;
     bool              can_go_forward;
     bool              is_fullscreen;
+    std::vector<int>  menu_items;
 
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     WINDOWPLACEMENT   saved_placement;
     LONG              saved_style;
     LONG              saved_exstyle;
-    WNDPROC original_wndproc;
-    HWND    tray_hwnd;
-    HICON   tray_icon;
-    HICON   last_icon_small;
-    HICON   last_icon_big;
-    HMENU   hmenu;
-    bool    menu_active;
-    NOTIFYICONDATAA nid;
-    bool    tray_active;
+    WNDPROC           original_wndproc;
+    HICON             last_icon_small;
+    HICON             last_icon_big;
 #endif
 
     WindowContext()
@@ -83,116 +87,194 @@ struct WindowContext {
         , id(0), zoom_level(1.0), has_navigated(false), can_go_forward(false), is_fullscreen(false)
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         , saved_style(0), saved_exstyle(0)
-        , original_wndproc(nullptr), tray_hwnd(nullptr), tray_icon(nullptr)
+        , original_wndproc(nullptr)
         , last_icon_small(nullptr), last_icon_big(nullptr)
-        , hmenu(nullptr), menu_active(false), tray_active(false)
 #endif
     {}
 };
 
-// -----------------------------------------------------
-// Global state: window registry (protected by mutex)
-// -----------------------------------------------------
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+#define WM_TRAYICON_MSG (WM_USER + 105)
+
+struct TrayContext {
+    int         id;
+    HWND        hwnd;
+    HICON       hicon;
+    HMENU       hmenu;
+    std::string tooltip;
+    bool        active;
+};
+#endif
+
+// ---------------------------------------------------------------------------
+// Global Registries & Thread Safety
+// ---------------------------------------------------------------------------
+
 static std::mutex g_ctx_mtx;
 static std::unordered_map<int, WindowContext*> g_contexts;
 static int g_next_id = 100;
-static djazairVM* g_last_vm = nullptr;
 
-// Menu item callback tracking
 static std::mutex g_menu_mtx;
 static std::unordered_map<int, Value> g_menu_callbacks;
 static int g_next_menu_id = 1000;
-// -----------------------------------------------------
-// GC protection helpers
-// -----------------------------------------------------
-static void gc_protect(djazairVM* vm, const char* key, int key_len, Value val) {
-    ObjString* k = copyString(vm, key, key_len);
-    push(vm, OBJ_VAL(k));
-    tableSet(vm, &vm->builtins, OBJ_VAL(k), val);
-    pop(vm);
-}
 
-static void gc_unprotect(djazairVM* vm, const char* key, int key_len) {
-    ObjString* k = copyString(vm, key, key_len);
-    push(vm, OBJ_VAL(k));
-    tableDelete(vm, &vm->builtins, OBJ_VAL(k));
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+static std::mutex g_tray_mtx;
+static std::unordered_map<int, TrayContext*> g_trays;
+static int g_next_tray_id = 500;
+#endif
+
+// ---------------------------------------------------------------------------
+// Isolated GC Root Management
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Retrieves the native _webview module instance from the VM's nativeModules table.
+ * Used to store protected callback references in module->globals instead of polluting vm->builtins.
+ */
+static ObjModule* get_webview_module(djazairVM* vm) {
+    if (!vm) return nullptr;
+    Value mod_val = NULL_VAL;
+    ObjString* mod_name = copyString(vm, "_webview", 8);
+    push(vm, OBJ_VAL(mod_name));
+    bool found = tableGet(vm, &vm->nativeModules, OBJ_VAL(mod_name), &mod_val);
     pop(vm);
+    if (found && IS_MODULE(mod_val)) {
+        return AS_MODULE(mod_val);
+    }
+    return nullptr;
 }
 
 static std::string gc_key(const char* prefix, int id) {
     return std::string(prefix) + "_" + std::to_string(id);
 }
 
-// -----------------------------------------------------
-// Close callback invocation
-// -----------------------------------------------------
-static void invoke_close_callback(WindowContext* c) {
-    if (c && c->vm && !IS_NULL(c->close_callback)) {
-        Value *savedStackTop = c->vm->stackTop;
-        int targetFrame = c->vm->frameCount;
-        int savedHandlerCount = c->vm->handlerCount;
-        push(c->vm, c->close_callback);
-        if (callValue(c->vm, c->close_callback, 0)) {
-            run(c->vm, targetFrame);
-        }
-        c->vm->handlerCount = savedHandlerCount;
-        c->vm->stackTop = savedStackTop;
-    }
+static void gc_protect(djazairVM* vm, const char* key, int key_len, Value val) {
+    if (!vm || IS_NULL(val)) return;
+    ObjModule* mod = get_webview_module(vm);
+    Table* target_table = mod ? &mod->globals : &vm->globals;
+    ObjString* k = copyString(vm, key, key_len);
+    push(vm, OBJ_VAL(k));
+    tableSet(vm, target_table, OBJ_VAL(k), val);
+    pop(vm);
 }
+
+static void gc_unprotect(djazairVM* vm, const char* key, int key_len) {
+    if (!vm) return;
+    ObjModule* mod = get_webview_module(vm);
+    Table* target_table = mod ? &mod->globals : &vm->globals;
+    ObjString* k = copyString(vm, key, key_len);
+    push(vm, OBJ_VAL(k));
+    tableDelete(vm, target_table, OBJ_VAL(k));
+    pop(vm);
+}
+
+// ---------------------------------------------------------------------------
+// Safe Callback Invocations (VM Stack Discipline)
+// ---------------------------------------------------------------------------
 
 static void invoke_callback_0(WindowContext* c, Value cb) {
     if (c && c->vm && !IS_NULL(cb)) {
-        Value *savedStackTop = c->vm->stackTop;
-        int targetFrame = c->vm->frameCount;
-        int savedHandlerCount = c->vm->handlerCount;
-        push(c->vm, cb);
-        if (callValue(c->vm, cb, 0)) {
-            run(c->vm, targetFrame);
+        djazairVM* vm = c->vm;
+        push(vm, cb);
+        int savedFC = vm->frameCount;
+        if (!callValue(vm, cb, 0)) {
+            if (!vm->exceptionCaught) { pop(vm); }
+            return;
         }
-        c->vm->handlerCount = savedHandlerCount;
-        c->vm->stackTop = savedStackTop;
+        if (vm->frameCount > savedFC) {
+            if (run(vm, savedFC) != DJAZAIR_OK) {
+                return;
+            }
+        }
+        if (vm->stackTop > vm->stack) {
+            pop(vm);
+        }
     }
 }
 
 static void invoke_callback_2(WindowContext* c, Value cb, double a, double b) {
     if (c && c->vm && !IS_NULL(cb)) {
-        Value *savedStackTop = c->vm->stackTop;
-        int targetFrame = c->vm->frameCount;
-        int savedHandlerCount = c->vm->handlerCount;
-        push(c->vm, cb);
-        push(c->vm, djazair_float(a));
-        push(c->vm, djazair_float(b));
-        if (callValue(c->vm, cb, 2)) {
-            run(c->vm, targetFrame);
+        djazairVM* vm = c->vm;
+        push(vm, cb);
+        push(vm, djazair_float(a));
+        push(vm, djazair_float(b));
+        int savedFC = vm->frameCount;
+        if (!callValue(vm, cb, 2)) {
+            if (!vm->exceptionCaught) { pop(vm); pop(vm); pop(vm); }
+            return;
         }
-        c->vm->handlerCount = savedHandlerCount;
-        c->vm->stackTop = savedStackTop;
+        if (vm->frameCount > savedFC) {
+            if (run(vm, savedFC) != DJAZAIR_OK) {
+                return;
+            }
+        }
+        if (vm->stackTop > vm->stack) {
+            pop(vm);
+        }
     }
 }
 
-// -----------------------------------------------------
-// Window proc hooking for close handling (Windows)
-// -----------------------------------------------------
-#if defined(WEBVIEW_PLATFORM_WINDOWS)
-static void menu_handle_command(WindowContext* c, int item_id);
-static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    WindowContext* c = nullptr;
-    for (auto& pair : g_contexts) {
-        if (pair.second->wv && (HWND)webview_get_window((webview_t)pair.second->wv) == hwnd) {
-            c = pair.second;
-            break;
+static void invoke_callback_str(WindowContext* c, Value cb, const char* text) {
+    if (c && c->vm && !IS_NULL(cb)) {
+        djazairVM* vm = c->vm;
+        push(vm, cb);
+        push(vm, djazair_str(vm, text ? text : ""));
+        int savedFC = vm->frameCount;
+        if (!callValue(vm, cb, 1)) {
+            if (!vm->exceptionCaught) { pop(vm); pop(vm); }
+            return;
+        }
+        if (vm->frameCount > savedFC) {
+            if (run(vm, savedFC) != DJAZAIR_OK) {
+                return;
+            }
+        }
+        if (vm->stackTop > vm->stack) {
+            pop(vm);
         }
     }
-    if (!c) return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+// ---------------------------------------------------------------------------
+// Platform Window Proc & Message Hooking (Windows)
+// ---------------------------------------------------------------------------
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+static HWND get_hwnd(webview::webview* wv) {
+    return (HWND)webview_get_window((webview_t)wv);
+}
+
+static void pump_windows_messages() {
+    MSG msg;
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+}
+
+static void menu_handle_command(WindowContext* c, int item_id);
+
+static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    WindowContext* c = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_ctx_mtx);
+        for (auto& pair : g_contexts) {
+            if (pair.second->wv && (HWND)webview_get_window((webview_t)pair.second->wv) == hwnd) {
+                c = pair.second;
+                break;
+            }
+        }
+    }
+    if (!c) return DefWindowProcW(hwnd, msg, wParam, lParam);
 
     switch (msg) {
         case WM_CLOSE:
             if (!IS_NULL(c->close_callback)) {
                 c->wv->dispatch([c]() {
-                    invoke_close_callback(c);
-                    if (c->wv) c->wv->terminate();
+                    invoke_callback_0(c, c->close_callback);
                 });
-                return 0;
+                return 0; // Managed by Djazair close handler
             }
             break;
 
@@ -217,7 +299,7 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             break;
 
         case WM_COMMAND:
-            if (lParam == 0) {  // Menu command
+            if (lParam == 0) {
                 menu_handle_command(c, (int)LOWORD(wParam));
             }
             break;
@@ -238,41 +320,25 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     }
 
     if (c->original_wndproc) {
-        return CallWindowProc(c->original_wndproc, hwnd, msg, wParam, lParam);
+        return CallWindowProcW(c->original_wndproc, hwnd, msg, wParam, lParam);
     }
-    return DefWindowProc(hwnd, msg, wParam, lParam);
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-static void hook_window_close(WindowContext* c) {
+static void hook_window_proc(WindowContext* c) {
     if (!c || !c->wv) return;
-    HWND hwnd = (HWND)webview_get_window((webview_t)c->wv);
+    HWND hwnd = get_hwnd(c->wv);
     if (!hwnd) return;
-    c->original_wndproc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)WebviewWndProc);
+    c->original_wndproc = (WNDPROC)SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)WebviewWndProc);
 }
 #else
-static void hook_window_close(WindowContext*) {}
+static void hook_window_proc(WindowContext*) {}
 #endif
 
-// -----------------------------------------------------
-// Helper: extract HWND from webview (Windows only)
-// -----------------------------------------------------
-#if defined(WEBVIEW_PLATFORM_WINDOWS)
-static HWND get_hwnd(webview::webview* wv) {
-    return (HWND)webview_get_window((webview_t)wv);
-}
+// ---------------------------------------------------------------------------
+// JSON Serialization for IPC Bridge
+// ---------------------------------------------------------------------------
 
-static void pump_windows_messages() {
-    MSG msg;
-    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
-}
-#endif
-
-// -----------------------------------------------------
-// JSON helpers for IPC bridge
-// -----------------------------------------------------
 static std::string json_escape_string(const std::string& raw) {
     std::string escaped;
     escaped.reserve(raw.size() + 2);
@@ -310,19 +376,20 @@ static std::string value_to_json_result(djazairVM *vm, Value value) {
     return result;
 }
 
-// -----------------------------------------------------
-// Macro: get window context from first arg (handle/id)
-// -----------------------------------------------------
 #define GET_WINDOW(idx) \
     int g_win_id = (int)AS_NUMBER(args[idx]); \
-    auto g_win_it = g_contexts.find(g_win_id); \
-    if (g_win_it == g_contexts.end()) return djazair_null(); \
-    WindowContext* wc = g_win_it->second; \
-    if (!wc->wv) return djazair_null()
+    WindowContext* wc = nullptr; \
+    { \
+        std::lock_guard<std::mutex> lock(g_ctx_mtx); \
+        auto g_win_it = g_contexts.find(g_win_id); \
+        if (g_win_it == g_contexts.end()) return djazair_null(); \
+        wc = g_win_it->second; \
+    } \
+    if (!wc || !wc->wv) return djazair_null()
 
-// ====================================================================
-// APP LIFECYCLE
-// ====================================================================
+// ===========================================================================
+// APP LIFECYCLE API
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeAppRun) {
     djazair_check_args(0, argCount);
@@ -351,12 +418,15 @@ extern "C" DJAZAIR_FUNC(nativeAppQuit) {
     for (auto* wv : all_wv) {
         if (wv) wv->terminate();
     }
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    PostQuitMessage(0);
+#endif
     return djazair_null();
 }
 
-// ====================================================================
-// WINDOW CREATION / DESTRUCTION
-// ====================================================================
+// ===========================================================================
+// WINDOW CREATION & LIFECYCLE
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     djazair_check_args(12, argCount);
@@ -378,7 +448,6 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     int max_h = (int)AS_NUMBER(args[10]);
     bool debug = AS_BOOL(args[11]);
 
-    g_last_vm = vm;
     auto c = new WindowContext();
     c->id = g_next_id++;
     c->vm = vm;
@@ -391,13 +460,11 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     }
 
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
-    // Drain pending WebView2 init messages
     pump_windows_messages();
-    // Show the window before any window ops to avoid deadlocks
     HWND hwnd_cr = get_hwnd(c->wv);
     if (hwnd_cr) {
-        SetWindowPos(hwnd_cr, NULL, 0, 0, width > 0 ? width : 640,
-                     height > 0 ? height : 480,
+        SetWindowPos(hwnd_cr, NULL, 0, 0, width > 0 ? width : 800,
+                     height > 0 ? height : 600,
                      SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW);
         UpdateWindow(hwnd_cr);
         pump_windows_messages();
@@ -407,13 +474,14 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     c->wv->set_title(title);
     c->wv->set_size(width, height, WEBVIEW_HINT_NONE);
     if (!resizable) c->wv->set_size(width, height, WEBVIEW_HINT_FIXED);
+
     if (frameless) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         HWND hwnd = get_hwnd(c->wv);
         if (hwnd) {
-            LONG style = GetWindowLong(hwnd, GWL_STYLE);
+            LONG style = GetWindowLongW(hwnd, GWL_STYLE);
             style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-            SetWindowLong(hwnd, GWL_STYLE, style);
+            SetWindowLongW(hwnd, GWL_STYLE, style);
             SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
             pump_windows_messages();
         }
@@ -431,22 +499,9 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
         g_contexts[c->id] = c;
     }
-    hook_window_close(c);
+    hook_window_proc(c);
 
     return djazair_int(c->id);
-}
-
-static void menu_cleanup(WindowContext* c) {
-    if (!c || !c->vm) return;
-    std::lock_guard<std::mutex> lock(g_menu_mtx);
-    (void)lock;
-    for (auto it = g_menu_callbacks.begin(); it != g_menu_callbacks.end(); ) {
-        if (!IS_NULL(it->second)) {
-            std::string k = gc_key("__wv_mcb", it->first);
-            gc_unprotect(c->vm, k.c_str(), (int)k.length());
-        }
-        it = g_menu_callbacks.erase(it);
-    }
 }
 
 extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
@@ -459,17 +514,22 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
         if (it == g_contexts.end()) return djazair_null();
         c = it->second;
     }
+
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     pump_windows_messages();
 #endif
-    if (c->wv) { delete c->wv; c->wv = nullptr; }
+
+    if (c->wv) {
+        c->wv->terminate();
+        delete c->wv;
+        c->wv = nullptr;
+    }
+
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
-    if (c->tray_active) { Shell_NotifyIconA(NIM_DELETE, &c->nid); c->tray_active = false; }
-    if (c->tray_hwnd) { DestroyWindow(c->tray_hwnd); c->tray_hwnd = nullptr; }
-    if (c->tray_icon) { DestroyIcon(c->tray_icon); c->tray_icon = nullptr; }
     if (c->last_icon_small) { DestroyIcon(c->last_icon_small); c->last_icon_small = nullptr; }
-    if (c->last_icon_big) { DestroyIcon(c->last_icon_big); c->last_icon_big = nullptr; }
+    if (c->last_icon_big)   { DestroyIcon(c->last_icon_big);   c->last_icon_big   = nullptr; }
 #endif
+
     auto gc_cleanup = [&](const char* prefix, Value val) {
         if (!IS_NULL(val)) {
             std::string k = gc_key(prefix, c->id);
@@ -488,18 +548,41 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
     gc_cleanup("__wv_nav", c->navigate_callback);
     gc_cleanup("__wv_title", c->title_callback);
     gc_cleanup("__wv_load", c->load_callback);
-    menu_cleanup(c);
+
+    // Clean up menu items owned by this window
+    {
+        std::lock_guard<std::mutex> lock(g_menu_mtx);
+        for (int item_id : c->menu_items) {
+            auto it = g_menu_callbacks.find(item_id);
+            if (it != g_menu_callbacks.end()) {
+                std::string k = gc_key("__wv_mcb", item_id);
+                gc_unprotect(c->vm, k.c_str(), (int)k.length());
+                g_menu_callbacks.erase(it);
+            }
+        }
+    }
+
     delete c;
+
+    bool is_empty = false;
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
         g_contexts.erase(id);
+        is_empty = g_contexts.empty();
     }
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    if (is_empty) {
+        PostQuitMessage(0);
+    }
+#endif
+
     return djazair_null();
 }
 
-// ====================================================================
-// WINDOW OPERATIONS
-// ====================================================================
+// ===========================================================================
+// WINDOW GEOMETRY & STATE
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeWindowSetVirtualHostMapping) {
     djazair_check_args(3, argCount);
@@ -508,7 +591,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetVirtualHostMapping) {
     djazair_check_str(2);
     GET_WINDOW(0);
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
-    ICoreWebView2Controller* controller = (ICoreWebView2Controller*)webview_get_native_handle((webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+    auto* controller = (ICoreWebView2Controller*)webview_get_native_handle((webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
     if (controller) {
         ICoreWebView2* webview = nullptr;
         HRESULT hr = controller->get_CoreWebView2(&webview);
@@ -784,10 +867,10 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetResizable) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         pump_windows_messages();
         HWND hwnd = get_hwnd(wc->wv);
-        LONG style = GetWindowLong(hwnd, GWL_STYLE);
+        LONG style = GetWindowLongW(hwnd, GWL_STYLE);
         if (AS_BOOL(args[1])) style |= WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
         else style &= ~(WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-        SetWindowLong(hwnd, GWL_STYLE, style);
+        SetWindowLongW(hwnd, GWL_STYLE, style);
         SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 #elif defined(WEBVIEW_PLATFORM_LINUX)
         gtk_window_set_resizable(GTK_WINDOW(webview_get_window((webview_t)wc->wv)), AS_BOOL(args[1]) ? TRUE : FALSE);
@@ -807,23 +890,6 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetMinSize) {
     return djazair_null();
 }
 
-extern "C" DJAZAIR_FUNC(nativeWindowSetDarkMode) {
-    djazair_check_args(2, argCount);
-    GET_WINDOW(0);
-    if (djazair_is_bool(args[1])) {
-#if defined(WEBVIEW_PLATFORM_WINDOWS)
-        HWND hwnd = get_hwnd(wc->wv);
-        BOOL is_dark = AS_BOOL(args[1]) ? TRUE : FALSE;
-        DwmSetWindowAttribute(hwnd, 20, &is_dark, sizeof(is_dark));
-        DwmSetWindowAttribute(hwnd, 19, &is_dark, sizeof(is_dark));
-        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        RedrawWindow(hwnd, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
-#endif
-    }
-    return djazair_null();
-}
-
 extern "C" DJAZAIR_FUNC(nativeWindowSetMaxSize) {
     djazair_check_args(3, argCount);
     GET_WINDOW(0);
@@ -837,7 +903,45 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetMaxSize) {
 
 extern "C" DJAZAIR_FUNC(nativeWindowSetBackgroundColor) {
     djazair_check_args(5, argCount);
+    djazair_check_num(0);
+    djazair_check_num(1);
+    djazair_check_num(2);
+    djazair_check_num(3);
+    djazair_check_num(4);
     GET_WINDOW(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    auto* ctrl = (ICoreWebView2Controller*)webview_get_native_handle(
+        (webview_t)wc->wv, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+    if (ctrl) {
+        ICoreWebView2Controller2* ctrl2 = nullptr;
+        static const IID local_IID_ICoreWebView2Controller2 = {0xc979903e,0xd4ca,0x4228,{0x92,0xeb,0x47,0xee,0x3f,0xa9,0x6e,0xab}};
+        if (SUCCEEDED(ctrl->QueryInterface(local_IID_ICoreWebView2Controller2, (void**)&ctrl2)) && ctrl2) {
+            COREWEBVIEW2_COLOR color;
+            color.R = (BYTE)AS_NUMBER(args[1]);
+            color.G = (BYTE)AS_NUMBER(args[2]);
+            color.B = (BYTE)AS_NUMBER(args[3]);
+            color.A = (BYTE)AS_NUMBER(args[4]);
+            ctrl2->put_DefaultBackgroundColor(color);
+            ctrl2->Release();
+        }
+    }
+#endif
+    return djazair_null();
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetDarkMode) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    if (djazair_is_bool(args[1])) {
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+        HWND hwnd = get_hwnd(wc->wv);
+        BOOL is_dark = AS_BOOL(args[1]) ? TRUE : FALSE;
+        DwmSetWindowAttribute(hwnd, 20, &is_dark, sizeof(is_dark));
+        DwmSetWindowAttribute(hwnd, 19, &is_dark, sizeof(is_dark));
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        RedrawWindow(hwnd, NULL, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
+#endif
+    }
     return djazair_null();
 }
 
@@ -851,13 +955,13 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetFullscreen) {
         if (fs && !wc->is_fullscreen) {
             wc->saved_placement.length = sizeof(WINDOWPLACEMENT);
             GetWindowPlacement(hwnd, &wc->saved_placement);
-            wc->saved_style = GetWindowLong(hwnd, GWL_STYLE);
-            wc->saved_exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            wc->saved_style = GetWindowLongW(hwnd, GWL_STYLE);
+            wc->saved_exstyle = GetWindowLongW(hwnd, GWL_EXSTYLE);
             HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
             MONITORINFO mi = { sizeof(MONITORINFO) };
-            GetMonitorInfo(monitor, &mi);
-            SetWindowLong(hwnd, GWL_STYLE, wc->saved_style & ~(WS_CAPTION | WS_THICKFRAME));
-            SetWindowLong(hwnd, GWL_EXSTYLE, wc->saved_exstyle & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE));
+            GetMonitorInfoW(monitor, &mi);
+            SetWindowLongW(hwnd, GWL_STYLE, wc->saved_style & ~(WS_CAPTION | WS_THICKFRAME));
+            SetWindowLongW(hwnd, GWL_EXSTYLE, wc->saved_exstyle & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE));
             SetWindowPos(hwnd, HWND_TOP,
                 mi.rcMonitor.left, mi.rcMonitor.top,
                 mi.rcMonitor.right - mi.rcMonitor.left,
@@ -865,11 +969,10 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetFullscreen) {
                 SWP_FRAMECHANGED | SWP_SHOWWINDOW);
             wc->is_fullscreen = true;
         } else if (!fs && wc->is_fullscreen) {
-            SetWindowLong(hwnd, GWL_STYLE, wc->saved_style);
-            SetWindowLong(hwnd, GWL_EXSTYLE, wc->saved_exstyle);
+            SetWindowLongW(hwnd, GWL_STYLE, wc->saved_style);
+            SetWindowLongW(hwnd, GWL_EXSTYLE, wc->saved_exstyle);
             SetWindowPlacement(hwnd, &wc->saved_placement);
-            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
             wc->is_fullscreen = false;
         }
 #elif defined(WEBVIEW_PLATFORM_LINUX)
@@ -927,10 +1030,10 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetIcon) {
     HICON hIcon = (HICON)LoadImageA(NULL, AS_CSTRING(args[1]), IMAGE_ICON,
         0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
     if (hIcon) {
-        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
         if (wc->last_icon_small) DestroyIcon(wc->last_icon_small);
-        if (wc->last_icon_big) DestroyIcon(wc->last_icon_big);
+        if (wc->last_icon_big)   DestroyIcon(wc->last_icon_big);
         wc->last_icon_small = hIcon;
         wc->last_icon_big = hIcon;
     }
@@ -944,7 +1047,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetScreenSize) {
     int w = GetSystemMetrics(SM_CXSCREEN);
     int h = GetSystemMetrics(SM_CYSCREEN);
 #else
-    int w = 1024, h = 768;
+    int w = 1920, h = 1080;
 #endif
     Value arr = djazair_new_array(vm);
     djazair_array_push(vm, arr, djazair_int(w));
@@ -956,11 +1059,11 @@ extern "C" DJAZAIR_FUNC(nativeWindowGetAvailableSize) {
     djazair_check_args(0, argCount);
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
     RECT r;
-    SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0);
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &r, 0);
     int w = r.right - r.left;
     int h = r.bottom - r.top;
 #else
-    int w = 1024, h = 768;
+    int w = 1920, h = 1040;
 #endif
     Value arr = djazair_new_array(vm);
     djazair_array_push(vm, arr, djazair_int(w));
@@ -975,7 +1078,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetOpacity) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         HWND hwnd = get_hwnd(wc->wv);
         BYTE alpha = (BYTE)(AS_NUMBER(args[1]) * 255.0);
-        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        SetWindowLongW(hwnd, GWL_EXSTYLE, GetWindowLongW(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
         SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
 #endif
     }
@@ -1057,9 +1160,9 @@ extern "C" DJAZAIR_FUNC(nativeWindowPrint) {
     return djazair_null();
 }
 
-// ====================================================================
-// WEBVIEW OPERATIONS
-// ====================================================================
+// ===========================================================================
+// WEBVIEW ENGINE OPERATIONS
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeWindowNavigate) {
     djazair_check_args(2, argCount);
@@ -1069,6 +1172,10 @@ extern "C" DJAZAIR_FUNC(nativeWindowNavigate) {
         wc->has_navigated = true;
         wc->can_go_forward = false;
         wc->wv->navigate(wc->current_url.c_str());
+        std::string cur_url = wc->current_url;
+        wc->wv->dispatch([wc, cur_url]() {
+            invoke_callback_str(wc, wc->navigate_callback, cur_url.c_str());
+        });
     }
     return djazair_null();
 }
@@ -1080,6 +1187,9 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetHtml) {
         wc->current_url = "about:blank";
         wc->has_navigated = true;
         wc->wv->set_html(AS_CSTRING(args[1]));
+        wc->wv->dispatch([wc]() {
+            invoke_callback_0(wc, wc->load_callback);
+        });
     }
     return djazair_null();
 }
@@ -1209,7 +1319,6 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetContextMenu) {
             }
         }
 #elif defined(WEBVIEW_PLATFORM_LINUX)
-        // WebKitGTK: prevent/allow context menu via JS injection
         if (!AS_BOOL(args[1])) {
             wc->wv->eval(
                 "document.addEventListener('contextmenu',function(e){"
@@ -1224,25 +1333,22 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetContextMenu) {
     return djazair_null();
 }
 
-// ====================================================================
-// CALLBACK SETTERS
-// ====================================================================
-
-extern "C" DJAZAIR_FUNC(nativeWindowSetCloseCallback) {
-    djazair_check_args(2, argCount);
-    GET_WINDOW(0);
-    std::string k = gc_key("__wv_close", wc->id);
-    if (!IS_NULL(wc->close_callback)) gc_unprotect(wc->vm, k.c_str(), (int)k.length());
-    wc->close_callback = args[1];
-    if (!IS_NULL(args[1])) gc_protect(vm, k.c_str(), (int)k.length(), args[1]);
-    return djazair_null();
-}
+// ===========================================================================
+// CALLBACK REGISTRATION
+// ===========================================================================
 
 static void set_callback(WindowContext* wc, djazairVM* vm, const char* prefix, Value& field, Value cb) {
     std::string k = gc_key(prefix, wc->id);
     if (!IS_NULL(field)) gc_unprotect(wc->vm, k.c_str(), (int)k.length());
     field = cb;
     if (!IS_NULL(cb)) gc_protect(vm, k.c_str(), (int)k.length(), cb);
+}
+
+extern "C" DJAZAIR_FUNC(nativeWindowSetCloseCallback) {
+    djazair_check_args(2, argCount);
+    GET_WINDOW(0);
+    set_callback(wc, vm, "__wv_close", wc->close_callback, args[1]);
+    return djazair_null();
 }
 
 extern "C" DJAZAIR_FUNC(nativeWindowSetDispatcher) {
@@ -1329,44 +1435,54 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetLoadCallback) {
     return djazair_null();
 }
 
-// ====================================================================
-// IPC BIND (JS bridge entry)
-// ====================================================================
+// ===========================================================================
+// IPC BIDIRECTIONAL BIND
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeWindowBind) {
     djazair_check_args(3, argCount);
     GET_WINDOW(0);
     if (!djazair_is_string(args[1])) return djazair_null();
     std::string name(AS_CSTRING(args[1]));
-    Value callback = args[2];
     int captured_id = wc->id;
 
     wc->wv->bind(name, [captured_id, vm, name](const std::string& seq, const std::string& req, void*) {
-        auto it = g_contexts.find(captured_id);
-        if (it == g_contexts.end() || !it->second->wv) { return; }
-        WindowContext* wc2 = it->second;
+        WindowContext* wc2 = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(g_ctx_mtx);
+            auto it = g_contexts.find(captured_id);
+            if (it == g_contexts.end() || !it->second->wv) return;
+            wc2 = it->second;
+        }
+
         if (IS_NULL(wc2->dispatcher)) {
             wc2->wv->resolve(seq, 0, "null");
             return;
         }
+
         push(vm, wc2->dispatcher);
         ObjString* name_arg = copyString(vm, name.c_str(), (int)name.length());
         push(vm, OBJ_VAL(name_arg));
         ObjString* req_arg = copyString(vm, req.c_str(), (int)req.length());
         push(vm, OBJ_VAL(req_arg));
-        Value *savedStackTop = vm->stackTop;
-        int targetFrame = vm->frameCount;
+
+        int savedFC = vm->frameCount;
         std::string result_str = "null";
         if (callValue(vm, wc2->dispatcher, 2)) {
-            DjazairResult res = run(vm, targetFrame);
-            if (res == DJAZAIR_OK) {
-                Value ret = peek(vm, 0);
-                result_str = value_to_json_result(vm, ret);
+            if (vm->frameCount > savedFC) {
+                DjazairResult res = run(vm, savedFC);
+                if (res == DJAZAIR_OK) {
+                    Value ret = pop(vm);
+                    result_str = value_to_json_result(vm, ret);
+                }
             }
+        } else {
+            if (!vm->exceptionCaught) { pop(vm); pop(vm); pop(vm); }
         }
-        vm->stackTop = savedStackTop;
+
         wc2->wv->resolve(seq, 0, result_str);
     }, nullptr);
+
     return djazair_null();
 }
 
@@ -1377,9 +1493,9 @@ extern "C" DJAZAIR_FUNC(nativeWindowUnbind) {
     return djazair_null();
 }
 
-// ====================================================================
-// DIALOGS
-// ====================================================================
+// ===========================================================================
+// NATIVE DIALOGS
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeDialogMessage) {
     djazair_check_args(7, argCount);
@@ -1477,11 +1593,9 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFile) {
         if (!multi) {
             return djazair_str(vm, fileName);
         }
-        // Parse multi-select result: directory\0file1\0file2\0\0
         std::string dir(fileName);
         char* p = fileName + dir.length() + 1;
         if (*p == '\0') {
-            // Only one file selected
             return djazair_str(vm, fileName);
         }
         Value arr = djazair_new_array(vm);
@@ -1544,10 +1658,7 @@ extern "C" DJAZAIR_FUNC(nativeDialogSaveFile) {
         filterStr += '\0';
     }
     if (filterStr.empty()) {
-        filterStr = "All Files";
-        filterStr += '\0';
-        filterStr += "*.*";
-        filterStr += '\0';
+        filterStr = "All Files\0*.*\0\0";
     } else {
         filterStr += '\0';
     }
@@ -1604,7 +1715,6 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFolder) {
         return djazair_null();
     }
 
-    // Fallback to classic dialog
     BROWSEINFOA bi = {0};
     bi.lpszTitle = title;
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
@@ -1646,11 +1756,23 @@ extern "C" DJAZAIR_FUNC(nativeDialogPickColor) {
     return djazair_null();
 }
 
-// ====================================================================
-// MENU (Windows HMENU implementation)
-// ====================================================================
+// ===========================================================================
+// MENUS (Native Win32 HMENU Implementation)
+// ===========================================================================
 
-
+static void menu_handle_command(WindowContext* c, int item_id) {
+    Value cb = NULL_VAL;
+    {
+        std::lock_guard<std::mutex> lock(g_menu_mtx);
+        auto it = g_menu_callbacks.find(item_id);
+        if (it != g_menu_callbacks.end()) cb = it->second;
+    }
+    if (!IS_NULL(cb) && c && c->wv) {
+        c->wv->dispatch([c, cb]() {
+            invoke_callback_0(c, cb);
+        });
+    }
+}
 
 extern "C" DJAZAIR_FUNC(nativeMenuCreate) {
     djazair_check_args(1, argCount);
@@ -1698,7 +1820,6 @@ extern "C" DJAZAIR_FUNC(nativeMenuAddItem) {
         std::string k = gc_key("__wv_mcb", item_id);
         gc_protect(vm, k.c_str(), (int)k.length(), cb);
         std::lock_guard<std::mutex> lock(g_menu_mtx);
-        (void)lock;
         g_menu_callbacks[item_id] = cb;
     }
 #endif
@@ -1707,23 +1828,7 @@ extern "C" DJAZAIR_FUNC(nativeMenuAddItem) {
 
 extern "C" DJAZAIR_FUNC(nativeMenuSetCallback) {
     djazair_check_args(3, argCount);
-    // Stub — callbacks set during menuAddItem now
     return djazair_null();
-}
-
-static void menu_handle_command(WindowContext* c, int item_id) {
-    Value cb = NULL_VAL;
-    {
-        std::lock_guard<std::mutex> lock(g_menu_mtx);
-        (void)lock;
-        auto it = g_menu_callbacks.find(item_id);
-        if (it != g_menu_callbacks.end()) cb = it->second;
-    }
-    if (!IS_NULL(cb) && c && c->wv) {
-        c->wv->dispatch([c, cb]() {
-            invoke_callback_0(c, cb);
-        });
-    }
 }
 
 extern "C" DJAZAIR_FUNC(nativeMenuPopup) {
@@ -1735,7 +1840,6 @@ extern "C" DJAZAIR_FUNC(nativeMenuPopup) {
     HWND hwnd = nullptr;
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
-        (void)lock;
         auto it = g_contexts.find(win_id);
         if (it != g_contexts.end() && it->second->wv) {
             hwnd = get_hwnd(it->second->wv);
@@ -1744,15 +1848,17 @@ extern "C" DJAZAIR_FUNC(nativeMenuPopup) {
     if (hwnd && hmenu) {
         POINT pt;
         GetCursorPos(&pt);
+        SetForegroundWindow(hwnd);
         TrackPopupMenu(hmenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
+        PostMessageW(hwnd, WM_NULL, 0, 0);
     }
 #endif
     return djazair_null();
 }
 
-// ====================================================================
+// ===========================================================================
 // NOTIFICATIONS
-// ====================================================================
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeNotificationShow) {
     djazair_check_args(6, argCount);
@@ -1762,50 +1868,218 @@ extern "C" DJAZAIR_FUNC(nativeNotificationShow) {
 #if defined(_WIN32)
     NOTIFYICONDATAA nid = {0};
     nid.cbSize = sizeof(NOTIFYICONDATAA);
-    nid.uFlags = NIF_INFO | NIF_GUID;
+    HWND hwnd = NULL;
+    {
+        std::lock_guard<std::mutex> lock(g_ctx_mtx);
+        if (!g_contexts.empty()) {
+            hwnd = get_hwnd(g_contexts.begin()->second->wv);
+        }
+    }
+    nid.hWnd = hwnd;
+    nid.uID = 8888;
+    nid.uFlags = NIF_INFO | NIF_ICON;
     nid.dwInfoFlags = NIIF_INFO;
-    nid.uTimeout = (UINT)AS_NUMBER(args[5]);
+    if (!AS_BOOL(args[3])) nid.dwInfoFlags |= NIIF_NOSOUND;
+    nid.uTimeout = (UINT)(AS_NUMBER(args[5]) * 1000);
+    nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+
     strncpy(nid.szInfoTitle, AS_CSTRING(args[0]), sizeof(nid.szInfoTitle) - 1);
-    nid.szInfoTitle[sizeof(nid.szInfoTitle) - 1] = '\0';
     strncpy(nid.szInfo, AS_CSTRING(args[1]), sizeof(nid.szInfo) - 1);
-    nid.szInfo[sizeof(nid.szInfo) - 1] = '\0';
+
     Shell_NotifyIconA(NIM_ADD, &nid);
-    Shell_NotifyIconA(NIM_DELETE, &nid);
+    Shell_NotifyIconA(NIM_MODIFY, &nid);
 #endif
     return djazair_null();
 }
 
-// ====================================================================
-// TRAY
-// ====================================================================
+// ===========================================================================
+// SYSTEM TRAY (Active Win32 Implementation)
+// ===========================================================================
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+static LRESULT CALLBACK TrayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_TRAYICON_MSG) {
+        if (lParam == WM_RBUTTONUP || lParam == WM_CONTEXTMENU) {
+            int tray_id = (int)wParam;
+            TrayContext* tc = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(g_tray_mtx);
+                auto it = g_trays.find(tray_id);
+                if (it != g_trays.end()) tc = it->second;
+            }
+            if (tc && tc->hmenu) {
+                POINT pt;
+                GetCursorPos(&pt);
+                SetForegroundWindow(hwnd);
+                TrackPopupMenu(tc->hmenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
+                PostMessageW(hwnd, WM_NULL, 0, 0);
+            }
+        }
+        return 0;
+    } else if (msg == WM_COMMAND) {
+        int item_id = (int)LOWORD(wParam);
+        WindowContext* active_ctx = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(g_ctx_mtx);
+            if (!g_contexts.empty()) active_ctx = g_contexts.begin()->second;
+        }
+        if (active_ctx) {
+            menu_handle_command(active_ctx, item_id);
+        }
+        return 0;
+    }
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+#endif
 
 extern "C" DJAZAIR_FUNC(nativeTrayCreate) {
     djazair_check_args(2, argCount);
     djazair_check_str(0); djazair_check_str(1);
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    auto tc = new TrayContext();
+    tc->id = g_next_tray_id++;
+    tc->hmenu = NULL;
+    tc->hicon = NULL;
+    tc->active = false;
+    tc->tooltip = AS_CSTRING(args[0]);
+
+    WNDCLASSEXW wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc = TrayWndProc;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpszClassName = L"DjazairWebviewTrayClass";
+    RegisterClassExW(&wc);
+
+    tc->hwnd = CreateWindowExW(0, L"DjazairWebviewTrayClass", L"DjazairTrayMsgWin",
+        0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+
+    const char* iconPath = AS_CSTRING(args[1]);
+    if (iconPath && strlen(iconPath) > 0) {
+        tc->hicon = (HICON)LoadImageA(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    }
+    if (!tc->hicon) {
+        tc->hicon = LoadIcon(NULL, IDI_APPLICATION);
+    }
+
+    NOTIFYICONDATAA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATAA);
+    nid.hWnd = tc->hwnd;
+    nid.uID = tc->id;
+    nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    nid.uCallbackMessage = WM_TRAYICON_MSG;
+    nid.hIcon = tc->hicon;
+    strncpy(nid.szTip, tc->tooltip.c_str(), sizeof(nid.szTip) - 1);
+
+    if (Shell_NotifyIconA(NIM_ADD, &nid)) {
+        tc->active = true;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(g_tray_mtx);
+        g_trays[tc->id] = tc;
+    }
+    return djazair_int(tc->id);
+#else
     return djazair_int(1);
+#endif
 }
 
 extern "C" DJAZAIR_FUNC(nativeTraySetIcon) {
     djazair_check_args(2, argCount);
     djazair_check_num(0); djazair_check_str(1);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int tray_id = (int)AS_NUMBER(args[0]);
+    TrayContext* tc = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_tray_mtx);
+        auto it = g_trays.find(tray_id);
+        if (it != g_trays.end()) tc = it->second;
+    }
+    if (tc && tc->active) {
+        HICON newIcon = (HICON)LoadImageA(NULL, AS_CSTRING(args[1]), IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        if (newIcon) {
+            tc->hicon = newIcon;
+            NOTIFYICONDATAA nid = {0};
+            nid.cbSize = sizeof(NOTIFYICONDATAA);
+            nid.hWnd = tc->hwnd;
+            nid.uID = tc->id;
+            nid.uFlags = NIF_ICON;
+            nid.hIcon = tc->hicon;
+            Shell_NotifyIconA(NIM_MODIFY, &nid);
+        }
+    }
+#endif
     return djazair_null();
 }
 
 extern "C" DJAZAIR_FUNC(nativeTraySetMenu) {
     djazair_check_args(2, argCount);
     djazair_check_num(0); djazair_check_num(1);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int tray_id = (int)AS_NUMBER(args[0]);
+    HMENU hmenu = (HMENU)(intptr_t)AS_NUMBER(args[1]);
+    std::lock_guard<std::mutex> lock(g_tray_mtx);
+    auto it = g_trays.find(tray_id);
+    if (it != g_trays.end()) {
+        it->second->hmenu = hmenu;
+    }
+#endif
     return djazair_null();
 }
 
 extern "C" DJAZAIR_FUNC(nativeTraySetTooltip) {
     djazair_check_args(2, argCount);
     djazair_check_num(0); djazair_check_str(1);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int tray_id = (int)AS_NUMBER(args[0]);
+    TrayContext* tc = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_tray_mtx);
+        auto it = g_trays.find(tray_id);
+        if (it != g_trays.end()) tc = it->second;
+    }
+    if (tc && tc->active) {
+        tc->tooltip = AS_CSTRING(args[1]);
+        NOTIFYICONDATAA nid = {0};
+        nid.cbSize = sizeof(NOTIFYICONDATAA);
+        nid.hWnd = tc->hwnd;
+        nid.uID = tc->id;
+        nid.uFlags = NIF_TIP;
+        strncpy(nid.szTip, tc->tooltip.c_str(), sizeof(nid.szTip) - 1);
+        Shell_NotifyIconA(NIM_MODIFY, &nid);
+    }
+#endif
     return djazair_null();
 }
 
 extern "C" DJAZAIR_FUNC(nativeTrayDestroy) {
     djazair_check_args(1, argCount);
     djazair_check_num(0);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int tray_id = (int)AS_NUMBER(args[0]);
+    TrayContext* tc = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_tray_mtx);
+        auto it = g_trays.find(tray_id);
+        if (it != g_trays.end()) {
+            tc = it->second;
+            g_trays.erase(it);
+        }
+    }
+    if (tc) {
+        if (tc->active) {
+            NOTIFYICONDATAA nid = {0};
+            nid.cbSize = sizeof(NOTIFYICONDATAA);
+            nid.hWnd = tc->hwnd;
+            nid.uID = tc->id;
+            Shell_NotifyIconA(NIM_DELETE, &nid);
+        }
+        if (tc->hwnd) DestroyWindow(tc->hwnd);
+        if (tc->hicon) DestroyIcon(tc->hicon);
+        delete tc;
+    }
+#endif
     return djazair_null();
 }
 
@@ -1813,12 +2087,33 @@ extern "C" DJAZAIR_FUNC(nativeTrayShowBalloon) {
     djazair_check_args(4, argCount);
     djazair_check_num(0); djazair_check_str(1);
     djazair_check_str(2); djazair_check_num(3);
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    int tray_id = (int)AS_NUMBER(args[0]);
+    TrayContext* tc = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_tray_mtx);
+        auto it = g_trays.find(tray_id);
+        if (it != g_trays.end()) tc = it->second;
+    }
+    if (tc && tc->active) {
+        NOTIFYICONDATAA nid = {0};
+        nid.cbSize = sizeof(NOTIFYICONDATAA);
+        nid.hWnd = tc->hwnd;
+        nid.uID = tc->id;
+        nid.uFlags = NIF_INFO;
+        nid.dwInfoFlags = NIIF_INFO;
+        nid.uTimeout = (UINT)(AS_NUMBER(args[3]) * 1000);
+        strncpy(nid.szInfoTitle, AS_CSTRING(args[1]), sizeof(nid.szInfoTitle) - 1);
+        strncpy(nid.szInfo, AS_CSTRING(args[2]), sizeof(nid.szInfo) - 1);
+        Shell_NotifyIconA(NIM_MODIFY, &nid);
+    }
+#endif
     return djazair_null();
 }
 
-// ====================================================================
-// PROTOCOL (stubs)
-// ====================================================================
+// ===========================================================================
+// PROTOCOL SCHEMES
+// ===========================================================================
 
 extern "C" DJAZAIR_FUNC(nativeProtocolRegister) {
     djazair_check_args(2, argCount);
@@ -1832,71 +2127,71 @@ extern "C" DJAZAIR_FUNC(nativeProtocolUnregister) {
     return djazair_null();
 }
 
-// ====================================================================
-// MODULE REGISTRATION
-// ====================================================================
+// ===========================================================================
+// NATIVE METHOD TABLE & MODULE INITIALIZATION
+// ===========================================================================
 
 static NativeMethod webview_methods[] = {
     // App lifecycle
-    {"appRun",               nativeAppRun,               0},
-    {"appQuit",              nativeAppQuit,              0},
+    {"appRun",                   nativeAppRun,                   0},
+    {"appQuit",                  nativeAppQuit,                  0},
 
     // Window management
-    {"windowCreate",         nativeWindowCreate,         12},
-    {"windowDestroy",        nativeWindowDestroy,        1},
-    {"windowSetTitle",       nativeWindowSetTitle,       2},
-    {"windowGetTitle",       nativeWindowGetTitle,       1},
-    {"windowSetSize",        nativeWindowSetSize,        3},
-    {"windowGetSize",        nativeWindowGetSize,        1},
-    {"windowSetPosition",    nativeWindowSetPosition,    3},
-    {"windowGetPosition",    nativeWindowGetPosition,    1},
-    {"windowMinimize",       nativeWindowMinimize,       1},
-    {"windowMaximize",       nativeWindowMaximize,       1},
-    {"windowRestore",        nativeWindowRestore,        1},
-    {"windowHide",           nativeWindowHide,           1},
-    {"windowShow",           nativeWindowShow,           1},
-    {"windowFocus",          nativeWindowFocus,          1},
-    {"windowIsMaximized",    nativeWindowIsMaximized,    1},
-    {"windowIsMinimized",    nativeWindowIsMinimized,    1},
-    {"windowIsVisible",      nativeWindowIsVisible,      1},
-    {"windowSetResizable",   nativeWindowSetResizable,   2},
-    {"windowSetMinSize",     nativeWindowSetMinSize,     3},
-    {"windowSetMaxSize",     nativeWindowSetMaxSize,     3},
+    {"windowCreate",             nativeWindowCreate,             12},
+    {"windowDestroy",            nativeWindowDestroy,            1},
+    {"windowSetTitle",           nativeWindowSetTitle,           2},
+    {"windowGetTitle",           nativeWindowGetTitle,           1},
+    {"windowSetSize",            nativeWindowSetSize,            3},
+    {"windowGetSize",            nativeWindowGetSize,            1},
+    {"windowSetPosition",        nativeWindowSetPosition,        3},
+    {"windowGetPosition",        nativeWindowGetPosition,        1},
+    {"windowMinimize",           nativeWindowMinimize,           1},
+    {"windowMaximize",           nativeWindowMaximize,           1},
+    {"windowRestore",            nativeWindowRestore,            1},
+    {"windowHide",               nativeWindowHide,               1},
+    {"windowShow",               nativeWindowShow,               1},
+    {"windowFocus",              nativeWindowFocus,              1},
+    {"windowIsMaximized",        nativeWindowIsMaximized,        1},
+    {"windowIsMinimized",        nativeWindowIsMinimized,        1},
+    {"windowIsVisible",          nativeWindowIsVisible,          1},
+    {"windowSetResizable",       nativeWindowSetResizable,       2},
+    {"windowSetMinSize",         nativeWindowSetMinSize,         3},
+    {"windowSetMaxSize",         nativeWindowSetMaxSize,         3},
     {"windowSetBackgroundColor", nativeWindowSetBackgroundColor, 5},
-    {"windowSetDarkMode",      nativeWindowSetDarkMode,      2},
+    {"windowSetDarkMode",        nativeWindowSetDarkMode,        2},
     {"windowSetVirtualHostMapping", nativeWindowSetVirtualHostMapping, 3},
-    {"windowSetFullscreen",    nativeWindowSetFullscreen,    2},
-    {"windowIsFullscreen",     nativeWindowIsFullscreen,     1},
-    {"windowSetAlwaysOnTop",   nativeWindowSetAlwaysOnTop,   2},
-    {"windowCenter",           nativeWindowCenter,           1},
-    {"windowSetIcon",          nativeWindowSetIcon,          2},
-    {"windowGetScreenSize",    nativeWindowGetScreenSize,    0},
-    {"windowGetAvailableSize", nativeWindowGetAvailableSize, 0},
-    {"windowSetOpacity",       nativeWindowSetOpacity,       2},
-    {"windowSetUserAgent",     nativeWindowSetUserAgent,     2},
-    {"windowClearCache",       nativeWindowClearCache,       1},
-    {"windowClearCookies",     nativeWindowClearCookies,     1},
-    {"windowPrint",            nativeWindowPrint,            1},
+    {"windowSetFullscreen",      nativeWindowSetFullscreen,      2},
+    {"windowIsFullscreen",       nativeWindowIsFullscreen,       1},
+    {"windowSetAlwaysOnTop",     nativeWindowSetAlwaysOnTop,     2},
+    {"windowCenter",             nativeWindowCenter,             1},
+    {"windowSetIcon",            nativeWindowSetIcon,            2},
+    {"windowGetScreenSize",      nativeWindowGetScreenSize,      0},
+    {"windowGetAvailableSize",   nativeWindowGetAvailableSize,   0},
+    {"windowSetOpacity",         nativeWindowSetOpacity,         2},
+    {"windowSetUserAgent",       nativeWindowSetUserAgent,       2},
+    {"windowClearCache",         nativeWindowClearCache,         1},
+    {"windowClearCookies",       nativeWindowClearCookies,       1},
+    {"windowPrint",              nativeWindowPrint,              1},
 
-    // WebView
-    {"windowNavigate",       nativeWindowNavigate,       2},
-    {"windowSetHtml",        nativeWindowSetHtml,        2},
-    {"windowEval",           nativeWindowEval,           2},
-    {"windowInit",           nativeWindowInit,           2},
-    {"windowReload",         nativeWindowReload,         1},
-    {"windowGoBack",         nativeWindowGoBack,         1},
-    {"windowGoForward",      nativeWindowGoForward,      1},
-    {"windowCanGoBack",      nativeWindowCanGoBack,      1},
-    {"windowCanGoForward",   nativeWindowCanGoForward,   1},
-    {"windowSetZoomLevel",   nativeWindowSetZoomLevel,   2},
-    {"windowGetZoomLevel",   nativeWindowGetZoomLevel,   1},
-    {"windowOpenDevTools",   nativeWindowOpenDevTools,   1},
-    {"windowGetUrl",         nativeWindowGetUrl,         1},
-    {"windowSetContextMenu", nativeWindowSetContextMenu, 2},
-    {"windowBind",           nativeWindowBind,           3},
-    {"windowUnbind",         nativeWindowUnbind,         2},
+    // WebView Core
+    {"windowNavigate",           nativeWindowNavigate,           2},
+    {"windowSetHtml",            nativeWindowSetHtml,            2},
+    {"windowEval",               nativeWindowEval,               2},
+    {"windowInit",               nativeWindowInit,               2},
+    {"windowReload",             nativeWindowReload,             1},
+    {"windowGoBack",             nativeWindowGoBack,             1},
+    {"windowGoForward",          nativeWindowGoForward,          1},
+    {"windowCanGoBack",          nativeWindowCanGoBack,          1},
+    {"windowCanGoForward",       nativeWindowCanGoForward,       1},
+    {"windowSetZoomLevel",       nativeWindowSetZoomLevel,       2},
+    {"windowGetZoomLevel",       nativeWindowGetZoomLevel,       1},
+    {"windowOpenDevTools",       nativeWindowOpenDevTools,       1},
+    {"windowGetUrl",             nativeWindowGetUrl,             1},
+    {"windowSetContextMenu",     nativeWindowSetContextMenu,     2},
+    {"windowBind",               nativeWindowBind,               3},
+    {"windowUnbind",             nativeWindowUnbind,             2},
 
-    // Callbacks
+    // Event Callbacks
     {"windowSetCloseCallback",   nativeWindowSetCloseCallback,   2},
     {"windowSetDispatcher",      nativeWindowSetDispatcher,      2},
     {"windowSetErrorCallback",   nativeWindowSetErrorCallback,   2},
@@ -1912,34 +2207,34 @@ static NativeMethod webview_methods[] = {
     {"windowSetLoadCallback",    nativeWindowSetLoadCallback,    2},
 
     // Dialogs
-    {"dialogMessage",        nativeDialogMessage,        7},
-    {"dialogOpenFile",       nativeDialogOpenFile,       5},
-    {"dialogSaveFile",       nativeDialogSaveFile,       3},
-    {"dialogOpenFolder",     nativeDialogOpenFolder,     2},
-    {"dialogPickColor",      nativeDialogPickColor,      1},
+    {"dialogMessage",            nativeDialogMessage,            7},
+    {"dialogOpenFile",           nativeDialogOpenFile,           5},
+    {"dialogSaveFile",           nativeDialogSaveFile,           3},
+    {"dialogOpenFolder",         nativeDialogOpenFolder,         2},
+    {"dialogPickColor",          nativeDialogPickColor,          1},
 
-    // Menu
-    {"menuCreate",           nativeMenuCreate,           1},
-    {"menuCreateSubmenu",    nativeMenuCreateSubmenu,    2},
-    {"menuAddSeparator",     nativeMenuAddSeparator,     1},
-    {"menuAddItem",          nativeMenuAddItem,          3},
-    {"menuSetCallback",      nativeMenuSetCallback,      3},
-    {"menuPopup",            nativeMenuPopup,            2},
+    // Menus
+    {"menuCreate",               nativeMenuCreate,               1},
+    {"menuCreateSubmenu",        nativeMenuCreateSubmenu,        2},
+    {"menuAddSeparator",         nativeMenuAddSeparator,         1},
+    {"menuAddItem",              nativeMenuAddItem,              3},
+    {"menuSetCallback",          nativeMenuSetCallback,          3},
+    {"menuPopup",                nativeMenuPopup,                2},
 
     // Notifications
-    {"notificationShow",     nativeNotificationShow,     6},
+    {"notificationShow",         nativeNotificationShow,         6},
 
-    // Tray
-    {"trayCreate",           nativeTrayCreate,           2},
-    {"traySetIcon",          nativeTraySetIcon,          2},
-    {"traySetMenu",          nativeTraySetMenu,          2},
-    {"traySetTooltip",       nativeTraySetTooltip,       2},
-    {"trayDestroy",          nativeTrayDestroy,          1},
-    {"trayShowBalloon",      nativeTrayShowBalloon,      4},
+    // System Tray
+    {"trayCreate",               nativeTrayCreate,               2},
+    {"traySetIcon",              nativeTraySetIcon,              2},
+    {"traySetMenu",              nativeTraySetMenu,              2},
+    {"traySetTooltip",           nativeTraySetTooltip,           2},
+    {"trayDestroy",              nativeTrayDestroy,              1},
+    {"trayShowBalloon",          nativeTrayShowBalloon,          4},
 
-    // Protocol
-    {"protocolRegister",     nativeProtocolRegister,     2},
-    {"protocolUnregister",   nativeProtocolUnregister,   1},
+    // Protocol Schemes
+    {"protocolRegister",         nativeProtocolRegister,         2},
+    {"protocolUnregister",       nativeProtocolUnregister,       1},
 
     {NULL, NULL, 0}
 };
