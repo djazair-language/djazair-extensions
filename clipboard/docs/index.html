@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Djazair Clipboard Extension | Official Documentation &amp; Interactive Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="docs.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="top-header">
+    <a href="#overview" class="logo-area">
+      <div class="logo-icon"><i class="fas fa-clipboard-check"></i></div>
+      <div class="logo-text">
+        <h1>Djazair <span>Clipboard</span></h1>
+        <span>Official Native Extension</span>
+      </div>
+    </a>
+
+    <div class="header-center">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="apiSearch" class="search-input" placeholder="Search APIs (e.g., copy, paste, sequenceNumber, formats, setText)..." autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <span class="badge-version">v0.2.0 Production</span>
+      <a href="#playground" class="btn-header"><i class="fas fa-play"></i> Playground</a>
+      <a href="https://github.com/djazair-language/djazair-extensions" target="_blank" class="btn-header"><i class="fab fa-github"></i> GitHub</a>
+      <button class="btn-header" id="themeToggleBtn" title="Toggle Dark/Light Mode"><i class="fas fa-sun"></i></button>
+      <button class="btn-header" id="mobileMenuBtn" title="Toggle Navigation"><i class="fas fa-bars"></i></button>
+    </div>
+  </header>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-compass"></i> Getting Started</div>
+      <ul class="nav-links">
+        <li><a href="#overview" class="nav-item active"><span>Overview &amp; Features</span></a></li>
+        <li><a href="#installation" class="nav-item"><span>Installation &amp; Build</span></a></li>
+        <li><a href="#quickstart" class="nav-item"><span>Quick Start Guide</span></a></li>
+        <li><a href="#playground" class="nav-item"><span>Live Simulator</span> <span class="nav-tag">Interactive</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-layer-group"></i> Core API</div>
+      <ul class="nav-links">
+        <li><a href="#method-copy" class="nav-item"><span>copy(text)</span></a></li>
+        <li><a href="#method-paste" class="nav-item"><span>paste()</span></a></li>
+        <li><a href="#method-clear" class="nav-item"><span>clear()</span></a></li>
+        <li><a href="#method-has" class="nav-item"><span>has()</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-chart-line"></i> Advanced Introspection</div>
+      <ul class="nav-links">
+        <li><a href="#method-sequencenumber" class="nav-item"><span>sequenceNumber()</span> <span class="nav-tag">O(1)</span></a></li>
+        <li><a href="#method-formats" class="nav-item"><span>formats()</span> <span class="nav-tag">New</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-tags"></i> Semantic Aliases</div>
+      <ul class="nav-links">
+        <li><a href="#method-settext" class="nav-item"><span>setText(text)</span></a></li>
+        <li><a href="#method-gettext" class="nav-item"><span>getText()</span></a></li>
+        <li><a href="#method-hastext" class="nav-item"><span>hasText()</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-microchip"></i> System Internals</div>
+      <ul class="nav-links">
+        <li><a href="#architecture" class="nav-item"><span>Platform Architecture</span></a></li>
+        <li><a href="#win32-resilience" class="nav-item"><span>Win32 Retry Mechanism</span></a></li>
+        <li><a href="#linux-wayland-x11" class="nav-item"><span>Linux Wayland &amp; X11</span></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title"><i class="fas fa-code"></i> Practical Workflows</div>
+      <ul class="nav-links">
+        <li><a href="#workflow-monitor" class="nav-item"><span>Clipboard Change Monitor</span></a></li>
+        <li><a href="#workflow-unicode" class="nav-item"><span>Arabic &amp; Unicode Safety</span></a></li>
+        <li><a href="#workflow-defensive" class="nav-item"><span>Defensive Error Handling</span></a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+    <div id="contentArea">
+
+      <!-- Hero Section -->
+      <section id="overview" class="doc-section hero-section">
+        <div class="hero-badges">
+          <span class="badge-version"><i class="fas fa-shield-alt"></i> Production v0.2.0</span>
+          <span class="nav-tag"><i class="fab fa-windows"></i> Win32 Native</span>
+          <span class="nav-tag"><i class="fab fa-linux"></i> Wayland + X11</span>
+          <span class="nav-tag"><i class="fab fa-apple"></i> macOS</span>
+        </div>
+
+        <h1 class="hero-title">High-Resilience System Clipboard for Djazair</h1>
+        <p class="hero-lead">
+          The <strong>Djazair Clipboard Extension</strong> provides native, cross-platform clipboard integration engineered with transient lock retry loops, full binary-safe Unicode (UTF-8) translation, instant \(O(1)\) sequence change detection, and format introspection.
+        </p>
+
+        <div class="hero-grid">
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-sync-alt"></i></div>
+            <div>
+              <h4>Win32 Retry Loop</h4>
+              <p>10-attempt retry with backoff eliminates errors from transient OS locks.</p>
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-language"></i></div>
+            <div>
+              <h4>Full UTF-8 &amp; Unicode</h4>
+              <p>Flawless handling of Arabic, Asian glyphs, emojis, and multiline text.</p>
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+            <div>
+              <h4>\(O(1)\) Change Tracking</h4>
+              <p>Detect clipboard updates instantly via serial sequence numbers.</p>
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-list-ul"></i></div>
+            <div>
+              <h4>Format Introspection</h4>
+              <p>Query available clipboard formats (unicode, plain text, bitmaps, files).</p>
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-shield-virus"></i></div>
+            <div>
+              <h4>Defensive Type Safety</h4>
+              <p>Built-in type assertions through the standard <code>assert</code> library.</p>
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="icon"><i class="fas fa-cubes"></i></div>
+            <div>
+              <h4>Zero Dependencies</h4>
+              <p>Direct Win32 API on Windows, native pipes on Linux and macOS.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Installation & Build -->
+      <section id="installation" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-hammer"></i> Installation &amp; Build</h2>
+            <p class="section-desc">How to compile the native shared object and import it into your Djazair programs.</p>
+          </div>
+        </div>
+
+        <div class="tab-container">
+          <div class="tab-nav">
+            <button class="tab-btn active" data-tab="win-build"><i class="fab fa-windows"></i> Windows</button>
+            <button class="tab-btn" data-tab="posix-build"><i class="fab fa-linux"></i> Linux / macOS</button>
+            <button class="tab-btn" data-tab="dpm-install"><i class="fas fa-box-open"></i> DPM (Package Manager)</button>
+          </div>
+
+          <div class="tab-pane active" data-pane="win-build">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>PowerShell / Command Prompt</span>
+                <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code># Build clipboard.dll using GCC (MinGW-w64)
+cd extensions/clipboard
+.\build.bat "D:\Programing\Djazair Programming Language\djazair-language"
+
+# Output will create clipboard.dll linked against libdjazair and user32</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" data-pane="posix-build">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Bash / Zsh</span>
+                <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code># Linux / macOS shared object compilation
+cd extensions/clipboard
+chmod +x build.sh
+./build.sh /path/to/djazair-language</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" data-pane="dpm-install">
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+              </div>
+              <div class="code-body">
+                <pre><code># Install via Djazair Package Manager
+dpm install clipboard
+
+# Compile native binary
+dpm build clipboard</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Start -->
+      <section id="quickstart" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-bolt"></i> Quick Start Guide</h2>
+            <p class="section-desc">Basic copy, paste, check, and clear in under 10 lines of Djazair code.</p>
+          </div>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>quick_start.dz</span>
+            <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+          </div>
+          <div class="code-body">
+            <pre><code>use clipboard
+
+# 1. Copy UTF-8 string to clipboard
+clipboard.copy("مرحبا بالعالم — Hello from Djazair 🇩🇿")
+
+# 2. Retrieve the text
+let text = clipboard.paste()
+print("Clipboard Content: " + text)
+
+# 3. Check if text is available
+if clipboard.has()
+    print("Text format is present on clipboard.")
+end
+
+# 4. Clear all clipboard data
+clipboard.clear()
+print("Has text after clear: " + str(clipboard.has()))</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Playground / Live Simulator -->
+      <section id="playground" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-laptop-code"></i> Live Clipboard Simulator &amp; Playground</h2>
+            <p class="section-desc">Interact with the virtual clipboard engine, test Unicode, examine sequence increments, and see generated Djazair code in real time.</p>
+          </div>
+        </div>
+
+        <div class="sim-container">
+          <div class="sim-grid">
+            <!-- Left Card: Input & Controls -->
+            <div class="sim-card">
+              <div class="sim-card-title">
+                <span><i class="fas fa-keyboard"></i> Test Payload Input</span>
+                <div style="display:flex;gap:4px;">
+                  <button class="btn-copy btn-preset" data-preset="arabic" style="font-size:10.5px;">Arabic</button>
+                  <button class="btn-copy btn-preset" data-preset="code" style="font-size:10.5px;">Code</button>
+                  <button class="btn-copy btn-preset" data-preset="json" style="font-size:10.5px;">JSON</button>
+                  <button class="btn-copy btn-preset" data-preset="emojis" style="font-size:10.5px;">Emojis</button>
+                </div>
+              </div>
+
+              <textarea id="simInput" class="sim-textarea" placeholder="Type or choose a preset payload to copy to clipboard...">مرحبا بكم في لغة البرمجة جزائر — الجزائر 🇩🇿</textarea>
+
+              <div class="sim-btn-group">
+                <button id="btnSimCopy" class="sim-btn sim-btn-primary"><i class="fas fa-copy"></i> clipboard.copy()</button>
+                <button id="btnSimPaste" class="sim-btn sim-btn-secondary"><i class="fas fa-paste"></i> clipboard.paste()</button>
+                <button id="btnSimClear" class="sim-btn sim-btn-danger"><i class="fas fa-trash-alt"></i> clipboard.clear()</button>
+              </div>
+
+              <div style="margin-top:16px;">
+                <div class="sim-card-title"><span><i class="fas fa-download"></i> Paste Output Field</span></div>
+                <textarea id="simPasteTarget" class="sim-textarea" style="height:70px;" readonly placeholder="Click 'clipboard.paste()' to paste here..."></textarea>
+              </div>
+            </div>
+
+            <!-- Right Card: State & Generated Code -->
+            <div class="sim-card">
+              <div class="sim-card-title">
+                <span><i class="fas fa-tachometer-alt"></i> Virtual Clipboard State</span>
+                <span class="nav-tag" style="background:rgba(16,185,129,0.15);color:var(--accent-emerald);">Live</span>
+              </div>
+
+              <div class="sim-status-box">
+                <div class="status-row">
+                  <span class="status-label">Text Available (has()):</span>
+                  <span id="simStatusHasText" class="status-value">True (Text Available)</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Sequence Number:</span>
+                  <span id="simStatusSeq" class="status-value">142</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Buffer Size:</span>
+                  <span id="simStatusBytes" class="status-value">56 bytes</span>
+                </div>
+                <div class="status-row" style="margin-top:4px;">
+                  <span class="status-label">Enumerated Formats (formats()):</span>
+                </div>
+                <div id="simFormatTags" class="format-tags">
+                  <span class="format-pill">unicode</span>
+                  <span class="format-pill">text</span>
+                  <span class="format-pill">locale</span>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;">
+                <div class="sim-card-title"><span><i class="fas fa-code"></i> Generated Djazair Code</span></div>
+                <div class="code-wrapper" style="margin:0;">
+                  <div class="code-body" style="padding:10px;">
+                    <pre><code id="simGeneratedCode">use clipboard
+
+clipboard.copy("مرحبا بكم في لغة البرمجة جزائر — الجزائر 🇩🇿")</code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Complete API Reference -->
+      <section id="api-reference" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-book"></i> Complete API Reference</h2>
+            <p class="section-desc">Comprehensive reference of all functions, signatures, parameters, return types, and constraints.</p>
+          </div>
+        </div>
+
+        <!-- Master Table -->
+        <div class="table-responsive">
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Function</th>
+                <th>Arguments</th>
+                <th>Return Type</th>
+                <th>Category</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>copy(text)</code></td>
+                <td><code>text: String</code></td>
+                <td><code>Bool</code></td>
+                <td>Core Operation</td>
+                <td>Copies a UTF-8 string to the system clipboard. Throws <code>TypeError</code> on non-string.</td>
+              </tr>
+              <tr>
+                <td><code>paste()</code></td>
+                <td><em>None</em></td>
+                <td><code>String</code></td>
+                <td>Core Operation</td>
+                <td>Retrieves current text content. Returns <code>""</code> if empty or non-text.</td>
+              </tr>
+              <tr>
+                <td><code>clear()</code></td>
+                <td><em>None</em></td>
+                <td><code>Bool</code></td>
+                <td>Core Operation</td>
+                <td>Flushes all data and formats from the system clipboard.</td>
+              </tr>
+              <tr>
+                <td><code>has()</code></td>
+                <td><em>None</em></td>
+                <td><code>Bool</code></td>
+                <td>Core Operation</td>
+                <td>Checks if text format (<code>CF_UNICODETEXT</code> or <code>CF_TEXT</code>) is available.</td>
+              </tr>
+              <tr>
+                <td><code>sequenceNumber()</code></td>
+                <td><em>None</em></td>
+                <td><code>Number</code></td>
+                <td>Introspection</td>
+                <td>Returns a 32-bit counter incremented on every clipboard change (\(O(1)\) check).</td>
+              </tr>
+              <tr>
+                <td><code>formats()</code></td>
+                <td><em>None</em></td>
+                <td><code>Array</code></td>
+                <td>Introspection</td>
+                <td>Enumerates available format names (e.g., <code>["unicode", "text", "bitmap", "files"]</code>).</td>
+              </tr>
+              <tr>
+                <td><code>setText(text)</code></td>
+                <td><code>text: String</code></td>
+                <td><code>Bool</code></td>
+                <td>Semantic Alias</td>
+                <td>Standard UI alias for <code>copy(text)</code>.</td>
+              </tr>
+              <tr>
+                <td><code>getText()</code></td>
+                <td><em>None</em></td>
+                <td><code>String</code></td>
+                <td>Semantic Alias</td>
+                <td>Standard UI alias for <code>paste()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>hasText()</code></td>
+                <td><em>None</em></td>
+                <td><code>Bool</code></td>
+                <td>Semantic Alias</td>
+                <td>Standard UI alias for <code>has()</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Detailed Cards: Core API -->
+        <h3 style="font-size:18px;margin:32px 0 16px 0;color:var(--text-primary);"><i class="fas fa-code-branch"></i> Core Methods Detail</h3>
+
+        <!-- copy(text) -->
+        <div id="method-copy" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.copy(text) &rarr; Bool</div>
+            <span class="method-badge">Core Method</span>
+          </div>
+          <p class="method-desc">
+            Writes the given UTF-8 string into the system clipboard. On Windows, allocates movable global memory (<code>HGLOBAL</code>), converts the text to UTF-16 wide characters, empties existing contents, and registers the data under <code>CF_UNICODETEXT</code>.
+          </p>
+
+          <div class="table-responsive">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Required</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>text</code></td>
+                  <td><code>String</code></td>
+                  <td>Yes</td>
+                  <td>The UTF-8 text string to be copied into the clipboard.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert-box info">
+            <i class="fas fa-info-circle"></i>
+            <div><strong>Defensive Type Assertion:</strong> If a non-string value (e.g., <code>Number</code>, <code>Array</code>, or <code>Null</code>) is passed to <code>copy()</code>, a descriptive <code>TypeError</code> exception is thrown immediately via <code>assert.string()</code>.</div>
+          </div>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+let ok = clipboard.copy("Hello, World!")
+if ok
+    print("Copied successfully!")
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- paste() -->
+        <div id="method-paste" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.paste() &rarr; String</div>
+            <span class="method-badge">Core Method</span>
+          </div>
+          <p class="method-desc">
+            Reads and converts text currently stored in the clipboard to a UTF-8 string. If the clipboard is empty, locked, or contains only non-text formats (such as raw bitmaps), it safely returns an empty string (<code>""</code>).
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+let content = clipboard.paste()
+if content != ""
+    print("Pasted content: " + content)
+else
+    print("Clipboard does not contain any readable text.")
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- clear() -->
+        <div id="method-clear" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.clear() &rarr; Bool</div>
+            <span class="method-badge">Core Method</span>
+          </div>
+          <p class="method-desc">
+            Flushes all contents and handles from the system clipboard. On Windows, calls <code>EmptyClipboard()</code> within a resilient retry loop.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+clipboard.clear()
+print("Clipboard cleared. hasText = " + str(clipboard.hasText()))</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- has() -->
+        <div id="method-has" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.has() &rarr; Bool</div>
+            <span class="method-badge">Core Method</span>
+          </div>
+          <p class="method-desc">
+            Checks whether text data is present in the clipboard without retrieving or allocating the entire string. Tests both <code>CF_UNICODETEXT</code> and <code>CF_TEXT</code> formats.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+if clipboard.has()
+    print("Found text: " + clipboard.paste())
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Cards: Introspection API -->
+        <h3 style="font-size:18px;margin:32px 0 16px 0;color:var(--text-primary);"><i class="fas fa-chart-line"></i> Introspection &amp; Tracking Detail</h3>
+
+        <!-- sequenceNumber() -->
+        <div id="method-sequencenumber" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.sequenceNumber() &rarr; Number</div>
+            <span class="method-badge" style="background:rgba(56,189,248,0.15);color:var(--accent-blue);border-color:rgba(56,189,248,0.3);">O(1) Check</span>
+          </div>
+          <p class="method-desc">
+            Returns a 32-bit integer representing the OS clipboard sequence counter. The operating system increments this counter whenever the clipboard contents change. This enables ultra-low-overhead change detection (\(O(1)\)) in polling loops or GUI timers without allocating memory or locking the clipboard.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+let seq1 = clipboard.sequenceNumber()
+clipboard.copy("Payload A")
+let seq2 = clipboard.sequenceNumber()
+
+print("Sequence incremented: " + str(seq2 > seq1)) # Prints: True</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- formats() -->
+        <div id="method-formats" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.formats() &rarr; Array</div>
+            <span class="method-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-emerald);border-color:rgba(16,185,129,0.3);">Introspection</span>
+          </div>
+          <p class="method-desc">
+            Enumerates all data formats currently registered on the clipboard and returns them as an array of human-readable string tokens. Known standard formats are mapped automatically:
+          </p>
+
+          <div class="table-responsive">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Format Token</th>
+                  <th>Win32 Constant</th>
+                  <th>Data Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>"unicode"</code></td><td><code>CF_UNICODETEXT</code></td><td>UTF-16 Unicode text</td></tr>
+                <tr><td><code>"text"</code></td><td><code>CF_TEXT</code></td><td>ANSI plain text</td></tr>
+                <tr><td><code>"oem_text"</code></td><td><code>CF_OEMTEXT</code></td><td>OEM character set text</td></tr>
+                <tr><td><code>"bitmap"</code></td><td><code>CF_BITMAP</code></td><td>Device-dependent bitmap</td></tr>
+                <tr><td><code>"dib"</code> / <code>"dibv5"</code></td><td><code>CF_DIB</code> / <code>CF_DIBV5</code></td><td>Device-independent bitmap image</td></tr>
+                <tr><td><code>"files"</code></td><td><code>CF_HDROP</code></td><td>File list drop handle (Explorer)</td></tr>
+                <tr><td><code>"locale"</code></td><td><code>CF_LOCALE</code></td><td>Locale identifier</td></tr>
+                <tr><td><code>"custom"</code> / name</td><td>Registered</td><td>Application-specific registered format (e.g. HTML Format)</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>Djazair Example</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+clipboard.setText("Testing format detection")
+let formatsList = clipboard.formats()
+
+for fmt in formatsList
+    print("  - Available format: " + fmt)
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Cards: Semantic Aliases -->
+        <h3 style="font-size:18px;margin:32px 0 16px 0;color:var(--text-primary);"><i class="fas fa-tags"></i> Semantic Aliases Detail</h3>
+
+        <div id="method-settext" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.setText(text) &rarr; Bool</div>
+            <span class="method-badge">Semantic Alias</span>
+          </div>
+          <p class="method-desc">
+            Semantic alias for <code>clipboard.copy(text)</code> conforming to standard UI/Widget naming conventions (Qt, WPF, Web Clipboard API).
+          </p>
+        </div>
+
+        <div id="method-gettext" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.getText() &rarr; String</div>
+            <span class="method-badge">Semantic Alias</span>
+          </div>
+          <p class="method-desc">
+            Semantic alias for <code>clipboard.paste()</code> conforming to standard UI/Widget naming conventions.
+          </p>
+        </div>
+
+        <div id="method-hastext" class="method-card">
+          <div class="card-header">
+            <div class="method-sig">clipboard.hasText() &rarr; Bool</div>
+            <span class="method-badge">Semantic Alias</span>
+          </div>
+          <p class="method-desc">
+            Semantic alias for <code>clipboard.has()</code> conforming to standard UI/Widget naming conventions.
+          </p>
+        </div>
+      </section>
+
+      <!-- System Architecture & Internals -->
+      <section id="architecture" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-microchip"></i> System Architecture &amp; Internals</h2>
+            <p class="section-desc">How Djazair achieves industrial reliability across Windows, Linux, and macOS.</p>
+          </div>
+        </div>
+
+        <div class="hero-grid" style="margin-top:0;">
+          <div class="feature-pill" style="flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <i class="fab fa-windows" style="color:var(--accent-cyan);font-size:20px;"></i>
+              <h4 style="margin:0;">Windows (Win32 user32.dll)</h4>
+            </div>
+            <p>Direct low-level C calls to <code>OpenClipboard</code>, <code>EmptyClipboard</code>, <code>GetClipboardData(CF_UNICODETEXT)</code>, and <code>GlobalAlloc</code>. Zero process spawning.</p>
+          </div>
+
+          <div class="feature-pill" style="flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <i class="fab fa-linux" style="color:var(--accent-emerald);font-size:20px;"></i>
+              <h4 style="margin:0;">Linux (Wayland &amp; X11)</h4>
+            </div>
+            <p>Automatic environment sniffing: uses <code>wl-copy</code>/<code>wl-paste</code> if <code>WAYLAND_DISPLAY</code> is active, otherwise falls back seamlessly to <code>xclip</code> or <code>xsel</code>.</p>
+          </div>
+
+          <div class="feature-pill" style="flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <i class="fab fa-apple" style="color:var(--accent-purple);font-size:20px;"></i>
+              <h4 style="margin:0;">macOS (AppKit Pipes)</h4>
+            </div>
+            <p>Clean streaming integration using the native <code>pbcopy</code> and <code>pbpaste</code> utilities pre-installed on all Apple macOS versions.</p>
+          </div>
+        </div>
+
+        <div id="win32-resilience" style="margin-top:28px;">
+          <h3 style="font-size:18px;margin-bottom:12px;color:var(--text-primary);"><i class="fas fa-shield-alt"></i> The Win32 Transient Lock Retry Loop</h3>
+          <p style="color:var(--text-secondary);line-height:1.7;">
+            In Windows desktop environments, background applications (such as Microsoft Office, clipboard managers, or browser extensions) frequently open the clipboard briefly to inspect format changes. A naive call to <code>OpenClipboard(NULL)</code> will immediately fail if triggered simultaneously.
+          </p>
+          <p style="color:var(--text-secondary);line-height:1.7;margin-top:10px;">
+            To resolve this, the Djazair native engine implements an automatic backoff retry loop:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header"><span>C Engine Snippet (src/clipboard.c)</span></div>
+            <div class="code-body">
+              <pre><code>static BOOL open_clipboard_with_retry(HWND owner) {
+    for (int i = 0; i < 10; i++) {
+        if (OpenClipboard(owner)) return TRUE;
+        Sleep(5); // Wait 5ms for other processes to release the clipboard
+    }
+    return FALSE;
+}</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Practical Workflows -->
+      <section id="workflows" class="doc-section">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><i class="fas fa-project-diagram"></i> Practical Workflows</h2>
+            <p class="section-desc">Production code patterns for building clipboard monitors, multilingual apps, and safe integrations.</p>
+          </div>
+        </div>
+
+        <!-- Workflow 1: Monitor -->
+        <div id="workflow-monitor" class="method-card">
+          <h3 style="font-size:16px;color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-eye"></i> Non-Blocking Clipboard Change Monitor</h3>
+          <p class="method-desc">
+            Use <code>sequenceNumber()</code> in an event loop or background worker. Because checking the sequence counter does not open or lock the clipboard, it has practically zero CPU overhead and will never conflict with other applications.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>monitor_clipboard.dz</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+let lastSeq = clipboard.sequenceNumber()
+print("Clipboard monitor started (sequence: ${lastSeq})...")
+
+# In your event loop or periodic timer:
+fn onTick()
+    let currentSeq = clipboard.sequenceNumber()
+    if currentSeq != lastSeq
+        lastSeq = currentSeq
+        if clipboard.hasText()
+            print("[Update Detected] New text: " + clipboard.getText())
+        end
+    end
+end</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow 2: Unicode -->
+        <div id="workflow-unicode" class="method-card">
+          <h3 style="font-size:16px;color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-globe"></i> Arabic &amp; Multilingual Unicode Processing</h3>
+          <p class="method-desc">
+            Djazair clipboard uses native Windows <code>CP_UTF8</code> conversion to and from wide strings, guaranteeing perfect preservation of right-to-left Arabic characters, diacritics (Harakat), and symbols.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>unicode_demo.dz</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+let arabicText = "الجمهورية الجزائرية الديمقراطية الشعبية 🇩🇿"
+clipboard.setText(arabicText)
+
+let restored = clipboard.getText()
+print("Restored Text: " + restored)
+print("Matches Original: " + str(restored == arabicText))</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow 3: Defensive -->
+        <div id="workflow-defensive" class="method-card">
+          <h3 style="font-size:16px;color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-shield-alt"></i> Defensive Error Handling</h3>
+          <p class="method-desc">
+            Wrap untrusted user inputs with <code>try ... catch</code> blocks to gracefully intercept invalid argument types.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span>safe_copy.dz</span>
+              <button class="btn-copy"><i class="far fa-copy"></i> Copy</button>
+            </div>
+            <div class="code-body">
+              <pre><code>use clipboard
+
+fn safeCopy(input)
+    try
+        clipboard.copy(input)
+        return True
+    catch err
+        print("[Clipboard Warning] Invalid input type: " + str(err))
+        return False
+    end
+end
+
+safeCopy("Valid text") # Success
+safeCopy(12345)        # Caught and reported gracefully</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        <div>
+          <strong>Djazair Clipboard Extension</strong> &mdash; Maintained by Harizi Riyadh
+          <br /><span style="font-size:12px;">Licensed under MIT &bull; Part of the Djazair Programming Language Ecosystem</span>
+        </div>
+        <div>
+          <a href="https://github.com/djazair-language/djazair-extensions" target="_blank" style="color:var(--accent-cyan);text-decoration:none;">
+            <i class="fab fa-github"></i> GitHub Repository
+          </a>
+        </div>
+      </footer>
+
+    </div>
+  </main>
+
+  <script src="docs.js"></script>
+</body>
+</html>
