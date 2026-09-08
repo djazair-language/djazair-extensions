@@ -15,9 +15,15 @@ fn readWebviewAsset(name)
     let sDir = process.scriptDir()
     let lDir = lang.libsDir()
     let candidates = [
+        # Search in global packages directory (lang.libsDir)
         path.join(lDir, "webview", "bridge", "js", name),
         path.join(lDir, "webview", "js", name),
         path.join(lDir, "webview", name),
+        # Search in local djazair_packages directory (dpm install)
+        path.join(sDir, "djazair_packages", "webview", "bridge", "js", name),
+        path.join(sDir, "djazair_packages", "webview", "js", name),
+        path.join(sDir, "djazair_packages", "webview", name),
+        # Search relative to script directory (development layout)
         path.join(sDir, "bridge", "js", name),
         path.join(sDir, "js", name),
         path.join(sDir, "assets", "js", name),
