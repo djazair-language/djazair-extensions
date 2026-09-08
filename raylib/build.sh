@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 # ─────────────────────────────────────────────
 #  build.sh  –  raylib extension for Djazair
 #  Usage: ./build.sh <ROOT>
@@ -6,17 +6,53 @@
 # ─────────────────────────────────────────────
 set -e
 
-ROOT="$1"
+# Locate Djazair SDK / Installation (General Use)
+DJAZAIR_DIR="$1"
 
-if [ -z "$ROOT" ]; then
-    echo "[ERROR] Missing argument: ROOT path to djazair-language."
-    echo "Usage: ./build.sh <path/to/djazair-language>"
+if [ -z "$DJAZAIR_DIR" ] && [ -n "$DJAZAIR_HOME" ]; then
+    DJAZAIR_DIR="$DJAZAIR_HOME"
+fi
+
+if [ -z "$DJAZAIR_DIR" ] && [ -n "$DJAZAIR_ROOT" ]; then
+    DJAZAIR_DIR="$DJAZAIR_ROOT"
+fi
+
+if [ -z "$DJAZAIR_DIR" ]; then
+    EXE_PATH="$(command -v djazair 2>/dev/null || true)"
+    if [ -n "$EXE_PATH" ]; then
+        BIN_DIR="$(dirname "$EXE_PATH")"
+        if [ -f "$BIN_DIR/../../src/include/djazair_api.h" ]; then
+            DJAZAIR_DIR="$(cd "$BIN_DIR/../.." && pwd)"
+        elif [ -f "$BIN_DIR/../include/djazair_api.h" ]; then
+            DJAZAIR_DIR="$(cd "$BIN_DIR/.." && pwd)"
+        fi
+    fi
+fi
+
+if [ -z "$DJAZAIR_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    for CANDIDATE in "$SCRIPT_DIR/../../djazair-language" "$SCRIPT_DIR/../../../djazair-language" "$SCRIPT_DIR/../djazair-language" "$SCRIPT_DIR/../.."; do
+        if [ -f "$CANDIDATE/src/include/djazair_api.h" ]; then
+            DJAZAIR_DIR="$(cd "$CANDIDATE" && pwd)"
+            break
+        fi
+    done
+fi
+
+if [ -z "$DJAZAIR_DIR" ]; then
+    echo "[ERROR] Djazair SDK / installation not found in PATH or DJAZAIR_HOME."
+    echo "Please install Djazair and add it to your PATH, or set DJAZAIR_HOME."
     exit 1
 fi
 
-if [ ! -d "$ROOT/src/include" ]; then
-    echo "[ERROR] '$ROOT/src/include' not found. Is ROOT correct?"
-    exit 1
+INC_FLAGS="-I$DJAZAIR_DIR/include"
+if [ -d "$DJAZAIR_DIR/src/include" ]; then
+    INC_FLAGS="-I$DJAZAIR_DIR/src/include -I$DJAZAIR_DIR/src/core -I$DJAZAIR_DIR/src/libs"
+fi
+
+LIB_DIR="$DJAZAIR_DIR/lib"
+if [ -f "$DJAZAIR_DIR/build/bin/libdjazair.a" ] || [ -f "$DJAZAIR_DIR/build/bin/libdjazair.so" ]; then
+    LIB_DIR="$DJAZAIR_DIR/build/bin"
 fi
 
 if ! command -v gcc >/dev/null 2>&1; then
@@ -57,13 +93,11 @@ echo "[INFO] Platform: $OS"
 echo "[INFO] Building raylib extension ($OUT)..."
 
 gcc $SHARED -O2 -std=c99 \
-    -I"$ROOT/src/include" \
-    -I"$ROOT/src/core" \
-    -I"$ROOT/src/libs" \
+    $INC_FLAGS \
     src/raylib.c src/raylib_camera.c src/raylib_core.c \
     src/raylib_helpers.c src/raylib_media.c src/raylib_shapes.c \
     -o "$OUT" \
-    -L"$ROOT/build/bin" -ldjazair -lraylib \
+    -L"$LIB_DIR" -ldjazair -lraylib \
     $PLATFORM_LIBS
 
 echo "[OK] $OUT built successfully."
