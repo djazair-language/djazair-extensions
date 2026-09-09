@@ -92,8 +92,8 @@ Available options with defaults:
 | `title` | String | `"Djazair App"` | Window title |
 | `width` | Number | `1024` | Initial width in pixels |
 | `height` | Number | `768` | Initial height in pixels |
-| `x` | Number | `-1` | X position (`-1` = OS default) |
-| `y` | Number | `-1` | Y position (`-1` = OS default) |
+| `x` | Number | `-1` | X position in pixels (`-1` = OS default position) |
+| `y` | Number | `-1` | Y position in pixels (`-1` = OS default position) |
 | `resizable` | Bool | `True` | Allow window resizing |
 | `frameless` | Bool | `False` | Remove title bar and borders |
 | `minWidth` | Number | `400` | Minimum width constraint |
@@ -401,6 +401,18 @@ try {
 } catch (e) {
     console.error(e.message);  // "Something went wrong!"
 }
+
+// Custom timeout (default is 10 000 ms)
+let result = await window.djazair.invoke("slowQuery", {id: 1}, 30000);
+
+// Catch timeout errors explicitly
+try {
+    await window.djazair.invoke("heavyTask", null, 5000);
+} catch (e) {
+    if (e.message.startsWith("TimeoutError")) {
+        console.warn("Handler did not respond in 5 s");
+    }
+}
 ```
 
 ### Expose Native Bindings
@@ -538,10 +550,11 @@ The bridge injects `window.djazair` automatically via `initJs()`:
 
 | Method | Description |
 |--------|-------------|
-| `djazair.invoke(channel, data)` | Call a Djazair handler. Returns `Promise<any>` |
+| `djazair.invoke(channel, data [, timeoutMs])` | Call a Djazair handler. Returns `Promise<any>`. Auto-rejects after `timeoutMs` ms (default: **10 000**) |
 | `djazair.on(channel, callback)` | Subscribe to push events from Djazair |
-| `djazair.off(channel, callback?)` | Unsubscribe. Omitting callback removes all |
-| `djazair.send(channel, data)` | (Internal) Dispatches data to JS listeners |
+| `djazair.off(channel, callback?)` | Unsubscribe. Omitting callback removes all listeners |
+| `djazair.send(channel, data)` | *(Internal)* Dispatch data to JS listeners |
+| `djazair.startDragging()` | Initiate native window drag from a frameless titlebar |
 
 ---
 
@@ -1328,9 +1341,10 @@ app.run()
 
 | Method | Description |
 |--------|-------------|
-| `djazair.invoke(channel, data)` | Call Djazair handler, returns Promise |
+| `djazair.invoke(channel, data [, timeoutMs])` | Call Djazair handler, returns `Promise`. Rejects after `timeoutMs` ms (default: 10 000) |
 | `djazair.on(channel, callback)` | Listen for Djazair push events |
 | `djazair.off(channel, callback?)` | Remove listener(s) |
+| `djazair.startDragging()` | Start native window drag (frameless titlebar) |
 
 ### Dialogs
 
