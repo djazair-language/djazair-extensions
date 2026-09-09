@@ -21,8 +21,13 @@
       var data = (payload !== undefined && payload !== null) ? payload : null;
       var ms   = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 10000;
 
-      // Race the actual IPC call against a timeout rejection
+      // Hold a reference to the timer so we can cancel it the moment
+      // the real call settles — prevents orphaned timers from accumulating
+      // in high-frequency invoke() scenarios.
+      var timerId;
+
       var callPromise = __dz_invoke(channel, data).then(function(result) {
+        clearTimeout(timerId); // ← cancel timer immediately on success
         if (result !== null && typeof result === 'object') {
           if (result.__dz_ok === false) {
             return Promise.reject(new Error(result.__dz_error || 'Handler error'));
@@ -32,10 +37,13 @@
           }
         }
         return result;
+      }, function(err) {
+        clearTimeout(timerId); // ← cancel timer immediately on error too
+        return Promise.reject(err);
       });
 
       var timeoutPromise = new Promise(function(_, reject) {
-        setTimeout(function() {
+        timerId = setTimeout(function() {
           reject(new Error('TimeoutError: invoke("' + channel + '") timed out after ' + ms + 'ms'));
         }, ms);
       });
