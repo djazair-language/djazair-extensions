@@ -1,13 +1,19 @@
 /**
- * @file webview_native.cc
- * @brief Webview Desktop Framework native module for Djazair Programming Language
- * @author Harizi Riyadh (hariziriyadh@gmail.com)
- * @copyright Copyright (c) 2026 Djazair Language Project
+ * =============================================================================
+ * Project:      Djazair WebView Desktop Application Framework
+ * File:         src/webview_native.cc
+ * Description:  Native C++ Engine Integration for Djazair (WebView2 / WebKit)
+ * Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+ * Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+ * License:      MIT License
+ * =============================================================================
  *
- * Implements high-performance desktop WebView integration powered by Microsoft WebView2 on Windows,
- * WebKitGTK on Linux, and Cocoa/WebKit on macOS. Provides seamless bidirectional IPC bridging,
- * window lifecycle management, dialogs, menus, and system tray integration.
+ * Implements high-performance desktop WebView integration powered by Microsoft
+ * Edge WebView2 on Windows, WebKitGTK on Linux, and Cocoa/WebKit on macOS.
+ * Provides bidirectional IPC bridging, window lifecycle management, dialogs,
+ * menus, system tray integration, and robust error surfacing.
  */
+
 
 #include <string.h>
 #include <stdlib.h>

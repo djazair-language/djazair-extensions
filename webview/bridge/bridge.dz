@@ -1,7 +1,11 @@
-# bridge.dz
-# Bidirectional IPC Bridge between Djazair and Webview JavaScript environments
-# Author: Harizi Riyadh (hariziriyadh@gmail.com)
-# Copyright (c) 2026 Djazair Language Project
+# =============================================================================
+# Project:      Djazair WebView Desktop Application Framework
+# File:         bridge/bridge.dz
+# Description:  Bidirectional IPC Inter-Process Communication and RPC Bridge
+# Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+# Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+# License:      MIT License
+# =============================================================================
 
 use json as *
 import "../utils/utils.dz" as *
@@ -9,8 +13,14 @@ import "assets.dz" as *
 
 let _native = __native("_webview")
 
-# Bridge class: Manages bidirectional IPC communication between Djazair runtime and Webview JavaScript environment.
+# =============================================================================
+# Class: Bridge
+# =============================================================================
+# Manages bidirectional RPC and push events between the native Djazair backend
+# and the Chromium/WebKit JavaScript frontend runtime. Provides request routing,
+# automatic JSON serialization/deserialization, error isolation, and native bindings.
 class Bridge
+
     # Constructs a new IPC bridge instance attached to a window.
     init(app, win)
         self.app = app

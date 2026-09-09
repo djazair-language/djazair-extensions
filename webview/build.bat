@@ -1,12 +1,14 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-:: ─────────────────────────────────────────────
-::  build.bat  –  webview extension for Djazair
-::  Usage: build.bat <ROOT>
-::    ROOT = path to the djazair-language repo root
-::  Requires: g++ (MinGW-w64 / MSYS2)
-:: ─────────────────────────────────────────────
+:: =============================================================================
+:: Project:      Djazair WebView Desktop Application Framework
+:: File:         build.bat
+:: Description:  Windows Native Extension Automated Compiler Script (MinGW-w64)
+:: Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+:: Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+:: License:      MIT License
+:: =============================================================================
 
 :: ── Locate Djazair SDK / Installation (General Use) ────────────────────────
 set "DJAZAIR_DIR=%~f1"

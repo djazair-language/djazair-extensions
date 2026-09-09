@@ -1,7 +1,11 @@
-# window.dz
-# Window class and lifecycle controller for Djazair Webview
-# Author: Harizi Riyadh (hariziriyadh@gmail.com)
-# Copyright (c) 2026 Djazair Language Project
+# =============================================================================
+# Project:      Djazair WebView Desktop Application Framework
+# File:         window/window.dz
+# Description:  Native Window Controller, Geometry, Layout, and Event Management
+# Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+# Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+# License:      MIT License
+# =============================================================================
 
 use process
 use path
@@ -9,8 +13,14 @@ import "../utils/utils.dz" as *
 
 let _native = __native("_webview")
 
-# Window class: Represents an individual desktop webview window instance.
+# =============================================================================
+# Class: Window
+# =============================================================================
+# Encapsulates an individual native operating system window hosting a WebView2 /
+# WebKit web container. Provides APIs for geometry, sizing, navigation, script
+# evaluation, fullscreen modes, dark mode, taskbar attention, and OS event hooks.
 class Window
+
     # Creates and displays a new native desktop webview window.
     init(app, options = {})
         self.app = app

@@ -1,3 +1,14 @@
+/**
+ * =============================================================================
+ * Project:      Djazair WebView Desktop Application Framework
+ * File:         bridge/js/bridge_client.js
+ * Description:  Client-Side JavaScript IPC API (window.djazair)
+ * Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+ * Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+ * License:      MIT License
+ * =============================================================================
+ */
+
 (function() {
   if (window.djazair) return;
 

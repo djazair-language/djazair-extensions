@@ -1,7 +1,11 @@
-# application.dz
-# Application lifecycle, event loop, and window manager for Djazair Webview
-# Author: Harizi Riyadh (hariziriyadh@gmail.com)
-# Copyright (c) 2026 Djazair Language Project
+# =============================================================================
+# Project:      Djazair WebView Desktop Application Framework
+# File:         application/application.dz
+# Description:  Application Lifecycle, Event Loop, and Window Management Coordinator
+# Author:       Harizi Riyadh (hariziriyadh@gmail.com)
+# Copyright:    (c) 2026 Harizi Riyadh / Djazair Language Project. All rights reserved.
+# License:      MIT License
+# =============================================================================
 
 import "../bridge/bridge.dz" as *
 import "../window/window.dz" as *
@@ -11,8 +15,14 @@ use json as *
 
 let _native = __native("_webview")
 
-# App class: Manages desktop application lifecycle, event loop, and multi-window hierarchy.
+# =============================================================================
+# Class: App
+# =============================================================================
+# Coordinates the desktop application process, manages single-instance mutexes,
+# handles the primary and secondary window lifecycle, bridges JavaScript IPC,
+# and controls the native platform message loop.
 class App
+
     # Initializes application instance and creates default primary window.
     init(options = {})
         let defaults = {
