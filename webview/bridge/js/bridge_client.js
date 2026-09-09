@@ -6,21 +6,23 @@
     _local: {},
 
     // ─────────────────────────────────────────────────────────────────────
-    // invoke(channel, payload) → Promise<any>
+    // invoke(channel, payload [, timeoutMs]) → Promise<any>
     //
     // Calls a Djazair handler by channel name and returns a Promise that
     // resolves with the handler's return value (auto-deserialized from JSON).
+    // Rejects automatically after `timeoutMs` milliseconds (default: 10000)
+    // to prevent Promises from hanging forever if the handler is unreachable.
     //
     // Example:
     //   const user = await window.djazair.invoke('getUser', { id: 42 });
-    //   console.log(user.name);
+    //   const result = await window.djazair.invoke('slowOp', {}, 30000);
     // ─────────────────────────────────────────────────────────────────────
-    invoke: function(channel, payload) {
+    invoke: function(channel, payload, timeoutMs) {
       var data = (payload !== undefined && payload !== null) ? payload : null;
-      // __dz_invoke is a webview.bind Promise — resolves with the parsed JSON
-      // return value from the Djazair dispatcher (_onDispatch in bridge.dz).
-      return __dz_invoke(channel, data).then(function(result) {
-        // The dispatcher wraps results in { __dz_ok, __dz_data } envelope.
+      var ms   = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 10000;
+
+      // Race the actual IPC call against a timeout rejection
+      var callPromise = __dz_invoke(channel, data).then(function(result) {
         if (result !== null && typeof result === 'object') {
           if (result.__dz_ok === false) {
             return Promise.reject(new Error(result.__dz_error || 'Handler error'));
@@ -31,6 +33,14 @@
         }
         return result;
       });
+
+      var timeoutPromise = new Promise(function(_, reject) {
+        setTimeout(function() {
+          reject(new Error('TimeoutError: invoke("' + channel + '") timed out after ' + ms + 'ms'));
+        }, ms);
+      });
+
+      return Promise.race([callPromise, timeoutPromise]);
     },
 
     // ─────────────────────────────────────────────────────────────────────

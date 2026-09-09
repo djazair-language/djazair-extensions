@@ -303,12 +303,18 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     switch (msg) {
         case WM_CLOSE:
             if (!IS_NULL(c->close_callback)) {
+                // Delegate to Djazair close handler — it will call windowDestroy
                 c->wv->dispatch([c]() {
                     invoke_callback_0(c, c->close_callback);
                 });
-                return 0; // Managed by Djazair close handler
+            } else {
+                // No user-defined close handler: terminate cleanly via webview
+                // to ensure on_window_destroyed → PostQuitMessage path is used.
+                c->wv->dispatch([c]() {
+                    c->wv->terminate();
+                });
             }
-            break;
+            return 0; // Always prevent default WM_CLOSE → DestroyWindow chain
 
         case WM_MOVE:
             c->wv->dispatch([c, lParam]() {
@@ -556,15 +562,17 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     djazair_check_bool(11);
 
     const char *title = AS_CSTRING(args[0]);
-    int width = (int)AS_NUMBER(args[1]);
-    int height = (int)AS_NUMBER(args[2]);
-    bool frameless = AS_BOOL(args[5]);
-    bool resizable = AS_BOOL(args[6]);
-    int min_w = (int)AS_NUMBER(args[7]);
-    int min_h = (int)AS_NUMBER(args[8]);
-    int max_w = (int)AS_NUMBER(args[9]);
-    int max_h = (int)AS_NUMBER(args[10]);
-    bool debug = AS_BOOL(args[11]);
+    int width    = (int)AS_NUMBER(args[1]);
+    int height   = (int)AS_NUMBER(args[2]);
+    int pos_x    = (int)AS_NUMBER(args[3]); // -1 = OS default
+    int pos_y    = (int)AS_NUMBER(args[4]); // -1 = OS default
+    bool frameless  = AS_BOOL(args[5]);
+    bool resizable  = AS_BOOL(args[6]);
+    int min_w    = (int)AS_NUMBER(args[7]);
+    int min_h    = (int)AS_NUMBER(args[8]);
+    int max_w    = (int)AS_NUMBER(args[9]);
+    int max_h    = (int)AS_NUMBER(args[10]);
+    bool debug   = AS_BOOL(args[11]);
 
     auto c = new WindowContext();
     c->id = g_next_id++;
@@ -581,9 +589,18 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     pump_windows_messages();
     HWND hwnd_cr = get_hwnd(c->wv);
     if (hwnd_cr) {
-        SetWindowPos(hwnd_cr, NULL, 0, 0, width > 0 ? width : 800,
-                     height > 0 ? height : 600,
-                     SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW);
+        int final_w = width  > 0 ? width  : 800;
+        int final_h = height > 0 ? height : 600;
+
+        if (pos_x >= 0 && pos_y >= 0) {
+            // Explicit position requested — move and resize in one call
+            SetWindowPos(hwnd_cr, NULL, pos_x, pos_y, final_w, final_h,
+                         SWP_NOZORDER | SWP_SHOWWINDOW);
+        } else {
+            // Keep OS default position, only set size
+            SetWindowPos(hwnd_cr, NULL, 0, 0, final_w, final_h,
+                         SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW);
+        }
         UpdateWindow(hwnd_cr);
         pump_windows_messages();
     }
@@ -624,7 +641,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
 
 extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
     djazair_check_args(1, argCount);
-    int id = (int)AS_NUMBER(args[0]);
+    int id = (int)AS_NUMBER(args[0]); // Save ID before any deallocation
     WindowContext* c = nullptr;
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
@@ -648,24 +665,25 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
     if (c->last_icon_big)   { DestroyIcon(c->last_icon_big);   c->last_icon_big   = nullptr; }
 #endif
 
+    // Unprotect all GC-pinned callbacks before freeing the context
     auto gc_cleanup = [&](const char* prefix, Value val) {
         if (!IS_NULL(val)) {
             std::string k = gc_key(prefix, c->id);
             gc_unprotect(c->vm, k.c_str(), (int)k.length());
         }
     };
-    gc_cleanup("__wv_disp", c->dispatcher);
-    gc_cleanup("__wv_close", c->close_callback);
-    gc_cleanup("__wv_move", c->move_callback);
-    gc_cleanup("__wv_resize", c->resize_callback);
-    gc_cleanup("__wv_focus", c->focus_callback);
-    gc_cleanup("__wv_blur", c->blur_callback);
-    gc_cleanup("__wv_max", c->maximize_callback);
-    gc_cleanup("__wv_min", c->minimize_callback);
+    gc_cleanup("__wv_disp",    c->dispatcher);
+    gc_cleanup("__wv_close",   c->close_callback);
+    gc_cleanup("__wv_move",    c->move_callback);
+    gc_cleanup("__wv_resize",  c->resize_callback);
+    gc_cleanup("__wv_focus",   c->focus_callback);
+    gc_cleanup("__wv_blur",    c->blur_callback);
+    gc_cleanup("__wv_max",     c->maximize_callback);
+    gc_cleanup("__wv_min",     c->minimize_callback);
     gc_cleanup("__wv_restore", c->restore_callback);
-    gc_cleanup("__wv_nav", c->navigate_callback);
-    gc_cleanup("__wv_title", c->title_callback);
-    gc_cleanup("__wv_load", c->load_callback);
+    gc_cleanup("__wv_nav",     c->navigate_callback);
+    gc_cleanup("__wv_title",   c->title_callback);
+    gc_cleanup("__wv_load",    c->load_callback);
 
     // Clean up menu items owned by this window
     {
@@ -680,12 +698,14 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
         }
     }
 
+    // Free the context struct BEFORE erasing from the map;
+    // `id` is already saved as a local — no use-after-free here.
     delete c;
 
     bool is_empty = false;
     {
         std::lock_guard<std::mutex> lock(g_ctx_mtx);
-        g_contexts.erase(id);
+        g_contexts.erase(id); // Uses local `id`, not c->id (c is deleted above)
         is_empty = g_contexts.empty();
     }
 
