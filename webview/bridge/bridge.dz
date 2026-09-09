@@ -63,6 +63,8 @@ class Bridge
                 let result = handler(payload)
                 return encode({ "__dz_ok": True, "__dz_data": result })
             catch err
+                # Fix #6: Always surface handler errors to Djazair log — not only to JS Promise
+                sysLog("Bridge", "Handler error on channel '${channel}': ${err}", "error")
                 return encode({ "__dz_ok": False, "__dz_error": "${err}" })
             end
         else
@@ -75,6 +77,8 @@ class Bridge
                 let result = handler(args)
                 return encode({ "__dz_ok": True, "__dz_data": result })
             catch err
+                # Fix #6: Always surface binding errors to Djazair log — not only to JS Promise
+                sysLog("Bridge", "Binding error on '${name}': ${err}", "error")
                 return encode({ "__dz_ok": False, "__dz_error": "${err}" })
             end
         end

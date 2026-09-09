@@ -580,7 +580,16 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
 
     try {
         c->wv = new webview::webview(debug, nullptr);
+    } catch (const std::exception& ex) {
+        fprintf(stderr, "[WebView ERROR] Failed to create webview window: %s\n", ex.what());
+        fflush(stderr);
+        delete c;
+        return djazair_null();
     } catch (...) {
+        fprintf(stderr, "[WebView ERROR] Failed to create webview window: unknown exception.\n"
+                        "               Ensure Microsoft Edge WebView2 Runtime is installed.\n"
+                        "               Download: https://developer.microsoft.com/en-us/microsoft-edge/webview2/\n");
+        fflush(stderr);
         delete c;
         return djazair_null();
     }
@@ -738,18 +747,19 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetVirtualHostMapping) {
             ICoreWebView2_3* webview3 = nullptr;
             hr = webview->QueryInterface(local_IID_ICoreWebView2_3, (void**)&webview3);
             if (SUCCEEDED(hr) && webview3) {
-                const char* host = AS_CSTRING(args[1]);
+                const char* host   = AS_CSTRING(args[1]);
                 const char* folder = AS_CSTRING(args[2]);
 
-                int host_len = MultiByteToWideChar(CP_UTF8, 0, host, -1, NULL, 0);
-                wchar_t* w_host = new wchar_t[host_len];
-                MultiByteToWideChar(CP_UTF8, 0, host, -1, w_host, host_len);
+                int host_len   = MultiByteToWideChar(CP_UTF8, 0, host,   -1, NULL, 0);
+                wchar_t* w_host   = new wchar_t[host_len];
+                MultiByteToWideChar(CP_UTF8, 0, host,   -1, w_host,   host_len);
 
                 int folder_len = MultiByteToWideChar(CP_UTF8, 0, folder, -1, NULL, 0);
                 wchar_t* w_folder = new wchar_t[folder_len];
                 MultiByteToWideChar(CP_UTF8, 0, folder, -1, w_folder, folder_len);
 
-                HRESULT map_hr = webview3->SetVirtualHostNameToFolderMapping(w_host, w_folder, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW);
+                HRESULT map_hr = webview3->SetVirtualHostNameToFolderMapping(
+                    w_host, w_folder, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW);
 
                 delete[] w_host;
                 delete[] w_folder;
@@ -759,10 +769,27 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetVirtualHostMapping) {
                 if (SUCCEEDED(map_hr)) {
                     return djazair_bool(true);
                 }
+                // Fix #2: surface the HRESULT so developers know why mapping failed
+                fprintf(stderr, "[WebView ERROR] SetVirtualHostNameToFolderMapping failed: "
+                                "host='%s' folder='%s' HRESULT=0x%08lX\n",
+                        host, folder, (unsigned long)map_hr);
+                fflush(stderr);
             } else {
+                // WebView2 version too old to support virtual host mapping (needs >= 88)
+                fprintf(stderr, "[WebView ERROR] Virtual host mapping unavailable: "
+                                "ICoreWebView2_3 not supported (HRESULT=0x%08lX). "
+                                "Update WebView2 Runtime.\n", (unsigned long)hr);
+                fflush(stderr);
                 webview->Release();
             }
+        } else {
+            fprintf(stderr, "[WebView ERROR] get_CoreWebView2 failed (HRESULT=0x%08lX)\n",
+                    (unsigned long)hr);
+            fflush(stderr);
         }
+    } else {
+        fprintf(stderr, "[WebView ERROR] SetVirtualHostMapping: no WebView2 controller available\n");
+        fflush(stderr);
     }
 #endif
     return djazair_bool(false);
@@ -1337,6 +1364,12 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetUserAgent) {
                         settings2->put_UserAgent(w_ua);
                         delete[] w_ua;
                         settings2->Release();
+                    } else {
+                        // Fix #3: ICoreWebView2Settings2 requires WebView2 >= 91
+                        fprintf(stderr, "[WebView ERROR] setUserAgent() failed: ICoreWebView2Settings2 "
+                                        "not available (HRESULT=0x%08lX). Update WebView2 Runtime.\n",
+                                (unsigned long)hr);
+                        fflush(stderr);
                     }
                     settings->Release();
                 }
@@ -1346,6 +1379,7 @@ extern "C" DJAZAIR_FUNC(nativeWindowSetUserAgent) {
 #endif
     }
     return djazair_null();
+
 }
 
 extern "C" DJAZAIR_FUNC(nativeWindowClearCache) {
@@ -1905,7 +1939,7 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFolder) {
     const char *title = AS_CSTRING(args[0]);
 #if defined(_WIN32)
     IFileOpenDialog *pFileOpen;
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, 
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
             IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
 
     if (SUCCEEDED(hr)) {
@@ -1943,6 +1977,10 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFolder) {
         pFileOpen->Release();
         return djazair_null();
     }
+    // Fix #4: Surface CoCreateInstance failure — fallback to legacy SHBrowseForFolder
+    fprintf(stderr, "[WebView WARN] IFileOpenDialog unavailable (HRESULT=0x%08lX), "
+                    "falling back to legacy folder browser.\n", (unsigned long)hr);
+    fflush(stderr);
 
     BROWSEINFOA bi = {0};
     bi.lpszTitle = title;
