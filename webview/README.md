@@ -1,5 +1,9 @@
 # Djazair WebView — Desktop Application Framework
 
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![WebView2](https://img.shields.io/badge/engine-WebView2%20(Edge%20Chromium)-green)
+
 Build modern desktop GUI applications for Windows using **HTML, CSS, and JavaScript** for the frontend and **Djazair** for the backend. Powered by Microsoft Edge WebView2 (Chromium).
 
 ---
@@ -1381,3 +1385,39 @@ app.run()
 | `setLogFile(path)` | Log to file |
 | `setLogTimeFormat(pattern)` | Set timestamp format |
 | `log(message, level?)` | Convenience logging |
+
+---
+
+## Changelog
+
+### v0.3.0 — 2026-09-09
+
+#### 🐛 Bug Fixes
+- **`nativeWindowCreate` (C++)** — `x` / `y` window-position options were read but **never applied**. Window now appears at the exact coordinates specified in `createWindow({ x, y })`.
+- **`WM_CLOSE` handler (C++)** — When no `onClose` callback was registered, the native close message bypassed the Djazair cleanup path. Now always routes through `dispatch → terminate()` so `PostQuitMessage` fires correctly.
+- **`nativeWindowDestroy` (C++)** — Fixed a **use-after-free** UB: the window ID is now saved to a local variable before `delete c`, then used for `g_contexts.erase()`.
+- **`invoke()` (JavaScript)** — Promises could hang indefinitely if a handler was unreachable. Added `Promise.race()` with a configurable timeout (default **10 000 ms**). Orphaned `setTimeout` timers are cleared immediately via `clearTimeout()` to prevent memory accumulation.
+
+#### 🔧 Improvements
+- **`readWebviewAsset()` (assets.dz)** — Expanded search paths to cover projects where the entry script lives in a sub-directory (e.g. `webview_apps/todo_app/main.dz`) while `djazair_packages` lives at the project root. Now traverses up to **3 parent levels**.
+
+#### 📄 Docs
+- Updated `invoke()` signature to `invoke(channel, payload [, timeoutMs])` in all reference tables.
+- Added `startDragging()` to both JS API tables (was missing from quick-reference).
+- Added `TimeoutError` handling examples in README code blocks and HTML docs.
+
+---
+
+### v0.2.0 — 2026-09-07
+
+#### ✨ New Features
+- **`window.startDragging()`** — Initiates native Win32 window drag from a frameless HTML titlebar (`window.djazair.startDragging()` in JS).
+- **`window.flash(enable?)` / `window.requestAttention(enable?)`** — Flash taskbar button to alert user; `requestAttention()` is a semantic alias.
+- **`window.isFocused()`** — Returns `True` if the window currently holds keyboard focus.
+- **Single Instance Lock** — `singleInstance: True` / `appId` options; second launch focuses the existing window and exits.
+
+---
+
+### v0.1.0 — 2026-09-06
+
+- Initial release with full WebView2 window framework, IPC bridge, native dialogs, system tray, menus, virtual host mapping, dark-mode title bar, and comprehensive HTML/jQuery documentation.
