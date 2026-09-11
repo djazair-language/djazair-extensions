@@ -1850,6 +1850,9 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFile) {
     bool multi = AS_BOOL(args[3]);
 
 #if defined(_WIN32)
+    char origCwd[MAX_PATH] = {0};
+    GetCurrentDirectoryA(MAX_PATH, origCwd);
+
     OPENFILENAMEA ofn = {0};
     char fileName[32768] = {0};
 
@@ -1858,7 +1861,7 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFile) {
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = sizeof(fileName);
     ofn.lpstrTitle = title;
-    ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_NOCHANGEDIR;
     if (multi) ofn.Flags |= OFN_ALLOWMULTISELECT;
 
     std::string filterStr;
@@ -1891,7 +1894,11 @@ extern "C" DJAZAIR_FUNC(nativeDialogOpenFile) {
     else filterStr += '\0';
     ofn.lpstrFilter = filterStr.data();
 
-    if (GetOpenFileNameA(&ofn)) {
+    BOOL got = GetOpenFileNameA(&ofn);
+    if (origCwd[0] != '\0') {
+        SetCurrentDirectoryA(origCwd);
+    }
+    if (got) {
         if (!multi) {
             return djazair_str(vm, fileName);
         }
@@ -1922,6 +1929,9 @@ extern "C" DJAZAIR_FUNC(nativeDialogSaveFile) {
     const char *defaultPath = AS_CSTRING(args[1]);
 
 #if defined(_WIN32)
+    char origCwd[MAX_PATH] = {0};
+    GetCurrentDirectoryA(MAX_PATH, origCwd);
+
     OPENFILENAMEA ofn = {0};
     char fileName[MAX_PATH] = {0};
     if (defaultPath && strlen(defaultPath) > 0) strncpy(fileName, defaultPath, MAX_PATH - 1);
@@ -1931,7 +1941,7 @@ extern "C" DJAZAIR_FUNC(nativeDialogSaveFile) {
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
     ofn.lpstrTitle = title;
-    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
+    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
 
     std::string filterStr;
     Value filters = args[2];
@@ -1966,7 +1976,11 @@ extern "C" DJAZAIR_FUNC(nativeDialogSaveFile) {
     }
     ofn.lpstrFilter = filterStr.data();
 
-    if (GetSaveFileNameA(&ofn)) return djazair_str(vm, fileName);
+    BOOL got = GetSaveFileNameA(&ofn);
+    if (origCwd[0] != '\0') {
+        SetCurrentDirectoryA(origCwd);
+    }
+    if (got) return djazair_str(vm, fileName);
 #endif
     return djazair_null();
 }
