@@ -72,6 +72,7 @@ struct WindowContext {
     bool              has_navigated;
     bool              can_go_forward;
     bool              is_fullscreen;
+    bool              is_frameless;
     std::vector<int>  menu_items;
 
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
@@ -90,7 +91,7 @@ struct WindowContext {
         , focus_callback(NULL_VAL), blur_callback(NULL_VAL)
         , maximize_callback(NULL_VAL), minimize_callback(NULL_VAL), restore_callback(NULL_VAL)
         , navigate_callback(NULL_VAL), title_callback(NULL_VAL), load_callback(NULL_VAL)
-        , id(0), zoom_level(1.0), has_navigated(false), can_go_forward(false), is_fullscreen(false)
+        , id(0), zoom_level(1.0), has_navigated(false), can_go_forward(false), is_fullscreen(false), is_frameless(false)
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         , saved_style(0), saved_exstyle(0)
         , original_wndproc(nullptr)
@@ -361,6 +362,13 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                     break;
             }
             break;
+
+        case WM_NCCALCSIZE:
+            if (c->is_frameless) {
+                // Remove all non-client caption and frame margins so client area covers 100% of window
+                return 0;
+            }
+            break;
     }
 
     if (c->original_wndproc) {
@@ -373,6 +381,7 @@ static void hook_window_proc(WindowContext* c) {
     if (!c || !c->wv) return;
     HWND hwnd = get_hwnd(c->wv);
     if (!hwnd) return;
+    if (c->original_wndproc) return;
     c->original_wndproc = (WNDPROC)SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)WebviewWndProc);
 }
 #else
@@ -625,14 +634,19 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
     c->wv->set_size(width, height, WEBVIEW_HINT_NONE);
     if (!resizable) c->wv->set_size(width, height, WEBVIEW_HINT_FIXED);
 
+    c->is_frameless = frameless;
+
     if (frameless) {
 #if defined(WEBVIEW_PLATFORM_WINDOWS)
         HWND hwnd = get_hwnd(c->wv);
         if (hwnd) {
+            hook_window_proc(c);
             LONG style = GetWindowLongW(hwnd, GWL_STYLE);
             style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
             SetWindowLongW(hwnd, GWL_STYLE, style);
-            SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            RECT wr{};
+            GetWindowRect(hwnd, &wr);
+            SetWindowPos(hwnd, NULL, 0, 0, wr.right - wr.left, wr.bottom - wr.top, SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
             pump_windows_messages();
         }
 #elif defined(WEBVIEW_PLATFORM_LINUX)
