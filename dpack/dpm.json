@@ -3,7 +3,7 @@
     "version": "1.0.1",
     "description": "Standalone executable bundler for Djazair.",
     "author": "Djazair Team",
-    "dependencies": {
+    "require": {
         "zip": "latest"
     }
 }
