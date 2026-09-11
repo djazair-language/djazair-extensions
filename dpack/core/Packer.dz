@@ -307,6 +307,8 @@ class Packer
         self.log("  Bundling: ${path.basename(scriptPath)} → __main__.dz")
 
         # 2. Copy all local imported .dz files preserving relative structure
+        let sep = if os.isWindows() ? "\\" else "/"
+        let scriptPrefix = scriptDir + sep
         for localScript in localFiles
             let absLocal = path.resolve(localScript)
             if bundledPaths.has(absLocal)
@@ -314,18 +316,18 @@ class Packer
             end
             bundledPaths[absLocal] = True
 
-            let rel = localScript
-            if rel.startsWith(scriptDir)
-                rel = rel.slice(scriptDir.length())
-                while rel.startsWith("/") or rel.startsWith("\\")
-                    rel = rel.slice(1)
-                end
-            else
-                rel = path.basename(localScript)
+            # Out-of-tree imports (../) cannot be re-homed without breaking
+            # their import statements at runtime — reject them with a clear error.
+            if !absLocal.startsWith(scriptPrefix)
+                throw "dpack: Import outside the script directory is not supported: ${absLocal}\n" +
+                      "       (imported from scripts under: ${scriptDir})\n" +
+                      "       Move the file into the project folder, or bundle it separately via 'assets'."
             end
+
+            let rel = absLocal.slice(scriptPrefix.length())
             let dest = path.join(stageDir, rel)
             self.log("  Bundling local script: ${rel}")
-            self.copyFileTo(localScript, dest)
+            self.copyFileTo(absLocal, dest)
         end
 
         # 3. Copy interpreter into a bin/ directory

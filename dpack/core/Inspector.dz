@@ -47,7 +47,7 @@ fn verify(exePath)
     end
 
     let footerBytes = bytes.fromString(footerStr)
-    let flags = footerBytes[0] | (footerBytes[1] * 256) | (footerBytes[2] * 65536)
+    let flags = footerBytes[0] | (footerBytes[1] * 256) | (footerBytes[2] * 65536) | (footerBytes[3] * 16777216)
     let offsetBuf = footerBytes.slice(8, 16)
     let zipOffset = bytes.toInteger(offsetBuf, False)
     let zipSize = int(size - zipOffset - 16)

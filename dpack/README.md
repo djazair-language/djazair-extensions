@@ -8,7 +8,7 @@ With `dpack`, you can distribute your Djazair programs to anyone, and they can r
 
 ## Features
 
-- **Zero-Dependency Executables**: Automatically bundles the Djazair interpreter, standard library (`std`), and `prelude` into your app.
+- **Self-Contained Executables**: Automatically bundles the Djazair interpreter, standard library (`std`), and `prelude` into your app. (Note: the stub unpacks the embedded bundle on first launch using the system's `Expand-Archive` (Windows) or `unzip` (Linux) — see Notes & Limitations.)
 - **Smart Extension Detection**: Scans your source code for `use <module>` and automatically bundles required external extensions (e.g., `raylib`, `qt`, `kasbah`).
 - **Flexible Asset Management**: Intelligently bundles your media files, images, sounds, and directories. You can let it auto-bundle everything, or manually specify exactly what to include.
 - **Cross-Platform**: Generates `.exe` files on Windows and native binaries on Linux.
@@ -71,7 +71,8 @@ The `options` dictionary accepts the following keys:
 
 5. **`encrypt`** / **`protect`** *(Bool)*:
    - **`False`** *(Default)*: Standard bundled files.
-   - **`True`**: Source code protection. Encrypts all user `.dz` scripts inside the executable so they cannot be inspected or extracted by standard ZIP / decompiler tools.
+   - **`True`**: Source **obfuscation**. XOR-scrambles all user `.dz` scripts inside the executable so standard ZIP / decompiler tools can't read them directly.
+   - ⚠️ **Honest limitation**: this is obfuscation, **not encryption or a security boundary**. The XOR key is embedded in the stub, and after the first run the decrypted scripts remain in the cache directory (`%TEMP%\dpack_app_*` on Windows, `/tmp/dpack_app_*` elsewhere). Anyone with filesystem access to that cache can read your full source. Do not rely on it to protect secrets.
 
 6. **`quiet`** *(Bool)*: 
    - **`False`** *(Default)*: Shows detailed progress logs in the console during the build.
@@ -134,6 +135,16 @@ dpack.pack("cli_tool.dz", Null, {
 
 ---
 
+## 📝 Notes & Limitations
+
+- **Runtime unpacking**: On first launch the stub unpacks the embedded bundle using the system's **`Expand-Archive` (Windows / PowerShell)** or **`unzip` (Linux)** — those tools must be available on the machine where the app runs.
+- **Obfuscation ≠ security**: The `encrypt`/`protect` option is source obfuscation only (static XOR). After the first run the plain scripts are present in the cache directory (`%TEMP%\dpack_app_*`). Never store secrets in bundled `.dz` files.
+- **Local imports**: Only imports inside the entry script's directory tree are supported. `import "../foo.dz"` (or any path escaping the project folder) is rejected at build time with a clear error — keep such files in the project folder or bundle them as `assets`.
+- **Unicode paths (Windows)**: The stub currently uses ANSI system APIs; non-ASCII (e.g. Arabic) characters in the executable's path are not reliably supported on Windows.
+- **Unsigned output**: Bundled executables are not cryptographically signed; a tampered bundle (replacing the embedded ZIP payload) will still run. Distribute through trusted channels, and keep the last 16 bytes (the dpack footer) intact.
+
+---
+
 ## How It Works Under The Hood
 
 When you run `dpack.pack()`, the following happens:
@@ -141,4 +152,4 @@ When you run `dpack.pack()`, the following happens:
 2. **Copying**: Your script (renamed to `__main__.dz`), the Djazair interpreter, standard libraries, extensions, and your assets are securely copied into the staging folder.
 3. **Compression**: The staging directory is zipped into a highly compressed archive.
 4. **Assembly**: The archive is injected into a tiny, pre-compiled C-binary stub (`stub/stub_win.exe`).
-5. **Execution**: When a user runs your final executable, the stub transparently extracts the application into a versioned cache directory (`%TEMP%` or locally in portable mode), executes your app seamlessly with full access to the user's working directory and arguments, and preserves the cache so subsequent launches start instantly. Old cache folders can be cleaned at any time using `dpack.cleanCache()`.
+5. **Execution**: When a user runs your final executable, the stub transparently extracts the application (via `Expand-Archive` / `unzip`) into a versioned cache directory (`%TEMP%` or locally in portable mode), executes your app seamlessly with full access to the user's working directory and arguments, and preserves the cache so subsequent launches start instantly. Old cache folders can be cleaned at any time using `dpack.cleanCache()`.

@@ -145,6 +145,27 @@ fn cleanCache()
         end
     end
 
+    # Also clean leftover build artifacts in the current directory
+    for left in [path.join(process.cwd(), ".dpack_bundle.zip"), path.join(process.cwd(), ".dpack_stage_tmp")]
+        if file.exists(left)
+            try
+                if file.isDir(left)
+                    let leftSize = calcDirSize(left)
+                    dir.deleteAll(left)
+                    cleanedCount += 1
+                    cleanedBytes += leftSize
+                else
+                    let leftSize = file.size(left)
+                    file.delete(left)
+                    cleanedCount += 1
+                    cleanedBytes += leftSize
+                end
+            catch e
+                # Skip if currently locked or in use
+            end
+        end
+    end
+
     let szStr = ""
     if cleanedBytes < 1048576
         szStr = "${math.floor(cleanedBytes / 1024)} KB"

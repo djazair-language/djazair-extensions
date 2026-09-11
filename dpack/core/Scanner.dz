@@ -55,12 +55,16 @@ fn scanFile(filePath)
         # Detect: use <module>
         if trimmed.startsWith("use ")
             let rest = trimmed.slice(4).strip()
-            # Module name is the first word (no spaces, no parens)
+            # Tolerate parenthesized or aliased forms: use (json as j), use json as j
+            if rest.startsWith("(")
+                rest = rest.slice(1).strip()
+            end
+            # Module name is the first word (no spaces, parens, or trailing punctuation)
             let nameEnd = rest.length()
             let i = 0
             while i < rest.length()
                 let ch = rest[i]
-                if ch == " " or ch == "\t" or ch == "#" or ch == "\r"
+                if ch == " " or ch == "\t" or ch == "#" or ch == "\r" or ch == ")" or ch == ";"
                     nameEnd = i
                     break
                 end

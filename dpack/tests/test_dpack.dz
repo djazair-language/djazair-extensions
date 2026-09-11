@@ -139,7 +139,7 @@ let out4 = path.join(p4, "app_port.exe")
 try
     dpack.pack(path.join(p4, "main.dz"), out4, {"portable": True, "quiet": True})
     let r4 = process.exec(out4)
-    
+
     let hasLocalCache = False
     let items = dir.list(p4)
     for it in items
@@ -200,7 +200,7 @@ catch e
 end
 
 # ── 7. Verification & Cache Cleanup ──────────────────────────────────────────
-print(">>> [7/7] Testing Verify & cleanCache()...")
+print(">>> [7/8] Testing Verify & cleanCache()...")
 try
     let vValid = dpack.verify(out1)
     let vInvalid = dpack.verify(path.join(p1, "extra.txt"))
@@ -213,6 +213,26 @@ try
     end
 catch e
     fail("Test 7 Exception", str(e))
+end
+
+# ── 8. Out-of-Tree Import Rejection ─────────────────────────────────────────
+print(">>> [8/8] Rejecting Out-of-Tree Imports...")
+let p8 = path.join(testDir, "p8")
+dir.createAll(p8)
+file.write(path.join(p8, "main.dz"), "import \"../outside.dz\" as o\nprint(o.val)\n")
+file.write(path.join(testDir, "outside.dz"), "let val = \"X\"\n")
+let out8 = path.join(p8, "app_bad.exe")
+
+try
+    dpack.pack(path.join(p8, "main.dz"), out8, {"assets": False, "quiet": True})
+    fail("Out-of-tree import rejection", "No error was raised")
+catch e
+    let msg = str(e)
+    if msg.contains("outside") or msg.contains("script directory")
+        ok("Out-of-tree import rejected with a clear error")
+    else
+        fail("Out-of-tree import rejection", msg)
+    end
 end
 
 # Cleanup test directory
