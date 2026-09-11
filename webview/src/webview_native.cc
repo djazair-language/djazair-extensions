@@ -646,7 +646,20 @@ extern "C" DJAZAIR_FUNC(nativeWindowCreate) {
             SetWindowLongW(hwnd, GWL_STYLE, style);
             RECT wr{};
             GetWindowRect(hwnd, &wr);
-            SetWindowPos(hwnd, NULL, 0, 0, wr.right - wr.left, wr.bottom - wr.top, SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            int fw = wr.right - wr.left;
+            int fh = wr.bottom - wr.top;
+            SetWindowPos(hwnd, NULL, 0, 0, fw, fh, SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            pump_windows_messages();
+            // Extend DWM frame to cover entire window — eliminates 1-2px NC border artifacts on left/right/bottom
+            MARGINS margins = {-1, -1, -1, -1};
+            DwmExtendFrameIntoClientArea(hwnd, &margins);
+            // Force WebView2 controller to fill the new full client area
+            RECT cr{};
+            GetClientRect(hwnd, &cr);
+            if (c->original_wndproc) {
+                CallWindowProcW(c->original_wndproc, hwnd, WM_SIZE, SIZE_RESTORED,
+                               MAKELPARAM(cr.right, cr.bottom));
+            }
             pump_windows_messages();
         }
 #elif defined(WEBVIEW_PLATFORM_LINUX)
