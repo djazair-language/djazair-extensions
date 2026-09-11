@@ -364,8 +364,14 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             break;
 
         case WM_NCCALCSIZE:
-            if (c->is_frameless) {
-                // Remove all non-client caption and frame margins so client area covers 100% of window
+            if (c->is_frameless && wParam == TRUE) {
+                if (IsZoomed(hwnd)) {
+                    // Maximized: let Windows calculate the work area first
+                    // (this properly clips to the taskbar/monitor work area)
+                    // then accept it by returning 0
+                    DefWindowProcW(hwnd, WM_NCCALCSIZE, wParam, lParam);
+                }
+                // Normal state: client = full window rect (no NC borders, no caption gap)
                 return 0;
             }
             break;
