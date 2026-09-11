@@ -427,7 +427,7 @@ class Packer
     # Final layout: [stub bytes][ZIP bytes][flags: 4B][reserved: 4B][zip offset: 8B]
     appendBundles(zipPath, outputPath, flags = 0)
         # Step 1: Get stub size (= zip offset)
-        let stubSize = file.size(self.activeStubBin)
+        let stubSize = int(file.size(self.activeStubBin))
 
         # Step 2: Concatenate stub + ZIP natively using bytes
         let stubBytes = file.readBytes(self.activeStubBin)
@@ -443,9 +443,9 @@ class Packer
 
         # Step 3: Append 16-byte footer
         use bytes
-        let flagsBytes = bytes.fromInteger(flags, 4, False)
+        let flagsBytes = bytes.fromInteger(int(flags), 4, False)
         let resBytes   = bytes.fromInteger(0, 4, False)
-        let offsetBytes = bytes.fromInteger(stubSize, 8, False)
+        let offsetBytes = bytes.fromInteger(int(stubSize), 8, False)
         
         outHandle.writeBytes(flagsBytes)
         outHandle.writeBytes(resBytes)
