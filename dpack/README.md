@@ -141,4 +141,4 @@ When you run `dpack.pack()`, the following happens:
 2. **Copying**: Your script (renamed to `__main__.dz`), the Djazair interpreter, standard libraries, extensions, and your assets are securely copied into the staging folder.
 3. **Compression**: The staging directory is zipped into a highly compressed archive.
 4. **Assembly**: The archive is injected into a tiny, pre-compiled C-binary stub (`stub/stub_win.exe`).
-5. **Execution**: When a user double-clicks your final `.exe`, the stub transparently extracts everything to a system temporary folder, runs your app seamlessly, and safely cleans up all files from the user's computer once the app is closed.
+5. **Execution**: When a user runs your final executable, the stub transparently extracts the application into a versioned cache directory (`%TEMP%` or locally in portable mode), executes your app seamlessly with full access to the user's working directory and arguments, and preserves the cache so subsequent launches start instantly. Old cache folders can be cleaned at any time using `dpack.cleanCache()`.

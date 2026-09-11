@@ -39,19 +39,52 @@ class Packer
         # Deduce repoRoot (djazair is typically at <repoRoot>/build/bin/djazair)
         self.repoRoot = path.resolve(path.join(path.dirname(self.interpBin), "..", ".."))
 
-        # Locate dpack root
-        let dpackRoot = path.join(self.repoRoot, "extensions", "dpack")
-        if !file.exists(dpackRoot)
-            dpackRoot = path.resolve(path.join(self.repoRoot, "..", "djazair-extensions", "dpack"))
+        # Locate dpack root: check candidate locations
+        let dpackCandidates = [
+            path.resolve(path.join(process.cwd(), "djazair_packages", "dpack")),
+            path.resolve(path.join(self.repoRoot, "packages", "dpack")),
+            path.resolve(path.join(self.repoRoot, "extensions", "dpack")),
+            path.resolve(path.join(self.repoRoot, "..", "djazair-extensions", "dpack"))
+        ]
+        let foundDpack = Null
+        for cand in dpackCandidates
+            if file.exists(cand) and file.isDir(cand)
+                foundDpack = cand
+                break
+            end
         end
-        self.dpackRoot = dpackRoot
+        if isNull(foundDpack)
+            try
+                use lang
+                let loc = lang.locateLibrary("dpack")
+                if loc["found"] and loc["path"] != ""
+                    foundDpack = if file.isDir(loc["path"]) ? loc["path"] else path.dirname(loc["path"])
+                end
+            catch e
+            end
+        end
+        if isNull(foundDpack)
+            foundDpack = path.resolve(path.join(self.repoRoot, "..", "djazair-extensions", "dpack"))
+        end
+        self.dpackRoot = foundDpack
 
         # Standard library and prelude paths
-        self.stdDir     = path.join(self.repoRoot, "src", "libs", "std")
+        let sDir = path.join(self.repoRoot, "src", "libs", "std")
+        if !file.exists(sDir)
+            try
+                use lang
+                sDir = lang.stdDir()
+            catch e
+            end
+        end
+        self.stdDir     = sDir
         self.preludeDir = path.join(self.repoRoot, "src", "libs", "prelude")
         
-        # Extensions can be local (current dir) or global (in djazair-language/extensions)
-        self.extDir     = path.join(self.repoRoot, "extensions")
+        # Global packages directory
+        self.extDir     = path.join(self.repoRoot, "packages")
+        if !file.exists(self.extDir)
+            self.extDir = path.join(self.repoRoot, "extensions")
+        end
     end
 
     log(msg)
@@ -87,7 +120,7 @@ class Packer
         if total > 0
             pct = (step * 100) / total
         end
-        print("[${bar}] ${pct}% ${label}")
+        print("[${bar}] " + str(pct) + "% ${label}")
     end
 
     # ── Public API ─────────────────────────────────────────────────────────
@@ -95,8 +128,12 @@ class Packer
     # Pack a script file into a self-contained executable.
     # scriptPath: path to the .dz entry script
     # outputPath: where to write the final executable
-    # options: dictionary with optional keys "extensions", "assets", "quiet"
+    # options: dictionary with optional keys "extensions", "assets", "quiet", "console", "portable", "encrypt"
     pack(scriptPath, outputPath, options = {})
+        if options.has("quiet")
+            self.quiet = options["quiet"]
+        end
+
         let absScript = path.resolve(scriptPath)
         if !file.exists(absScript)
             throw "dpack: Script not found: ${absScript}"
@@ -111,10 +148,12 @@ class Packer
 
         let startTime = datetime.now().timestamp()
 
-        # ── Step 1: Scan for used extensions ──────────────────────────────
+        # ── Step 1: Scan for used extensions and local imports ─────────────
         self.progress(1, 5, "Scanning imports...")
         let scanResult = Scanner.scanAll(absScript)
         let extensions = scanResult["extensions"]
+        let localFiles = scanResult["localFiles"]
+
         for ext in extraExtensions
             let found = False
             for e in extensions
@@ -170,7 +209,7 @@ class Packer
         let bundledAssetCount = 0
 
         try
-            bundledAssetCount = self.buildStage(tmpStage, absScript, extensions, assetsOpt, outputPath)
+            bundledAssetCount = self.buildStage(tmpStage, absScript, extensions, localFiles, assetsOpt, outputPath)
             
             if (flags & 2) != 0
                 self.encryptStageScripts(tmpStage)
@@ -257,73 +296,122 @@ class Packer
     # ── Private helpers ────────────────────────────────────────────────────
 
     # Builds the staging directory with all files to be bundled.
-    buildStage(stageDir, scriptPath, extensions, assetsOpt, outputPath)
-        # Copy entry script as __main__.dz
+    buildStage(stageDir, scriptPath, extensions, localFiles, assetsOpt, outputPath)
+        let scriptDir = path.dirname(scriptPath)
+        let bundledPaths = {}
+
+        # 1. Copy entry script as __main__.dz
         let mainDest = path.join(stageDir, "__main__.dz")
         file.copy(scriptPath, mainDest)
+        bundledPaths[path.resolve(scriptPath)] = True
         self.log("  Bundling: ${path.basename(scriptPath)} → __main__.dz")
 
-        # Copy interpreter into a bin/ directory
+        # 2. Copy all local imported .dz files preserving relative structure
+        for localScript in localFiles
+            let absLocal = path.resolve(localScript)
+            if bundledPaths.has(absLocal)
+                continue
+            end
+            bundledPaths[absLocal] = True
+
+            let rel = localScript
+            if rel.startsWith(scriptDir)
+                rel = rel.slice(scriptDir.length())
+                while rel.startsWith("/") or rel.startsWith("\\")
+                    rel = rel.slice(1)
+                end
+            else
+                rel = path.basename(localScript)
+            end
+            let dest = path.join(stageDir, rel)
+            self.log("  Bundling local script: ${rel}")
+            self.copyFileTo(localScript, dest)
+        end
+
+        # 3. Copy interpreter into a bin/ directory
         let interpDest = path.join(stageDir, "bin", self.interpName)
         self.log("  Bundling: interpreter (${self.interpName})")
         self.copyFileTo(self.interpBin, interpDest)
 
-        # Copy std/ library
+        # 4. Copy std/ library (filtering .dz only)
         self.log("  Bundling: std/ library...")
         let stdDest = path.join(stageDir, "src", "libs", "std")
         dir.createAll(path.dirname(stdDest))
-        self.copyDirTo(self.stdDir, stdDest)
+        self.copyDirTo(self.stdDir, stdDest, "dzOnly")
 
-        # Copy prelude/
+        # 5. Copy prelude/ (filtering .dz only)
         if file.exists(self.preludeDir)
             self.log("  Bundling: prelude/")
             let preludeDest = path.join(stageDir, "src", "libs", "prelude")
             dir.createAll(path.dirname(preludeDest))
-            self.copyDirTo(self.preludeDir, preludeDest)
+            self.copyDirTo(self.preludeDir, preludeDest, "dzOnly")
         end
 
-        # Copy detected extensions
+        # 6. Locate and copy detected extensions / packages (no duplication!)
         for extName in extensions
-            let localExtSrc = path.join(process.cwd(), "extensions", extName)
-            let globalExtSrc = path.join(self.extDir, extName)
-            let extSrc = Null
-
-            if file.exists(localExtSrc)
-                extSrc = localExtSrc
-            elif file.exists(globalExtSrc)
-                extSrc = globalExtSrc
+            let foundSrc = Null
+            let candidateDirs = [
+                path.join(process.cwd(), "djazair_packages", extName),
+                path.join(scriptDir, "djazair_packages", extName),
+                path.join(self.repoRoot, "packages", extName),
+                path.join(self.extDir, extName),
+                path.join(path.dirname(self.dpackRoot), extName),
+                path.join(process.cwd(), "extensions", extName)
+            ]
+            for cand in candidateDirs
+                if file.exists(cand) and file.isDir(cand)
+                    foundSrc = cand
+                    break
+                end
             end
 
-            if !isNull(extSrc)
-                self.log("  Bundling: extension/${extName}")
-                let extDest = path.join(stageDir, "extensions", extName)
-                dir.createAll(path.dirname(extDest))
-                self.copyDirTo(extSrc, extDest)
+            if isNull(foundSrc)
+                try
+                    use lang
+                    let loc = lang.locateLibrary(extName)
+                    if loc["found"] and loc["path"] != ""
+                        foundSrc = if file.isDir(loc["path"]) ? loc["path"] else path.dirname(loc["path"])
+                    end
+                catch e
+                end
+            end
+
+            if !isNull(foundSrc)
+                self.log("  Bundling package: ${extName}")
+                # Copy to djazair_packages/ in staging — this is where Djazair VM looks primarily
+                let pkgDest = path.join(stageDir, "djazair_packages", extName)
+                dir.createAll(pkgDest)
+                self.copyDirTo(foundSrc, pkgDest, "package")
             else
-                print("  Warning: Extension '${extName}' not found locally or globally, skipping.")
+                print("  Warning: Package '${extName}' not found locally or globally, skipping.")
             end
         end
 
-        # Process assets
+        # 7. Process assets (preventing duplicate copying)
         let assetCount = 0
         if isBool(assetsOpt) and assetsOpt == True
             # Auto-bundle all files and folders in the script's directory
-            let scriptDir = path.dirname(scriptPath)
             let outputBase = path.basename(outputPath)
             let mainBase = path.basename(scriptPath)
             let items = dir.list(scriptDir)
             
             for item in items
                 # Skip output executable, main script, staging folder, and standard ignored files
-                if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == ".dpack_bundle.zip" or item == "extensions" or item == "src" or item == "build" or item == "node_modules" or item == ".dpm_cache"
+                if item == mainBase or item == outputBase or item == ".dpack_stage_tmp" or item == ".git" or item == ".vscode" or item == "test.dz" or item == "build.bat" or item == "build.sh" or item == ".dpack_bundle.zip" or item == "extensions" or item == "packages" or item == "djazair_packages" or item == "src" or item == "build" or item == "node_modules" or item == ".dpm_cache" or item == "dpack.json" or item.startsWith(".dpack_cache_") or item.endsWith(".metadata.json") or item == "build.dz" or item == "build_app.dz" or item == "Makefile"
                     continue
                 end
                 
                 let itemSrc = path.join(scriptDir, item)
+                let absItem = path.resolve(itemSrc)
+                if bundledPaths.has(absItem)
+                    continue
+                end
+                bundledPaths[absItem] = True
+
                 let itemDest = path.join(stageDir, item)
                 
                 if file.isDir(itemSrc)
-                    self.copyDirTo(itemSrc, itemDest)
+                    self.copyDirTo(itemSrc, itemDest, "all")
                 else
                     self.copyFileTo(itemSrc, itemDest)
                 end
@@ -332,12 +420,18 @@ class Packer
         elif isArray(assetsOpt)
             # Explicit user-defined assets
             for asset in assetsOpt
-                let assetSrc = path.join(path.dirname(scriptPath), asset)
+                let assetSrc = path.join(scriptDir, asset)
+                let absAsset = path.resolve(assetSrc)
+                if bundledPaths.has(absAsset)
+                    continue
+                end
+                bundledPaths[absAsset] = True
+
                 let assetDest = path.join(stageDir, asset)
                 
                 if file.exists(assetSrc)
                     if file.isDir(assetSrc)
-                        self.copyDirTo(assetSrc, assetDest)
+                        self.copyDirTo(assetSrc, assetDest, "all")
                     else
                         self.copyFileTo(assetSrc, assetDest)
                     end
@@ -360,7 +454,8 @@ class Packer
     end
 
     # Recursively copies a directory to dest natively.
-    copyDirTo(src, dest)
+    # mode: "all" (copy everything), "dzOnly" (only .dz files), "package" (clean package runtime files)
+    copyDirTo(src, dest, mode = "all")
         if !file.exists(dest)
             dir.createAll(dest)
         end
@@ -368,9 +463,38 @@ class Packer
         for itemName in items
             let srcPath = path.join(src, itemName)
             let destPath = path.join(dest, itemName)
+
+            # Common ignore list
+            if itemName == ".git" or itemName == ".vscode" or itemName == ".gitignore" or itemName.startsWith(".dpack_")
+                continue
+            end
+
+            if mode == "package"
+                # Exclude build scripts, examples, and tests from packages
+                if itemName == "build.bat" or itemName == "build.sh" or itemName == "Makefile" or itemName == "CMakeLists.txt"
+                    continue
+                end
+                if itemName == "examples" or itemName == "tests" or itemName == "test"
+                    continue
+                end
+                if itemName.startsWith("test_") and itemName.endsWith(".dz")
+                    continue
+                end
+                if itemName == "src"
+                    # If the package has a compiled binary (.dll, .so), skip C source tree
+                    let hasBin = file.exists(path.join(src, path.basename(src) + ".dll")) or file.exists(path.join(src, path.basename(src) + ".so"))
+                    if hasBin
+                        continue
+                    end
+                end
+            end
+
             if file.isDir(srcPath)
-                self.copyDirTo(srcPath, destPath)
+                self.copyDirTo(srcPath, destPath, mode)
             else
+                if mode == "dzOnly" and !itemName.endsWith(".dz")
+                    continue
+                end
                 file.copy(srcPath, destPath)
             end
         end
@@ -391,10 +515,19 @@ class Packer
             if file.isDir(fullPath)
                 self.addDirToZip(z, fullPath, arcName)
             else
-                # Use readBytes + bytes.toString for binary-safe reading
-                let rawBytes = file.readBytes(fullPath)
-                let content  = bytes.toString(rawBytes)
-                z.writestr(arcName, content)
+                let sz = int(file.size(fullPath))
+                if sz == 0
+                    z.writestr(arcName, "")
+                else
+                    let h = file.open(fullPath, "rb")
+                    if !isNull(h) and h.isOpen()
+                        let content = h.readBytes(sz)
+                        h.close()
+                        z.writestr(arcName, content)
+                    else
+                        throw "dpack: Cannot read file for bundling: ${fullPath}"
+                    end
+                end
             end
         end
     end
@@ -423,28 +556,46 @@ class Packer
         end
     end
 
-    # Appends the ZIP to the stub binary and writes the 16-byte footer natively.
+    # Appends the ZIP to the stub binary and writes the 16-byte footer natively using streaming.
     # Final layout: [stub bytes][ZIP bytes][flags: 4B][reserved: 4B][zip offset: 8B]
     appendBundles(zipPath, outputPath, flags = 0)
-        # Step 1: Get stub size (= zip offset)
         let stubSize = int(file.size(self.activeStubBin))
 
-        # Step 2: Concatenate stub + ZIP natively using bytes
-        let stubBytes = file.readBytes(self.activeStubBin)
-        let zipBytes = file.readBytes(zipPath)
-
+        let inStub = file.open(self.activeStubBin, "rb")
         let outHandle = file.open(outputPath, "wb")
         if isNull(outHandle) or !outHandle.isOpen()
+            if !isNull(inStub) and inStub.isOpen()
+                inStub.close()
+            end
             throw "dpack: Failed to open output file for writing: ${outputPath}"
         end
 
-        outHandle.writeBytes(stubBytes)
-        outHandle.writeBytes(zipBytes)
+        # Stream stub in chunks
+        let chunkSize = 65536
+        while !inStub.eof()
+            let chunk = inStub.readBytes(chunkSize)
+            if chunk.length() == 0
+                break
+            end
+            outHandle.write(chunk)
+        end
+        inStub.close()
 
-        # Step 3: Append 16-byte footer
+        # Stream ZIP in chunks
+        let inZip = file.open(zipPath, "rb")
+        while !inZip.eof()
+            let chunk = inZip.readBytes(chunkSize)
+            if chunk.length() == 0
+                break
+            end
+            outHandle.write(chunk)
+        end
+        inZip.close()
+
+        # Append 16-byte footer
         use bytes
-        let flagsBytes = bytes.fromInteger(int(flags), 4, False)
-        let resBytes   = bytes.fromInteger(0, 4, False)
+        let flagsBytes  = bytes.fromInteger(int(flags), 4, False)
+        let resBytes    = bytes.fromInteger(0, 4, False)
         let offsetBytes = bytes.fromInteger(int(stubSize), 8, False)
         
         outHandle.writeBytes(flagsBytes)
@@ -453,3 +604,4 @@ class Packer
         outHandle.close()
     end
 end
+

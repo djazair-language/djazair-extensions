@@ -1,5 +1,5 @@
 # dpack/core/Scanner.dz
-# Scans Djazair source files to detect `use` statements.
+# Scans Djazair source files to detect `use` statements and local imports.
 # Distinguishes between built-in stdlib modules and external extensions (installed via dpm).
 #
 # Developer: Harizi Riyadh (hariziriyadh@gmail.com)
@@ -17,8 +17,12 @@ let STDLIB_MODULES = [
 
 # Returns True if the given module name is a built-in stdlib module.
 fn isStdlib(name)
+    let clean = name
+    if clean.startsWith("std::")
+        clean = clean.slice(5)
+    end
     for mod in STDLIB_MODULES
-        if mod == name
+        if mod == clean
             return True
         end
     end
@@ -65,7 +69,17 @@ fn scanFile(filePath)
             let modName = rest.slice(0, nameEnd).strip()
             if modName != ""
                 if isStdlib(modName)
-                    result["stdlib"].append(modName)
+                    let stdName = if modName.startsWith("std::") ? modName.slice(5) else modName
+                    let foundStd = False
+                    for s in result["stdlib"]
+                        if s == stdName
+                            foundStd = True
+                            break
+                        end
+                    end
+                    if !foundStd
+                        result["stdlib"].append(stdName)
+                    end
                 else
                     # External extension
                     let alreadyFound = False
@@ -82,15 +96,15 @@ fn scanFile(filePath)
             end
         end
 
-        # Detect: import "path/to/file.dz" as ...
+        # Detect: import "path/to/file.dz" as ... or import 'path/to/file.dz' as ...
         if trimmed.startsWith("import ")
             let rest = trimmed.slice(7).strip()
-            if rest.startsWith("\"")
-                # Find the closing quote starting from position 1
+            if rest.startsWith("\"") or rest.startsWith("'")
+                let quoteChar = rest[0]
                 let endQuote = -1
                 let qi = 1
                 while qi < rest.length()
-                    if rest[qi] == "\""
+                    if rest[qi] == quoteChar
                         endQuote = qi
                         break
                     end
@@ -108,10 +122,14 @@ fn scanFile(filePath)
 end
 
 # Recursively scans a script and all its local imports.
-# Returns a merged result with all unique modules and extensions found.
+# Returns a merged result with:
+# - stdlib: unique stdlib modules
+# - extensions: unique external extensions
+# - localFiles: all discovered local imported .dz files (absolute paths)
 fn scanAll(entryFile)
     let visited = {}
-    let allResult = {"stdlib": [], "extensions": [], "imports": []}
+    let allResult = {"stdlib": [], "extensions": [], "imports": [], "localFiles": []}
+    let absEntry = path.resolve(entryFile)
 
     fn collectUnique(target, source)
         for item in source
@@ -135,9 +153,14 @@ fn scanAll(entryFile)
         end
         visited[absPath] = True
 
+        if absPath != absEntry
+            allResult["localFiles"].append(absPath)
+        end
+
         let result = scanFile(absPath)
         collectUnique(allResult["stdlib"], result["stdlib"])
         collectUnique(allResult["extensions"], result["extensions"])
+        collectUnique(allResult["imports"], result["imports"])
 
         # Recursively visit local imports
         let baseDir = path.dirname(absPath)
@@ -155,3 +178,4 @@ fn scanAll(entryFile)
     visit(entryFile)
     return allResult
 end
+

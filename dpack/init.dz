@@ -89,12 +89,26 @@ fn pack(scriptPath = Null, outputPath = Null, options = {})
         outputPath = defaultOutputName(absScript)
     else
         if !path.isAbsolute(outputPath)
-            outputPath = path.resolve(path.join(process.scriptDir(), outputPath))
+            outputPath = path.resolve(outputPath)
         end
     end
     
     let p = new Packer(options)
     p.pack(absScript, outputPath, options)
+end
+
+fn calcDirSize(d)
+    let list = dir.list(d)
+    let total = 0
+    for it in list
+        let child = path.join(d, it)
+        if file.isDir(child)
+            total += calcDirSize(child)
+        else
+            total += file.size(child)
+        end
+    end
+    return total
 end
 
 # Cleans up cached dpack build folders from system TEMP directory.
@@ -120,21 +134,7 @@ fn cleanCache()
             let p = path.join(tmpDir, item)
             if file.isDir(p)
                 try
-                    let sz = 0
-                    fn calcSize(d)
-                        let list = dir.list(d)
-                        let total = 0
-                        for it in list
-                            let child = path.join(d, it)
-                            if file.isDir(child)
-                                total += calcSize(child)
-                            else
-                                total += file.size(child)
-                            end
-                        end
-                        return total
-                    end
-                    sz = calcSize(p)
+                    let sz = calcDirSize(p)
                     dir.deleteAll(p)
                     cleanedCount += 1
                     cleanedBytes += sz
@@ -160,7 +160,7 @@ end
 # Checks whether a file is a valid dpack bundle.
 fn verify(exePath)
     if !path.isAbsolute(exePath)
-        exePath = path.resolve(path.join(process.scriptDir(), exePath))
+        exePath = path.resolve(exePath)
     end
     return Inspector.verify(exePath)
 end
@@ -168,7 +168,7 @@ end
 # Lists all files bundled inside a packed executable.
 fn inspect(exePath)
     if !path.isAbsolute(exePath)
-        exePath = path.resolve(path.join(process.scriptDir(), exePath))
+        exePath = path.resolve(exePath)
     end
     let fileList = Inspector.inspect(exePath)
 

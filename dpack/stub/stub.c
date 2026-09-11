@@ -34,6 +34,7 @@
 #  include <sys/stat.h>
 #  include <sys/types.h>
 #  include <sys/wait.h>
+#  include <dirent.h>
 #  include <ftw.h>
 #  define PATH_SEP "/"
 #  define INTERP   "djazair"
@@ -186,8 +187,8 @@ static void get_cache_dir(const char *self_path, uint64_t file_size, uint64_t zi
 
     if (portable) {
         /* Portable mode: place cache in local directory next to self EXE */
-        char exe_dir[2048] = {0};
-        strncpy(exe_dir, self_path, sizeof(exe_dir) - 1);
+        char exe_dir[4096] = {0};
+        snprintf(exe_dir, sizeof(exe_dir), "%s", self_path);
         char *last_sep = strrchr(exe_dir, PATH_SEP[0]);
         if (last_sep) *last_sep = '\0';
         snprintf(out, sz, "%s%s.dpack_cache_%llx", exe_dir, PATH_SEP, (unsigned long long)h);
@@ -419,7 +420,7 @@ int main(int argc, char *argv[]) {
             inheritHandles,     /* inherit handles */
             creationFlags,      /* creation flags */
             NULL,               /* environment */
-            tmp_dir,            /* working directory = extracted tmp */
+            NULL,               /* working directory = inherit from caller */
             &si,
             &pi)) {
         WaitForSingleObject(pi.hProcess, INFINITE);
