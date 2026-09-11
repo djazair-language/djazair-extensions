@@ -77,8 +77,7 @@ g++ -shared -O2 -std=c++14 -DUNICODE -D_UNICODE ^
     src\webview_native.cc ^
     -o webview.dll ^
     -L"%LIB_DIR%" -ldjazair ^
-    -lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32 -ldwmapi -luuid ^
-    -Wl,--disable-dynamicbase
+    -lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32 -ldwmapi -luuid
 
 if errorlevel 1 (
     echo [ERROR] Build failed.

@@ -38,6 +38,7 @@ class Window
         let minHeight = getOpt(options, "minHeight", 300)
         let maxWidth = getOpt(options, "maxWidth", 0)
         let maxHeight = getOpt(options, "maxHeight", 0)
+        let virtualHostDir = getOpt(options, "virtualHostDir", "")
 
         sysLog("Window", "Creating native window: '${title}' (${width}x${height})")
 
@@ -66,17 +67,29 @@ class Window
         self._onLoad = Null
         self._loaded = False
 
-        # Virtual host mapping setup for secure local assets
-        let hostName = "djazair.local"
-        let scriptDir = process.scriptDir()
+        # Virtual host mapping for local assets.
+        # Maps a folder to http://djazair.localhost/ (same-origin only on the
+        # native side: DENY_CORS). By default the whole script directory is
+        # mapped so navigate("index.html") keeps working; apps that only serve
+        # web assets can restrict this to a subfolder via "virtualHostDir".
+        # NOTE: use ".localhost", NOT ".local" — Chromium stalls on DNS for
+        # ".local" (mDNS) and the navigation fails with chrome-error.
+        # ".localhost" (RFC 6761) resolves instantly and is intercepted by
+        # the virtual host mapping.
+        let hostName = "djazair.localhost"
+        let vhDir = virtualHostDir
+        if isNull(vhDir) or vhDir == ""
+            vhDir = process.scriptDir()
+        end
         let mapped = False
         try
-            mapped = _native.windowSetVirtualHostMapping(h, hostName, scriptDir)
+            mapped = _native.windowSetVirtualHostMapping(h, hostName, vhDir)
         catch err
             sysLog("Window", "Virtual host mapping skipped or not supported: ${err}", "debug")
         end
         self._virtualHostMapped = mapped
         self._virtualHostName = hostName
+        self._virtualHostDir = vhDir
 
         # Hook native window close
         let selfRef = self
@@ -286,7 +299,11 @@ class Window
                 sysLog("Window", "Navigating to virtual host URL: ${localUrl}")
                 _native.windowNavigate(self._handle, localUrl)
             else
-                let absPath = path.resolve(path.join(process.scriptDir(), url))
+                let baseDir = self._virtualHostDir
+                if isNull(baseDir) or baseDir == ""
+                    baseDir = process.scriptDir()
+                end
+                let absPath = path.resolve(path.join(baseDir, url))
                 absPath = absPath.replace("\\", "/")
                 if !absPath.startsWith("/")
                     absPath = "/" + absPath
@@ -510,11 +527,11 @@ class Window
     onLoad(callback)
         self._onLoad = callback
         let selfRef = self
-        _native.windowSetLoadCallback(self._handle, fn()
+        _native.windowSetLoadCallback(self._handle, fn(url)
             sysLog("Window", "Window content fully loaded")
             selfRef._loaded = True
             if !isNull(selfRef._onLoad)
-                selfRef._onLoad()
+                selfRef._onLoad(url)
             end
         end)
     end

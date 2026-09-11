@@ -22,8 +22,9 @@ Build modern desktop GUI applications for Windows using **HTML, CSS, and JavaScr
 10. [System Tray Icon](#10-system-tray-icon)
 11. [Toast Notifications](#11-toast-notifications)
 12. [Custom URL Protocols](#12-custom-url-protocols)
-13. [Logging System](#13-logging-system)
-14. [Complete Examples](#14-complete-examples)
+13. [Security & Trust Boundaries](#13-security--trust-boundaries)
+14. [Logging System](#14-logging-system)
+15. [Complete Examples](#15-complete-examples)
 
 ---
 
@@ -124,7 +125,8 @@ app.onQuit(fn()
     print("Goodbye!")
 end)
 
-# Catches bridge/internal errors
+# Catches internal errors, including uncaught bridge handler/binding errors
+# (handlers that `throw`, or unknown channels/bindings)
 app.onError(fn(err)
     print("Error: " + err)
 end)
@@ -282,8 +284,8 @@ app.window.onClose(fn()
     print("Window closing")
 end)
 
-app.window.onLoad(fn()
-    print("Page fully loaded: ${app.window.getUrl()}")
+app.window.onLoad(fn(url)
+    print("Page fully loaded: ${url}")
 end)
 
 app.window.onNavigate(fn(url)
@@ -310,12 +312,28 @@ app.window.setHtml("<h1>Hello</h1>")
 # 2. Navigate to a URL
 app.window.navigate("https://example.com")
 
-# 3. Load a local file (auto-mapped to http://djazair.local/ to avoid CORS)
+# 3. Load a local file (auto-mapped to http://djazair.localhost/ with
+#    same-origin access only — remote pages cannot read it cross-origin)
 app.window.navigate("index.html")
 
 # 4. Load a local file from a subdirectory
 app.window.navigate("views/main.html")
 ```
+
+Local files are mapped to `http://djazair.localhost/...` which is served with **same-origin access only** (native `DENY_CORS`): pages loaded from your own local files can fetch these assets freely, but pages loaded from untrusted remote URLs cannot read them cross-origin. By default the whole script directory is mapped; to restrict the mapping to a dedicated subfolder, pass `"virtualHostDir"` when creating the window:
+
+```djazair
+let app = webview.createWindow({
+    "title": "Locked Down",
+    "virtualHostDir": "assets"   # only ./assets is exposed at http://djazair.localhost/
+})
+```
+
+> **Why `.localhost` and not `.local`?** Chromium performs a DNS (mDNS) lookup for
+> `*.local` virtual hosts before applying the mapping; on many machines the
+> navigation stalls or fails entirely with a `chrome-error` page. Names under
+> RFC 6761's `.localhost` TLD resolve instantly with no network query, so the
+> virtual-host mapping is applied immediately and reliably.
 
 ### JavaScript Execution
 
@@ -850,7 +868,29 @@ webview.protocolUnregister("myapp")
 
 ---
 
-## 13. Logging System
+## 13. Security & Trust Boundaries
+
+Desktop webview apps grant more native power than browser pages: the bridge exposes native functions, dialogs, menus, tray, and notifications to JavaScript. Treat the web content as **untrusted input**, not as part of your trusted native code.
+
+### Trust model
+
+- Content you ship in `assets/` (or the folder passed via `"virtualHostDir"`) and static HTML you pass to `setHtml()` is **first-party** content. It is served under a virtual host real name with `DENY_CORS`, so it has the same origin as the bridge and may call it freely.
+- Remote or third-party pages (anything loaded from the network, or a page you did not author) are **untrusted**. If you ever point `navigate()` at a remote URL, remember that page can call the same IPC bridge and native functions you expose. Only bridge trusted content.
+- The native ↔ JavaScript bridge is a full trust boundary. Registering a JS-visible native binding is equivalent to exposing a public API to whoever controls the rendered page. Validate and authorize anything sensitive.
+
+### Hardening notes
+
+- `debug: True` enables DevTools and forwards JS console output. Do not ship with it in production — it lets a user inspect and tamper with bridge traffic.
+- File dialogs return paths with user-selected filesystem access. Never auto-open, copy, or delete returned paths without validating them, especially when the request originates from web content.
+- The packaged `webview.dll` is compiled with OS defenses enabled (ASLR/DYNAMICBASE). Rebuild the extension only from sources you trust.
+
+### Reporting
+
+If you find a security issue in this extension, report it privately to the maintainers (see package metadata) before disclosing publicly. Do not open a public issue with exploit details.
+
+---
+
+## 14. Logging System
 
 The library has a built-in logging system with levels and colored console output:
 
@@ -878,7 +918,7 @@ When `debug: True` is set in `createWindow()`, console messages from JavaScript 
 
 ---
 
-## 14. Complete Examples
+## 15. Complete Examples
 
 ### Example 1: Counter App with Bridge
 
@@ -1330,7 +1370,7 @@ app.run()
 | `onClose(cb)` / `onMove(cb)` / `onResize(cb)` | Event callbacks |
 | `onFocus(cb)` / `onBlur(cb)` | Focus events |
 | `onMaximize(cb)` / `onMinimize(cb)` / `onRestore(cb)` | State events |
-| `onNavigate(cb)` / `onTitleChange(cb)` / `onLoad(cb)` | Content events |
+| `onNavigate(cb)` / `onTitleChange(cb)` / `onLoad(cb)` | Content events (`onLoad(cb)` fires once per completed navigation and receives the loaded URL) |
 
 ### Bridge Methods
 

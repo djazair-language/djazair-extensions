@@ -76,8 +76,8 @@ case "$OS" in
     MINGW*|MSYS*|CYGWIN*)
         OUT="webview.dll"
         SHARED="-shared"
-        PLATFORM_FLAGS="-DUNICODE -D_UNICODE -Wl,--disable-dynamicbase"
-        PLATFORM_LIBS="-lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32"
+        PLATFORM_FLAGS="-DUNICODE -D_UNICODE"
+        PLATFORM_LIBS="-lole32 -lshell32 -lshlwapi -luser32 -lversion -lcomdlg32 -ladvapi32 -ldwmapi -luuid"
         ;;
     *)
         # Linux — requires libwebkit2gtk-4.0-dev and libgtk-3-dev

@@ -19,3 +19,6 @@ Thumbs.db
 # dweb (managed separately)
 /tests/
 /qt/
+
+# Internal audit reports (not part of the shipped extension)
+webview/reports/

@@ -37,6 +37,7 @@ class App
             "maxWidth": 0,
             "maxHeight": 0,
             "closable": True,
+            "virtualHostDir": "",
             "debug": False,
             "singleInstance": False,
             "appId": ""
