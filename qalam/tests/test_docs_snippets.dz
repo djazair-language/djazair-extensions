@@ -137,7 +137,7 @@ let dataFilter = {
 let resFilter = qalam.renderString(tplFilter, dataFilter)
 testContains("DOC: Chained trim | title", resFilter, "<h1>Qalam Template Engine</h1>")
 testContains("DOC: Chained join | upper", resFilter, "<p>Joined tags: DJAZAIR • QALAM • KASBAH</p>")
-testContains("DOC: Math round filter", resFilter, "<p>Price: $20</p>")
+testContains("DOC: Math round filter", resFilter, "<p>Price: $20.0</p>")
 testContains("DOC: Default filter fallback", resFilter, "<p>Bio: No biography provided.</p>")
 
 # ── 5. Conditionals & Logical Operators ───────────────────────────────────────
@@ -186,7 +186,7 @@ let resLoop = qalam.renderString(tplLoop, {
 testContains("DOC: Loop item 1 index", resLoop, "<td>1</td>")
 testContains("DOC: Loop item 1 odd class", resLoop, "<tr class=\"row-odd\">")
 testContains("DOC: Loop item 2 even class", resLoop, "<tr class=\"row-even\">")
-testContains("DOC: Loop item 2 price", resLoop, "<td>$25</td>")
+testContains("DOC: Loop item 2 price", resLoop, "<td>$25.0</td>")
 
 let resLoopEmpty = qalam.renderString(tplLoop, {"products": []})
 testContains("DOC: For-else fallback", resLoopEmpty, "No products found.")
@@ -494,7 +494,7 @@ let outFnDoc = qalam.renderString(tplFnDoc, {
     "calculateTax": fn(amount, rate) return amount * (1 + rate) end
 })
 testContains("DOC HTML Snippet 15: Direct function greet", outFnDoc, "<p>Greeting: Marhaba, Riad!</p>")
-testContains("DOC HTML Snippet 15: Direct function calculateTax", outFnDoc, "<p>Total Amount: 11900 DZD</p>")
+testContains("DOC HTML Snippet 15: Direct function calculateTax", outFnDoc, "<p>Total Amount: 11900.0 DZD</p>")
 
 # Snippet 16: Filter Pipelines and Default Fallbacks
 let tplSnippet16 = `

@@ -290,7 +290,7 @@ class filterRegistry
         self.register("round", fn(val, args = [])
             if isNull(val) return 0 end
             let digits = if args.length() > 0 ? int(args[0]) else 0
-            return round(float(val), digits)
+            return round(num(val), digits)
         end)
 
         self.register("floor", fn(val, args = [])

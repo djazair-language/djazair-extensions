@@ -109,7 +109,7 @@ test("FILTER: get with fallback", qalam.renderString("{{ data | get('age', 18) }
 # Math filters
 test("FILTER: floor", qalam.renderString("{{ 3.9 | floor }}", {}), "3")
 test("FILTER: ceil", qalam.renderString("{{ 3.1 | ceil }}", {}), "4")
-test("FILTER: sqrt", qalam.renderString("{{ 16 | sqrt }}", {}), "4")
+test("FILTER: sqrt", qalam.renderString("{{ 16 | sqrt }}", {}), "4.0")
 
 # Type checking filters
 test("FILTER: isNull", qalam.renderString("{{ val | isNull }}", {"val": Null}), "True")

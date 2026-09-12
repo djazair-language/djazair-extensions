@@ -1,4 +1,4 @@
-﻿import "kasbah/init.dz" as kasbah
+﻿import "../init.dz" as kasbah
 use process
 
 let app = new kasbah.kasbahApp({"port": 9999, "logger": False})
