@@ -405,15 +405,31 @@ static LRESULT CALLBACK WebviewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             }
             break;
 
+        case WM_GETMINMAXINFO: {
+            LRESULT res = c->original_wndproc
+                ? CallWindowProcW(c->original_wndproc, hwnd, msg, wParam, lParam)
+                : DefWindowProcW(hwnd, msg, wParam, lParam);
+            if (c->is_frameless && !c->is_fullscreen) {
+                MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+                HMONITOR hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                MONITORINFO mi;
+                mi.cbSize = sizeof(MONITORINFO);
+                if (GetMonitorInfoW(hMon, &mi)) {
+                    RECT rcWork = mi.rcWork;
+                    RECT rcMonitor = mi.rcMonitor;
+                    mmi->ptMaxPosition.x = rcWork.left - rcMonitor.left;
+                    mmi->ptMaxPosition.y = rcWork.top - rcMonitor.top;
+                    mmi->ptMaxSize.x = rcWork.right - rcWork.left;
+                    mmi->ptMaxSize.y = rcWork.bottom - rcWork.top;
+                    mmi->ptMaxTrackSize.x = mmi->ptMaxSize.x;
+                    mmi->ptMaxTrackSize.y = mmi->ptMaxSize.y;
+                }
+            }
+            return res;
+        }
+
         case WM_NCCALCSIZE:
             if (c->is_frameless && wParam == TRUE) {
-                if (IsZoomed(hwnd)) {
-                    // Maximized: let Windows calculate the work area first
-                    // (this properly clips to the taskbar/monitor work area)
-                    // then accept it by returning 0
-                    DefWindowProcW(hwnd, WM_NCCALCSIZE, wParam, lParam);
-                }
-                // Normal state: client = full window rect (no NC borders, no caption gap)
                 return 0;
             }
             break;
