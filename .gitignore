@@ -1,8 +1,6 @@
 # Build artifacts
-*.so
 *.o
 *.obj
-*.exe
 *.lib
 
 # IDE
