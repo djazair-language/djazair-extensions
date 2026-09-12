@@ -23,7 +23,25 @@ let _native = __native("_webview")
 # and controls the native platform message loop.
 class App
 
-    # Initializes application instance and creates default primary window.
+    # Initializes the application instance and creates the default primary window.
+    #
+    # @param  options {Map} Configuration dictionary:
+    #                       - "title":          {String}  Window title (default: "Djazair App")
+    #                       - "width":          {Number}  Initial width in pixels (default: 1024)
+    #                       - "height":         {Number}  Initial height in pixels (default: 768)
+    #                       - "x":              {Number}  Horizontal coordinate or -1 for OS default (default: -1)
+    #                       - "y":              {Number}  Vertical coordinate or -1 for OS default (default: -1)
+    #                       - "resizable":      {Bool}    Allow user resizing (default: True)
+    #                       - "frameless":      {Bool}    Borderless/custom chrome (default: False)
+    #                       - "minWidth":       {Number}  Minimum width limit (default: 400)
+    #                       - "minHeight":      {Number}  Minimum height limit (default: 300)
+    #                       - "maxWidth":       {Number}  Maximum width limit; 0 for unconstrained (default: 0)
+    #                       - "maxHeight":      {Number}  Maximum height limit; 0 for unconstrained (default: 0)
+    #                       - "closable":       {Bool}    Enable standard close button (default: True)
+    #                       - "virtualHostDir": {String}  Virtual host directory for web assets (default: "")
+    #                       - "debug":          {Bool}    Enable DevTools & console logs (default: False)
+    #                       - "singleInstance": {Bool}    Enforce single app instance (default: False)
+    #                       - "appId":          {String}  Unique identifier mutex key; falls back to title (default: "")
     init(options = {})
         let defaults = {
             "title": "Djazair App",
@@ -136,6 +154,9 @@ class App
     end
 
     # Creates and registers a new additional window managed by this application.
+    #
+    # @param  options {Map} Window configuration options using the same recognized keys as init (default: {})
+    # @return {Window} The newly created additional window instance
     createWindow(options = {})
         sysLog("App", "Spawning new window...")
         let win = new Window(self, options)
@@ -144,6 +165,8 @@ class App
     end
 
     # Internal hook invoked when an individual window is closed.
+    #
+    # @param  win {Window} The window instance that was closed
     _onWindowClosed(win)
         let idx = -1
         for i in 0..self._windows.length()
@@ -207,26 +230,36 @@ class App
     end
 
     # Checks if the primary window is valid and open.
+    #
+    # @return {Bool} True if the primary window is valid and open
     isValid()
         return !isNull(self.window) and self.window.isValid()
     end
 
     # Registers a callback to execute right before the event loop starts.
+    #
+    # @param  cb {Function} Callback invoked right before the event loop starts
     onReady(cb)
         self._onReady = cb
     end
 
     # Registers a callback to execute before application termination.
+    #
+    # @param  cb {Function} Callback invoked before application termination
     onQuit(cb)
         self._onQuit = cb
     end
 
     # Registers a global error callback.
+    #
+    # @param  cb {Function} Callback invoked with framework error messages
     onError(cb)
         self._errorCallback = cb
     end
 
     # Enables or disables runtime debug mode.
+    #
+    # @param  enable {Bool} True to enable debug mode and DevTools, False to disable
     setDebug(enable)
         self._debug = enable
         if enable
@@ -242,12 +275,17 @@ class App
     end
 
     # Requests a single-instance application lock via named mutex.
-    # Returns True if this process successfully acquired the lock.
+    #
+    # @param  appId {String} Unique application identifier used as the mutex key
+    # @return {Bool} True if this process successfully acquired the lock
     requestSingleInstanceLock(appId)
         return _native.appRequestSingleInstanceLock(appId)
     end
 
     # Finds and brings to foreground an existing instance of the application window.
+    #
+    # @param  title {String} Window title or identifier of the existing instance
+    # @return {Bool} True if an existing instance was found and focused
     focusExistingInstance(title)
         return _native.appFocusExistingInstance(title)
     end
