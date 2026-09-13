@@ -1,4 +1,4 @@
-﻿/**
+/**
  * =============================================================================
  * Project:      Djazair WebView Desktop Application Framework
  * File:         assets/js/app.js
@@ -414,8 +414,11 @@
             try {
                 if (typeof window.nativeMultiply === 'function') {
                     window.nativeMultiply(9, 9).then(function(res) {
-                        appendLog('success', `window.nativeMultiply(9, 9) returned: ${res}`);
-                        $('#valMultiplyRes').text(res);
+                        var val = (res !== null && typeof res === 'object' && ('__dz_data' in res)) ? res.__dz_data : res;
+                        appendLog('success', `window.nativeMultiply(9, 9) returned: ${val}`);
+                        $('#valMultiplyRes').text(val);
+                    }).catch(function(err) {
+                        appendLog('error', `window.nativeMultiply failed: ${err.message}`);
                     });
                 } else {
                     appendLog('error', 'window.nativeMultiply is not exposed!');
