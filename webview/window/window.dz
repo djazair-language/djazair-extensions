@@ -66,6 +66,7 @@ class Window
         self._onTitleChange = Null
         self._onLoad = Null
         self._loaded = False
+        self._alwaysOnTop = False
 
         # Virtual host mapping for local assets.
         # Maps a folder to http://djazair.localhost/ (same-origin only on the
@@ -316,7 +317,15 @@ class Window
     # @param alwaysOnTop {Boolean}  Whether to keep the window on top.
     setAlwaysOnTop(alwaysOnTop)
         if isNull(self._handle) return end
+        self._alwaysOnTop = alwaysOnTop
         _native.windowSetAlwaysOnTop(self._handle, alwaysOnTop)
+    end
+
+    # Checks whether the window is currently pinned above all other windows.
+    #
+    # @return {Boolean} True if always on top, False otherwise.
+    isAlwaysOnTop()
+        return self._alwaysOnTop
     end
 
     # Sets the window opacity level.
@@ -653,33 +662,46 @@ class Window
 
     # Registers a callback invoked when the webview navigates to a URL.
     #
-    # @param callback {Function}  Receives (url).
+    # @param callback {Function}  Receives (url) or no arguments.
     onNavigate(callback)
         self._onNavigate = callback
         let selfRef = self
         _native.windowSetNavigateCallback(self._handle, fn(url)
             if !isNull(selfRef._onNavigate)
-                selfRef._onNavigate(url)
+                try
+                    selfRef._onNavigate(url)
+                catch err
+                    selfRef._onNavigate()
+                end
             end
         end)
     end
 
     # Registers a callback invoked when the window title changes.
     #
-    # @param callback {Function}  Receives (title).
+    # @param callback {Function}  Receives (title) or no arguments.
     onTitleChange(callback)
         self._onTitleChange = callback
         let selfRef = self
         _native.windowSetTitleCallback(self._handle, fn(title)
             if !isNull(selfRef._onTitleChange)
-                selfRef._onTitleChange(title)
+                try
+                    selfRef._onTitleChange(title)
+                catch err
+                    selfRef._onTitleChange()
+                end
             end
         end)
     end
 
+    # Alias for onTitleChange (backward compatibility).
+    onTitle(callback)
+        self.onTitleChange(callback)
+    end
+
     # Registers a callback invoked when page content finishes loading.
     #
-    # @param callback {Function}  Receives (url).
+    # @param callback {Function}  Receives (url) or no arguments.
     onLoad(callback)
         self._onLoad = callback
         let selfRef = self
@@ -687,7 +709,11 @@ class Window
             sysLog("Window", "Window content fully loaded")
             selfRef._loaded = True
             if !isNull(selfRef._onLoad)
-                selfRef._onLoad(url)
+                try
+                    selfRef._onLoad(url)
+                catch err
+                    selfRef._onLoad()
+                end
             end
         end)
     end

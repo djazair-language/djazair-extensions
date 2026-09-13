@@ -79,7 +79,7 @@ class ShowcaseApp
             bridge.send("evt_windowRestore", {"restored": True})
         end)
 
-        win.onLoad(fn()
+        win.onLoad(fn(loadedUrl)
             bridge.send("evt_windowLoaded", {"url": win.getUrl()})
         end)
 
