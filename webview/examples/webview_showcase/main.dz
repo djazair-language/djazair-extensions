@@ -27,7 +27,7 @@ class ShowcaseApp
         # 1. Primary Window Creation with Full Configuration
         # ---------------------------------------------------------------------
         self.app = webview.createWindow({
-            "title": "Djazair WebView — Ultimate Showcase & Test Suite",
+            "title": "Djazair WebView  Ultimate Showcase & Test Suite",
             "width": 1240,
             "height": 820,
             "minWidth": 850,
@@ -460,7 +460,26 @@ class ShowcaseApp
                 "debug": True
             })
 
-            sec.setHtml("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Secondary Window</title><style>body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f8fafc;margin:0;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 48px);text-align:center}.badge{background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:6px 14px;border-radius:9999px;font-weight:600;font-size:13px;margin-bottom:16px}h2{margin:0 0 8px 0;font-size:22px;color:#38bdf8}p{color:#94a3b8;font-size:14px;max-width:400px;line-height:1.6}button{background:#2563eb;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;margin-top:16px;transition:all 0.2s}button:hover{background:#1d4ed8}</style></head><body><div class='badge'>Independent Native Window</div><h2>Djazair Multi-Window Engine</h2><p>This secondary window runs concurrently alongside the main window in the same Win32 message loop.</p><button onclick='window.djazair.invoke(\"win_closeSecondary\")'>Close This Window</button></body></html>")
+            sec.onClose(fn()
+                selfRef.secondaryWin = Null
+                if !isNull(selfRef.app.bridge)
+                    selfRef.app.bridge.send("evt_secondaryClosed", {})
+                end
+            end)
+
+            sec.bridge.on("win_closeSecondary", fn(_)
+                if !isNull(selfRef.secondaryWin) and selfRef.secondaryWin.isValid()
+                    selfRef.secondaryWin.close()
+                    selfRef.secondaryWin = Null
+                    if !isNull(selfRef.app.bridge)
+                        selfRef.app.bridge.send("evt_secondaryClosed", {})
+                    end
+                    return True
+                end
+                return False
+            end)
+
+            sec.setHtml("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Secondary Window</title><style>body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f8fafc;margin:0;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 48px);text-align:center}.badge{background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:6px 14px;border-radius:9999px;font-weight:600;font-size:13px;margin-bottom:16px}h2{margin:0 0 8px 0;font-size:22px;color:#38bdf8}p{color:#94a3b8;font-size:14px;max-width:400px;line-height:1.6}button{background:#2563eb;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;margin-top:16px;transition:all 0.2s}button:hover{background:#1d4ed8}</style></head><body><div class='badge'>Independent Native Window</div><h2>Djazair Multi-Window Engine</h2><p>This secondary window runs concurrently alongside the main window in the same Win32 message loop.</p><button onclick='if(window.djazair && window.djazair.invoke){window.djazair.invoke(\"win_closeSecondary\");}'>Close This Window</button></body></html>")
 
             selfRef.secondaryWin = sec
             return {"spawned": True, "title": title}
@@ -470,6 +489,9 @@ class ShowcaseApp
             if !isNull(selfRef.secondaryWin) and selfRef.secondaryWin.isValid()
                 selfRef.secondaryWin.close()
                 selfRef.secondaryWin = Null
+                if !isNull(selfRef.app.bridge)
+                    selfRef.app.bridge.send("evt_secondaryClosed", {})
+                end
                 return True
             end
             return False
@@ -572,7 +594,7 @@ class ShowcaseApp
 
         self.app.onReady(fn()
             webview.log( "Navigating to UI: ${uiPath}")
-            self.app.window.navigate(uiPath)
+            self.app.window.navigate("ui.html")
         end)
 
         self.app.onQuit(fn()

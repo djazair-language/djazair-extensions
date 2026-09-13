@@ -601,6 +601,11 @@
                 appendLog('event', `Push Ticker Pulse #${data.counter} (Timestamp: ${data.timestamp})`);
             });
 
+            window.djazair.on('evt_secondaryClosed', function() {
+                appendLog('info', 'Secondary window closed');
+                $('#badgeSecondaryStatus').text('Closed').removeClass('tag-green').addClass('tag-amber');
+            });
+
             window.djazair.on('evt_log', function(data) {
                 appendLog(data.level || 'info', data.msg);
             });

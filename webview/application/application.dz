@@ -105,10 +105,17 @@ class App
 
         sysLog("App", "Attaching IPC bridge to primary window...")
         self.bridge = new Bridge(self, win)
+        win.bridge = self.bridge
 
         # Built-in handler for frameless window dragging from frontend
         self.bridge.on("__djazair_start_drag", fn(_)
             win.startDragging()
+            return True
+        end)
+
+        # Built-in handler for closing the window from frontend
+        self.bridge.on("win_close", fn(_)
+            win.close()
             return True
         end)
 
@@ -154,13 +161,62 @@ class App
     end
 
     # Creates and registers a new additional window managed by this application.
+    # Automatically attaches an IPC Bridge and forwards console diagnostics.
     #
     # @param  options {Map} Window configuration options using the same recognized keys as init (default: {})
-    # @return {Window} The newly created additional window instance
+    # @return {Window} The newly created additional window instance with .bridge attached
     createWindow(options = {})
         sysLog("App", "Spawning new window...")
         let win = new Window(self, options)
         self._windows.append(win)
+
+        sysLog("App", "Attaching IPC bridge to window...")
+        let bridge = new Bridge(self, win)
+        win.bridge = bridge
+
+        # Built-in handler for frameless window dragging from frontend
+        bridge.on("__djazair_start_drag", fn(_)
+            win.startDragging()
+            return True
+        end)
+
+        # Built-in handler for closing the window from its own frontend
+        bridge.on("win_close", fn(_)
+            win.close()
+            return True
+        end)
+
+        if win._debug
+            win.initJs(readWebviewAsset("debug_console.js"))
+            bridge.on("__console", fn(args)
+                let typeStr = args[0]
+                let msg = args[1]
+                let lvl = "info"
+                if typeStr == "error"
+                    lvl = "error"
+                elif typeStr == "warn"
+                    lvl = "warn"
+                elif typeStr == "log"
+                    lvl = "debug"
+                elif typeStr == "info"
+                    lvl = "info"
+                end
+                sysLog("Webview", msg, lvl)
+            end)
+            win.openDevTools()
+        else
+            win.initJs(readWebviewAsset("debug_console.js"))
+            bridge.on("__console", fn(args)
+                let typeStr = args[0]
+                let msg = args[1]
+                if typeStr == "error"
+                    sysLog("Webview", msg, "error")
+                elif typeStr == "warn"
+                    sysLog("Webview", msg, "warn")
+                end
+            end)
+        end
+
         return win
     end
 

@@ -898,7 +898,6 @@ static void destroy_context(WindowContext* c) {
 #endif
 
     if (c->wv) {
-        c->wv->terminate();
         delete c->wv;
         c->wv = nullptr;
     }
@@ -977,6 +976,13 @@ extern "C" DJAZAIR_FUNC(nativeWindowDestroy) {
         if (it == g_contexts.end()) return djazair_null();
         c = it->second;
     }
+
+#if defined(WEBVIEW_PLATFORM_WINDOWS)
+    if (c->wv) {
+        HWND hwnd = get_hwnd(c->wv);
+        if (hwnd) ShowWindow(hwnd, SW_HIDE);
+    }
+#endif
 
     // Fix: if this window's message loop is currently running, the destroy is
     // being requested from inside one of its own callbacks (e.g. an IPC
@@ -2388,6 +2394,15 @@ extern "C" DJAZAIR_FUNC(nativeWindowBind) {
             }
         } else {
             if (!vm->exceptionCaught) { pop(vm); pop(vm); pop(vm); }
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(g_ctx_mtx);
+            auto it = g_contexts.find(captured_id);
+            if (it == g_contexts.end() || !it->second || !it->second->wv) {
+                return; // Window context destroyed during dispatch — do not access freed webview
+            }
+            wc2 = it->second;
         }
 
         wc2->wv->resolve(seq, 0, result_str);
