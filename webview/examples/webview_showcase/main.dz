@@ -202,7 +202,12 @@ class ShowcaseApp
         end)
 
         bridge.on("win_toggleMaximize", fn(_)
-            return win.toggleMaximize()
+            if win.isMaximized()
+                win.restore()
+            else
+                win.maximize()
+            end
+            return win.isMaximized()
         end)
 
         bridge.on("win_isFullscreen", fn(_)
