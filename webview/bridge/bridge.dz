@@ -151,6 +151,8 @@ class Bridge
     end
 
     # Exposes a native function to the webview by binding a global on window[name].
+    # Automatically unwraps the { __dz_ok, __dz_data } envelope so the JavaScript
+    # caller receives the direct return value and errors reject the Promise.
     #
     # @param  name {String} The global property name bound on window
     # @param  handler {Function} Native callback invoked when the JS global is called
@@ -158,6 +160,9 @@ class Bridge
         sysLog("Bridge", "Exposed native binding: ${name}", "debug")
         self._handlers[name] = handler
         _native.windowBind(self.win._handle, name, Null)
+        let wrapperJs = "(function(){var n='" + str(name) + "';if(window[n]&&!window[n].__dzWrapped){var o=window[n];window[n]=function(){var a=Array.prototype.slice.call(arguments);return o.apply(window,a).then(function(r){if(r&&typeof r==='object'&&'__dz_ok' in r){return r.__dz_ok?r.__dz_data:Promise.reject(new Error(r.__dz_error));}return r;});};window[n].__dzWrapped=true;}})();"
+        self.win.initJs(wrapperJs)
+        self.win.eval(wrapperJs)
     end
 end
 
