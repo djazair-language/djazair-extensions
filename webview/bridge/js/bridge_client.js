@@ -30,7 +30,23 @@
     // ─────────────────────────────────────────────────────────────────────
     invoke: function(channel, payload, timeoutMs) {
       var data = (payload !== undefined && payload !== null) ? payload : null;
+      var disableTimeout = (timeoutMs === 0 || timeoutMs === false || (typeof timeoutMs === 'number' && timeoutMs >= 86400000));
       var ms   = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 10000;
+
+      // When timeout is explicitly disabled (e.g. for modal dialogs or long tasks), return direct call promise
+      if (disableTimeout) {
+        return __dz_invoke(channel, data).then(function(result) {
+          if (result !== null && typeof result === 'object') {
+            if (result.__dz_ok === false) {
+              return Promise.reject(new Error(result.__dz_error || 'Handler error'));
+            }
+            if ('__dz_data' in result) {
+              return result.__dz_data;
+            }
+          }
+          return result;
+        });
+      }
 
       // Hold a reference to the timer so we can cancel it the moment
       // the real call settles — prevents orphaned timers from accumulating
