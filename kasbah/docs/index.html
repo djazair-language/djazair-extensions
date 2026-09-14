@@ -39,7 +39,6 @@
 
     <div class="header-actions">
       <a href="#quickstart" class="header-link"><i class="fas fa-bolt"></i> Quick Start</a>
-      <a href="#simulator" class="header-link"><i class="fas fa-sliders-h"></i> REST Studio</a>
       <a href="https://github.com/djazair-language/djazair-extensions" target="_blank" class="icon-btn" title="GitHub Repository"><i class="fab fa-github"></i></a>
       <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
       <button class="icon-btn" id="mobileMenuBtn" style="display:none;" title="Toggle Menu"><i class="fas fa-bars"></i></button>
@@ -53,7 +52,6 @@
         <div class="nav-group-title">Getting Started</div>
         <a href="#overview" class="nav-item active"><i class="fas fa-compass"></i> Overview &amp; Architecture <span class="nav-badge">Intro</span></a>
         <a href="#quickstart" class="nav-item"><i class="fas fa-bolt"></i> Quick Start in 5 Lines</a>
-        <a href="#simulator" class="nav-item"><i class="fas fa-play-circle"></i> Live REST Studio <span class="nav-badge live">Live</span></a>
       </div>
 
       <div class="nav-group">
@@ -187,73 +185,6 @@ app.<span class="fn">listen</span>()</code></pre>
           </div>
         </section>
 
-        <!-- Section: Interactive Simulator -->
-        <section class="doc-section" id="simulator">
-          <h2 class="section-title"><i class="fas fa-play-circle"></i> Live Interactive REST API Studio</h2>
-          <p class="section-lead">Test and simulate how Kasbah executes HTTP requests through its pipeline and generates production server code in real time:</p>
-
-          <div class="simulator-box">
-            <div class="sim-header">
-              <div class="sim-title"><i class="fas fa-sliders-h"></i> Request Dispatch Simulator</div>
-              <div id="simStatusBadge">
-                <span class="badge-tag http-get"><i class="fas fa-check-circle"></i> Ready</span>
-              </div>
-            </div>
-
-            <div class="sim-body">
-              <div class="sim-control-row">
-                <select id="simMethod" class="sim-select">
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                  <option value="PATCH">PATCH</option>
-                </select>
-                <input type="text" id="simPath" class="sim-input" value="/api/v1/trades" placeholder="Enter endpoint path (e.g. /api/users/:id)" />
-                <button id="simRunBtn" class="sim-btn-run"><i class="fas fa-paper-plane"></i> Send Request</button>
-              </div>
-
-              <!-- Presets -->
-              <div style="margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Presets:</span>
-                <button class="copy-btn sim-preset-btn" data-method="GET" data-path="/api/v1/trades">GET /trades</button>
-                <button class="copy-btn sim-preset-btn" data-method="GET" data-path="/api/users/:id">GET /users/:id</button>
-                <button class="copy-btn sim-preset-btn" data-method="POST" data-path="/api/v1/trades" data-body='{"symbol":"BTCUSD","amount":1.5}'>POST /trades</button>
-                <button class="copy-btn sim-preset-btn" data-method="GET" data-path="/health">GET /health</button>
-              </div>
-
-              <!-- Middleware Options -->
-              <div class="sim-options-grid">
-                <span style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-right: 4px;">Middleware Pipeline:</span>
-                <label class="sim-checkbox-label"><input type="checkbox" id="simUseHelmet" checked /> Helmet (Security)</label>
-                <label class="sim-checkbox-label"><input type="checkbox" id="simUseCors" checked /> CORS Headers</label>
-                <label class="sim-checkbox-label"><input type="checkbox" id="simUseLogger" checked /> Structured Logger</label>
-                <label class="sim-checkbox-label"><input type="checkbox" id="simUseSession" /> Signed Session</label>
-              </div>
-
-              <!-- Payload Input -->
-              <div style="margin-bottom: 18px;">
-                <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Request Body (JSON for POST/PUT):</label>
-                <textarea id="simBodyInput" class="sim-input" style="width: 100%; height: 70px; padding: 10px; resize: vertical;" placeholder='{"key": "value"}'></textarea>
-              </div>
-
-              <!-- Split Output: Code & Response -->
-              <div id="simResponseContainer" class="sim-split-view">
-                <div class="sim-panel">
-                  <div class="sim-panel-title"><span><i class="fas fa-code"></i> Generated Kasbah Server Code</span></div>
-                  <pre class="sim-panel-body" id="simGeneratedCode"></pre>
-                </div>
-
-                <div class="sim-panel">
-                  <div class="sim-panel-title"><span><i class="fas fa-satellite-dish"></i> Live HTTP Response</span></div>
-                  <pre class="sim-panel-body" id="simResponseHeaders" style="color: #38bdf8; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px;"></pre>
-                  <pre class="sim-panel-body" id="simResponseBody" style="color: #a7f3d0;"></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- Section: Application Class & Config -->
         <section class="doc-section" id="app-class">
           <h2 class="section-title"><i class="fas fa-server"></i> Application Instance &amp; Lifecycle</h2>
@@ -282,10 +213,10 @@ app.<span class="fn">listen</span>()</code></pre>
 
           <div class="method-card">
             <div class="method-header">
-              <div class="method-signature">app.listen(port = Null, host = Null, quiet = False)</div>
+              <div class="method-signature">app.listen(port = Null, quiet = False)</div>
               <span class="badge-tag method-oop">Method</span>
             </div>
-            <p class="method-desc">Starts the asynchronous HTTP listener on the configured or supplied host and port.</p>
+            <p class="method-desc">Starts the asynchronous HTTP listener on the configured or supplied port. Host binding is configured via application options.</p>
           </div>
 
           <div class="method-card">
@@ -522,10 +453,10 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
 
           <div class="method-card">
             <div class="method-header">
-              <div class="method-signature">app.use(prefix, routerInstance)</div>
+              <div class="method-signature">app.mount(prefix, routerInstance)</div>
               <span class="badge-tag method-oop">Sub-Router Mounting</span>
             </div>
-            <p class="method-desc">Mounts a modular standalone <code>new kasbah.router()</code> instance under an application path prefix.</p>
+            <p class="method-desc">Mounts a modular standalone <code>new kasbah.router()</code> instance under an application path prefix. (Note: <code>mount()</code> is used instead of <code>use()</code> as <code>use</code> is a reserved module keyword in Djazair).</p>
           </div>
         </section>
 
@@ -633,13 +564,21 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
             </table>
           </div>
           <div class="code-container">
-            <div class="code-header"><span><i class="fas fa-code"></i> File Upload Example</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
+            <div class="code-header"><span><i class="fas fa-code"></i> File Upload Example (via req.file)</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
             <pre><code>app.<span class="fn">post</span>(<span class="str">"/upload"</span>, <span class="kwd">fn</span>(req, res)
-    <span class="kwd">let</span> file = req.<span class="fn">uploader</span>().<span class="fn">single</span>(<span class="str">"avatar"</span>)
-    <span class="kwd">let</span> savedPath = file.saveTo(<span class="str">"./storage/avatars"</span>)
+    <span class="kwd">if</span> not req.<span class="fn">hasFile</span>(<span class="str">"avatar"</span>)
+        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(<span class="str">"No avatar uploaded"</span>)
+    <span class="kwd">end</span>
+
+    <span class="kwd">let</span> file = req.<span class="fn">file</span>(<span class="str">"avatar"</span>)
+    <span class="kwd">if</span> not file.<span class="fn">isImage</span>() or not file.<span class="fn">hasExt</span>([<span class="str">"jpg"</span>, <span class="str">"png"</span>, <span class="str">"webp"</span>])
+        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(<span class="str">"Avatar must be a valid JPG, PNG, or WebP image"</span>)
+    <span class="kwd">end</span>
+
+    <span class="kwd">let</span> savedPath = file.<span class="fn">saveTo</span>(<span class="str">"./storage/avatars"</span>)
     res.<span class="fn">created</span>({
-        <span class="str">"filename"</span>: file.filename,
-        <span class="str">"size"</span>:     file.size,
+        <span class="str">"filename"</span>: file.<span class="fn">getFilename</span>(),
+        <span class="str">"size"</span>:     file.<span class="fn">getSize</span>(),
         <span class="str">"path"</span>:     savedPath
     })
 <span class="kwd">end</span>)</code></pre>
@@ -649,7 +588,7 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
             <table class="api-table">
               <thead>
                 <tr>
-                  <th>Uploader Method</th>
+                  <th>Uploader Method (<code>req.uploader(options)</code>)</th>
                   <th>Return Type</th>
                   <th>Description</th>
                 </tr>
@@ -657,28 +596,28 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
               <tbody>
                 <tr>
                   <td><code>uploader.single(fieldName)</code></td>
-                  <td>uploadedFile | Null</td>
-                  <td>Extracts and validates a single file upload from the specified field name.</td>
-                </tr>
-                <tr>
-                  <td><code>uploader.array(fieldName)</code></td>
-                  <td>Array&lt;uploadedFile&gt;</td>
-                  <td>Extracts and validates multiple files uploaded under the same field name.</td>
-                </tr>
-                <tr>
-                  <td><code>uploader.all()</code></td>
                   <td>Map</td>
-                  <td>Returns a dictionary of all uploaded files keyed by form field names.</td>
+                  <td>Validates and saves a single file: <code>{"ok": Boolean, "file": Map, "error": String}</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>uploader.saveAll(destinationDir)</code></td>
+                  <td><code>uploader.multiple(fieldName, maxCount = 10)</code></td>
                   <td>Map</td>
-                  <td>Saves all uploaded files to disk and returns a map of results with paths.</td>
+                  <td>Validates and saves multiple files: <code>{"ok": Boolean, "files": Array, "errors": Array}</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>uploader.any()</code></td>
+                  <td>Map</td>
+                  <td>Validates and saves all uploaded files across all form fields.</td>
+                </tr>
+                <tr>
+                  <td><code>uploader.info(filePath)</code></td>
+                  <td>Map</td>
+                  <td>Returns file metadata on disk: <code>{"exists": Boolean, "name": String, "size": Number, "mimeType": String}</code>.</td>
                 </tr>
                 <tr>
                   <td><code>uploader.remove(filePath)</code></td>
                   <td>Boolean</td>
-                  <td>Safely deletes a file from disk with path validation.</td>
+                  <td>Safely deletes a file from disk with path normalization.</td>
                 </tr>
               </tbody>
             </table>
@@ -688,66 +627,76 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
             <table class="api-table">
               <thead>
                 <tr>
-                  <th>uploadedFile Property / Method</th>
-                  <th>Type</th>
+                  <th>UploadedFile Method (<code>req.file(name)</code>)</th>
+                  <th>Return Type</th>
                   <th>Description</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><code>file.name</code></td>
+                  <td><code>file.getName()</code></td>
                   <td>String</td>
-                  <td>Form field name identifier (e.g. <code>"avatar"</code>).</td>
+                  <td>Returns the form field name identifier (e.g. <code>"avatar"</code>).</td>
                 </tr>
                 <tr>
-                  <td><code>file.filename</code></td>
+                  <td><code>file.getFilename()</code></td>
                   <td>String</td>
-                  <td>Sanitized original filename uploaded by the client (e.g. <code>"photo.png"</code>).</td>
+                  <td>Returns the sanitized original client filename (e.g. <code>"photo.png"</code>).</td>
                 </tr>
                 <tr>
-                  <td><code>file.type</code></td>
+                  <td><code>file.getMimeType()</code></td>
                   <td>String</td>
-                  <td>MIME content-type of the file (e.g. <code>"image/png"</code>).</td>
+                  <td>Returns MIME media type string (e.g. <code>"image/png"</code>).</td>
                 </tr>
                 <tr>
-                  <td><code>file.size</code></td>
+                  <td><code>file.getSize()</code></td>
                   <td>Number</td>
-                  <td>File size in bytes.</td>
+                  <td>Returns file size in bytes.</td>
                 </tr>
                 <tr>
-                  <td><code>file.tempPath</code></td>
+                  <td><code>file.getTempPath()</code></td>
                   <td>String</td>
-                  <td>Temporary filesystem storage path where bytes are staged.</td>
+                  <td>Returns path to the temporary staged file on disk.</td>
+                </tr>
+                <tr>
+                  <td><code>file.getExt()</code></td>
+                  <td>String</td>
+                  <td>Returns lowercased file extension without leading dot (e.g. <code>"png"</code>).</td>
+                </tr>
+                <tr>
+                  <td><code>file.hasExt(allowedList)</code></td>
+                  <td>Boolean</td>
+                  <td>Checks if file extension matches the permitted extensions list.</td>
+                </tr>
+                <tr>
+                  <td><code>file.isImage()</code></td>
+                  <td>Boolean</td>
+                  <td>Checks if uploaded file is an image (by MIME type or extension).</td>
                 </tr>
                 <tr>
                   <td><code>file.isValid()</code></td>
                   <td>Boolean</td>
-                  <td>Verifies that the temporary file exists on disk and is non-empty.</td>
+                  <td>Verifies that temporary staged file exists on disk.</td>
                 </tr>
                 <tr>
-                  <td><code>file.extension()</code></td>
+                  <td><code>file.saveTo(destDir, newFilename = Null)</code></td>
                   <td>String</td>
-                  <td>Returns lowercase file extension with leading dot (e.g. <code>".png"</code>).</td>
-                </tr>
-                <tr>
-                  <td><code>file.saveTo(destDir, newName = "")</code></td>
-                  <td>String</td>
-                  <td>Persists file to destination directory and removes temporary staging file.</td>
+                  <td>Moves temporary file to destination directory and cleans up staging file.</td>
                 </tr>
                 <tr>
                   <td><code>file.readBytes()</code></td>
                   <td>Array</td>
-                  <td>Reads raw binary contents into a byte array.</td>
+                  <td>Reads file contents into a raw byte array.</td>
                 </tr>
                 <tr>
                   <td><code>file.readText()</code></td>
                   <td>String</td>
-                  <td>Reads contents decoded as a UTF-8 text string.</td>
+                  <td>Reads file contents as a UTF-8 text string.</td>
                 </tr>
                 <tr>
                   <td><code>file.delete()</code></td>
                   <td>Boolean</td>
-                  <td>Deletes temporary file from disk immediately.</td>
+                  <td>Deletes temporary file from disk.</td>
                 </tr>
               </tbody>
             </table>
@@ -815,17 +764,17 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
                   <td>Dispatches XML document with <code>application/xml; charset=utf-8</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>res.sendFile(filePath)</code></td>
+                  <td><code>res.file(filePath)</code> / <code>res.sendFile(filePath)</code></td>
                   <td>Response</td>
-                  <td>Streams binary or text file from disk with MIME detection and caching headers.</td>
+                  <td>Streams binary or text file from disk with accurate byte Content-Length and MIME detection.</td>
                 </tr>
                 <tr>
-                  <td><code>res.download(filePath, name)</code></td>
+                  <td><code>res.download(filePath, name = Null)</code></td>
                   <td>Response</td>
                   <td>Forces browser download with RFC 5987 Unicode filename encoding.</td>
                 </tr>
                 <tr>
-                  <td><code>res.view(template, data)</code></td>
+                  <td><code>res.view(template, data = {})</code></td>
                   <td>Response</td>
                   <td>Renders server-side HTML view using the integrated Qalam AST template engine.</td>
                 </tr>
@@ -833,6 +782,16 @@ app.<span class="fn">group</span>(<span class="str">"/api/v1"</span>, [requireAu
                   <td><code>res.redirect(url, code = 302)</code></td>
                   <td>Response</td>
                   <td>Issues HTTP redirect with <code>Location</code> header.</td>
+                </tr>
+                <tr>
+                  <td><code>res.back(fallback = "/")</code></td>
+                  <td>Response</td>
+                  <td>Redirects client back to their previous Referer URL.</td>
+                </tr>
+                <tr>
+                  <td><code>res.sendStatus(code)</code></td>
+                  <td>Response</td>
+                  <td>Sets status code and sends standard HTTP status reason text as response body.</td>
                 </tr>
                 <tr>
                   <td><code>res.links(linksMap)</code></td>
@@ -931,13 +890,16 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>())
 
 <span class="cmt"># Custom Security Directives</span>
 app.<span class="fn">middleware</span>(kasbah.<span class="fn">helmet</span>({
-    <span class="str">"frameguard"</span>: {<span class="str">"action"</span>: <span class="str">"DENY"</span>},
-    <span class="str">"referrerPolicy"</span>: {<span class="str">"policy"</span>: <span class="str">"strict-origin-when-cross-origin"</span>},
-    <span class="str">"contentSecurityPolicy"</span>: {
-        <span class="str">"directives"</span>: {
-            <span class="str">"default-src"</span>: [<span class="str">"'self'"</span>],
-            <span class="str">"script-src"</span>:  [<span class="str">"'self'"</span>, <span class="str">"https://trusted.cdn.com"</span>]
-        }
+    <span class="str">"xFrameOptions"</span>:  <span class="str">"DENY"</span>,
+    <span class="str">"referrerPolicy"</span>: <span class="str">"strict-origin-when-cross-origin"</span>,
+    <span class="str">"hsts"</span>: {
+        <span class="str">"maxAge"</span>:            <span class="num">31536000</span>, <span class="cmt"># 1 year</span>
+        <span class="str">"includeSubDomains"</span>: <span class="kwd">True</span>,
+        <span class="str">"preload"</span>:           <span class="kwd">True</span>
+    },
+    <span class="str">"csp"</span>: {
+        <span class="str">"default-src"</span>: [<span class="str">"'self'"</span>],
+        <span class="str">"script-src"</span>:  [<span class="str">"'self'"</span>, <span class="str">"https://cdn.jsdelivr.net"</span>]
     }
 }))</code></pre>
           </div>
@@ -955,11 +917,13 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>())
 
 <span class="cmt"># Strict Enterprise Production CORS</span>
 app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
-    <span class="str">"origin"</span>:      [<span class="str">"https://app.djazair.com"</span>, <span class="str">"https://admin.djazair.com"</span>],
-    <span class="str">"methods"</span>:     <span class="str">"GET,POST,PUT,DELETE,PATCH,OPTIONS"</span>,
-    <span class="str">"headers"</span>:     <span class="str">"Content-Type,Authorization,X-Requested-With"</span>,
-    <span class="str">"credentials"</span>: <span class="kwd">True</span>,
-    <span class="str">"maxAge"</span>:      <span class="num">86400</span>
+    <span class="str">"origin"</span>:            [<span class="str">"https://app.djazair.com"</span>, <span class="str">"https://admin.djazair.com"</span>],
+    <span class="str">"methods"</span>:           <span class="str">"GET,POST,PUT,DELETE,PATCH,OPTIONS"</span>,
+    <span class="str">"allowedHeaders"</span>:    <span class="str">"Content-Type,Authorization,X-Requested-With"</span>,
+    <span class="str">"exposedHeaders"</span>:    <span class="str">"Content-Range,X-Total-Count"</span>,
+    <span class="str">"credentials"</span>:       <span class="kwd">True</span>,
+    <span class="str">"maxAge"</span>:            <span class="num">86400</span>,
+    <span class="str">"preflightContinue"</span>: <span class="kwd">False</span>
 }))</code></pre>
           </div>
         </section>
@@ -1082,54 +1046,60 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
           </div>
         </section>
 
+        <!-- Section: Body Parser -->
+        <section class="doc-section" id="body-parser">
+          <h2 class="section-title"><i class="fas fa-envelope-open-text"></i> Body Parser Middleware</h2>
+          <p class="section-lead">Automatically parses incoming JSON, URL-encoded forms, and multipart payloads into <code>req.body</code> and <code>req.files</code>:</p>
+
+          <div class="code-container">
+            <div class="code-header"><span><i class="fas fa-code"></i> Body Parser Configuration</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
+            <pre><code><span class="cmt"># Enabled by default with 10 MB limit, or configure custom maxBodySize</span>
+<span class="kwd">let</span> app = <span class="kwd">new</span> kasbah.<span class="typ">app</span>({
+    <span class="str">"maxBodySize"</span>: <span class="num">20</span> <span class="cmt"># Max body size in Megabytes (MB)</span>
+})
+
+<span class="cmt"># Or register explicitly as standalone middleware:</span>
+app.<span class="fn">middleware</span>(kasbah.<span class="fn">bodyParser</span>(<span class="num">20</span>))</code></pre>
+          </div>
+
+          <div class="alert-box alert-info">
+            <i class="fas fa-layer-group"></i>
+            <div>
+              <strong>Automatic Multi-Format Detection:</strong><br />
+              Kasbah inspects the <code>Content-Type</code> header and automatically decodes:
+              <ul style="margin-top: 6px; padding-left: 18px;">
+                <li><code>application/json</code> &rarr; parsed into a native Djazair Map/Array in <code>req.body</code>.</li>
+                <li><code>application/x-www-form-urlencoded</code> &rarr; parsed into key-value pairs in <code>req.body</code>.</li>
+                <li><code>multipart/form-data</code> &rarr; extracts text fields into <code>req.body</code> and streams binary files to disk, accessible via <code>req.file()</code> and <code>req.uploader()</code>.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
         <!-- Section: Multipart File Uploads -->
         <section class="doc-section" id="file-uploads">
           <h2 class="section-title"><i class="fas fa-cloud-arrow-up"></i> Multipart File Uploads</h2>
           <p class="section-lead">Stream and validate uploaded files with MIME type restrictions and size constraints:</p>
 
           <div class="code-container">
-            <div class="code-header"><span><i class="fas fa-code"></i> File Upload Handler</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
+            <div class="code-header"><span><i class="fas fa-code"></i> File Upload via FileManager (req.uploader)</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
             <pre><code>app.<span class="fn">post</span>(<span class="str">"/api/upload"</span>, <span class="kwd">fn</span>(req, res)
     <span class="kwd">let</span> uploader = req.<span class="fn">uploader</span>({
         <span class="str">"dest"</span>:         <span class="str">"./storage/uploads"</span>,
-        <span class="str">"maxSize"</span>:      <span class="num">5</span>, <span class="cmt"># 5 MB limit</span>
-        <span class="str">"allowedTypes"</span>: [<span class="str">"image/png"</span>, <span class="str">"image/jpeg"</span>, <span class="str">"application/pdf"</span>]
+        <span class="str">"maxSize"</span>:      <span class="num">5</span>, <span class="cmt"># 5 MB limit per file</span>
+        <span class="str">"allowedTypes"</span>: [<span class="str">"image/png"</span>, <span class="str">"image/jpeg"</span>, <span class="str">"application/pdf"</span>],
+        <span class="str">"prefix"</span>:       <span class="str">"doc_"</span>
     })
 
-    <span class="kwd">let</span> file = uploader.<span class="fn">single</span>(<span class="str">"avatar"</span>)
-    <span class="kwd">if</span> isNull(file)
-        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(<span class="str">"Avatar file is required"</span>)
+    <span class="kwd">let</span> result = uploader.<span class="fn">single</span>(<span class="str">"avatar"</span>)
+    <span class="kwd">if</span> not result[<span class="str">"ok"</span>]
+        <span class="kwd">return</span> res.<span class="fn">badRequest</span>(result[<span class="str">"error"</span>])
     <span class="kwd">end</span>
 
-    <span class="kwd">let</span> savedPath = file.<span class="fn">saveTo</span>(<span class="str">"./storage/avatars"</span>)
     res.<span class="fn">created</span>({
-        <span class="str">"filename"</span>: file.filename,
-        <span class="str">"size"</span>:     file.size,
-        <span class="str">"path"</span>:     savedPath
+        <span class="str">"message"</span>: <span class="str">"File uploaded successfully"</span>,
+        <span class="str">"file"</span>:    result[<span class="str">"file"</span>]
     })
-<span class="kwd">end</span>)</code></pre>
-          </div>
-        <!-- Section: Sessions & CookieJar -->
-        <section class="doc-section" id="session-cookies">
-          <h2 class="section-title"><i class="fas fa-key"></i> Sessions &amp; CookieJar Management</h2>
-          <p class="section-lead">Secure, HMAC-SHA256 signed session state management with file storage backing:</p>
-
-          <div class="code-container">
-            <div class="code-header"><span><i class="fas fa-code"></i> Session State Operations</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
-            <pre><code>app.<span class="fn">get</span>(<span class="str">"/profile"</span>, <span class="kwd">fn</span>(req, res)
-    <span class="cmt"># Read session</span>
-    <span class="kwd">let</span> user = req.session.<span class="fn">get</span>(<span class="str">"user"</span>, <span class="str">"Guest"</span>)
-    
-    <span class="cmt"># Write session</span>
-    req.session.<span class="fn">set</span>(<span class="str">"visits"</span>, req.session.<span class="fn">get</span>(<span class="str">"visits"</span>, <span class="num">0</span>) + <span class="num">1</span>)
-    
-    <span class="cmt"># Regenerate session ID (anti-fixation)</span>
-    req.session.<span class="fn">regenerate</span>()
-
-    <span class="cmt"># CookieJar API</span>
-    req.cookies.<span class="fn">set</span>(<span class="str">"theme"</span>, <span class="str">"dark"</span>, {<span class="str">"maxAge"</span>: <span class="num">86400</span>, <span class="str">"httpOnly"</span>: <span class="kwd">True</span>})
-
-    res.<span class="fn">ok</span>({<span class="str">"user"</span>: user, <span class="str">"visits"</span>: req.session.<span class="fn">get</span>(<span class="str">"visits"</span>)})
 <span class="kwd">end</span>)</code></pre>
           </div>
         </section>
@@ -1163,14 +1133,14 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
           <p class="section-lead">Fluent schema validation rules with structured error reporting:</p>
 
           <div class="code-container">
-            <div class="code-header"><span><i class="fas fa-code"></i> Request Validation Example</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
+            <div class="code-header"><span><i class="fas fa-code"></i> Request Validation Example (Fluent DSL)</span><button class="copy-btn"><i class="fas fa-copy"></i> Copy</button></div>
             <pre><code>app.<span class="fn">post</span>(<span class="str">"/api/register"</span>, <span class="kwd">fn</span>(req, res)
-    <span class="kwd">let</span> v = kasbah.<span class="fn">validator</span>(req.body, {
-        <span class="str">"username"</span>: <span class="str">"required|min:3|max:20|alphanumeric"</span>,
-        <span class="str">"email"</span>:    <span class="str">"required|email"</span>,
-        <span class="str">"age"</span>:      <span class="str">"required|numeric|min:18"</span>,
-        <span class="str">"role"</span>:     <span class="str">"required|in:trader,analyst,admin"</span>
-    })
+    <span class="kwd">let</span> v = req.<span class="fn">validate</span>()
+    v.<span class="fn">field</span>(<span class="str">"username"</span>).<span class="fn">required</span>().<span class="fn">string</span>().<span class="fn">minLength</span>(<span class="num">3</span>).<span class="fn">maxLength</span>(<span class="num">20</span>)
+    v.<span class="fn">field</span>(<span class="str">"email"</span>).<span class="fn">required</span>().<span class="fn">email</span>()
+    v.<span class="fn">field</span>(<span class="str">"age"</span>).<span class="fn">required</span>().<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">18</span>)
+    v.<span class="fn">field</span>(<span class="str">"role"</span>).<span class="fn">required</span>().<span class="fn">oneOf</span>([<span class="str">"trader"</span>, <span class="str">"analyst"</span>, <span class="str">"admin"</span>])
+    v.<span class="fn">field</span>(<span class="str">"website"</span>).<span class="fn">optional</span>().<span class="fn">url</span>()
 
     <span class="kwd">if</span> v.<span class="fn">fails</span>()
         <span class="kwd">return</span> res.<span class="fn">validationError</span>(v.<span class="fn">errors</span>())
@@ -1185,56 +1155,86 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
             <table class="api-table">
               <thead>
                 <tr>
-                  <th>Validation Rule</th>
+                  <th>Validation Rule Method</th>
                   <th>Example</th>
                   <th>Constraint Description</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><code>required</code></td>
-                  <td><code>"name": "required"</code></td>
-                  <td>Field must exist and not be Null, False, or empty string.</td>
+                  <td><code>.required()</code></td>
+                  <td><code>.field("name").required()</code></td>
+                  <td>Field must exist and not be Null or empty string.</td>
                 </tr>
                 <tr>
-                  <td><code>email</code></td>
-                  <td><code>"email": "required|email"</code></td>
-                  <td>Field must match valid email syntax containing @ and domain.</td>
+                  <td><code>.optional()</code></td>
+                  <td><code>.field("bio").optional()</code></td>
+                  <td>Skips remaining checks on field if missing or empty.</td>
                 </tr>
                 <tr>
-                  <td><code>min:N</code></td>
-                  <td><code>"password": "min:8"</code></td>
-                  <td>String length &gt;= N characters, or numeric value &gt;= N.</td>
+                  <td><code>.string()</code></td>
+                  <td><code>.field("title").string()</code></td>
+                  <td>Field value must be of String type.</td>
                 </tr>
                 <tr>
-                  <td><code>max:N</code></td>
-                  <td><code>"bio": "max:500"</code></td>
-                  <td>String length &lt;= N characters, or numeric value &lt;= N.</td>
+                  <td><code>.number()</code></td>
+                  <td><code>.field("amount").number()</code></td>
+                  <td>Field value must be an integer or floating point number.</td>
                 </tr>
                 <tr>
-                  <td><code>numeric</code></td>
-                  <td><code>"amount": "numeric"</code></td>
-                  <td>Field must be an integer or floating point number.</td>
+                  <td><code>.boolean()</code></td>
+                  <td><code>.field("agree").boolean()</code></td>
+                  <td>Field value must be a boolean (<code>True</code> or <code>False</code>).</td>
                 </tr>
                 <tr>
-                  <td><code>alpha</code></td>
-                  <td><code>"firstName": "alpha"</code></td>
-                  <td>Field must contain letters only (a-z, A-Z).</td>
+                  <td><code>.array()</code></td>
+                  <td><code>.field("tags").array()</code></td>
+                  <td>Field value must be an Array.</td>
                 </tr>
                 <tr>
-                  <td><code>alphanumeric</code></td>
-                  <td><code>"code": "alphanumeric"</code></td>
-                  <td>Field must contain letters and digits only.</td>
+                  <td><code>.email()</code></td>
+                  <td><code>.field("email").email()</code></td>
+                  <td>Field must match valid RFC email syntax.</td>
                 </tr>
                 <tr>
-                  <td><code>in:a,b,c</code></td>
-                  <td><code>"role": "in:trader,admin"</code></td>
-                  <td>Field value must match one of the allowed whitelist values.</td>
+                  <td><code>.url()</code></td>
+                  <td><code>.field("website").url()</code></td>
+                  <td>Field must start with <code>http://</code> or <code>https://</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>regex:pattern</code></td>
-                  <td><code>"sku": "regex:^[A-Z]{3}-[0-9]+$"</code></td>
-                  <td>Field must match custom regular expression.</td>
+                  <td><code>.matches(regex)</code></td>
+                  <td><code>.matches("^[A-Z]{3}-[0-9]+$")</code></td>
+                  <td>Field must match regular expression pattern.</td>
+                </tr>
+                <tr>
+                  <td><code>.min(n)</code></td>
+                  <td><code>.field("age").min(18)</code></td>
+                  <td>Numeric value must be &gt;= n.</td>
+                </tr>
+                <tr>
+                  <td><code>.max(n)</code></td>
+                  <td><code>.field("discount").max(100)</code></td>
+                  <td>Numeric value must be &lt;= n.</td>
+                </tr>
+                <tr>
+                  <td><code>.minLength(n)</code></td>
+                  <td><code>.field("password").minLength(8)</code></td>
+                  <td>String or array length must be &gt;= n.</td>
+                </tr>
+                <tr>
+                  <td><code>.maxLength(n)</code></td>
+                  <td><code>.field("bio").maxLength(500)</code></td>
+                  <td>String or array length must be &lt;= n.</td>
+                </tr>
+                <tr>
+                  <td><code>.oneOf(allowed)</code></td>
+                  <td><code>.oneOf(["admin", "user"])</code></td>
+                  <td>Field value must match one of the allowed choices.</td>
+                </tr>
+                <tr>
+                  <td><code>.custom(fn)</code></td>
+                  <td><code>.custom(fn(v) return v % 2 == 0 end)</code></td>
+                  <td>Custom validation closure returning <code>True</code> on pass or error string on fail.</td>
                 </tr>
               </tbody>
             </table>
@@ -1266,9 +1266,9 @@ app.<span class="fn">middleware</span>(kasbah.<span class="fn">cors</span>({
                   <td>Returns dictionary of all errors: <code>{"field": ["message"]}</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>v.firstError(field)</code></td>
-                  <td>String</td>
-                  <td>Returns the first error message string for a field.</td>
+                  <td><code>v.firstError()</code></td>
+                  <td>String | Null</td>
+                  <td>Returns the first error message string across all fields, or Null if valid.</td>
                 </tr>
                 <tr>
                   <td><code>v.errorFor(field)</code></td>

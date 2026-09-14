@@ -230,6 +230,11 @@ class response
         return self
     end
 
+    # Alias for file() — streams binary or text file to the client.
+    sendFile(filePath)
+        return self.file(filePath)
+    end
+
     # Triggers a file download in the browser with Content-Disposition header.
     #
     # @param filePath {String}      Path to file on disk
