@@ -423,6 +423,7 @@ int main(int argc, char *argv[]) {
             NULL,               /* working directory = inherit from caller */
             &si,
             &pi)) {
+        AllowSetForegroundWindow(pi.dwProcessId);
         WaitForSingleObject(pi.hProcess, INFINITE);
         DWORD code = 1;
         GetExitCodeProcess(pi.hProcess, &code);
