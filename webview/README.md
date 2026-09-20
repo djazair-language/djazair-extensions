@@ -1,6 +1,6 @@
 # Djazair WebView — Desktop Application Framework
 
-![Version](https://img.shields.io/badge/version-0.4.0-blue)
+![Version](https://img.shields.io/badge/version-0.4.1-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![WebView2](https://img.shields.io/badge/engine-WebView2%20(Edge%20Chromium)-green)
 
@@ -116,8 +116,8 @@ Query the framework release version programmatically at runtime:
 ```djazair
 use webview
 
-print(webview.version())  # e.g. "0.4.0"
-print(webview.VERSION)    # "0.4.0"
+print(webview.version())  # e.g. "0.4.1"
+print(webview.VERSION)    # "0.4.1"
 ```
 
 ### Creating an App
@@ -330,6 +330,9 @@ app.window.onRestore(fn()
 end)
 
 app.window.onClose(fn()
+    # Returning False cancels window close (useful for Minimize to Tray)
+    # app.window.hide()
+    # return False
     print("Window closing")
 end)
 
@@ -881,7 +884,9 @@ Tray methods and functions:
 | `tray.showBalloon(title, msg, timeout)` | `trayShowBalloon(handle, title, msg, timeout)` | Show balloon notification |
 | `tray.destroy()` | `trayDestroy(handle)` | Remove the tray icon |
 
-> **Note:** Tray functionality requires a valid `.ico` file path. On Linux/macOS these are stub implementations.
+> **Note:** 
+> - Tray functionality requires a valid `.ico` file path. On Linux/macOS these are stub implementations.
+> - **Mouse Interaction:** Left-clicking or double-clicking the tray icon automatically restores, un-minimizes, and brings the application window to the foreground (`SetForegroundWindow` & `SetFocus`). Right-clicking opens the attached context menu.
 
 ---
 
@@ -1475,8 +1480,8 @@ app.run()
 
 | Function / Constant | Description |
 |---------------------|-------------|
-| `webview.version()` | Returns framework semantic version string (e.g. `"0.4.0"`) |
-| `webview.VERSION` | Framework release version constant string (`"0.4.0"`) |
+| `webview.version()` | Returns framework semantic version string (e.g. `"0.4.1"`) |
+| `webview.VERSION` | Framework release version constant string (`"0.4.1"`) |
 | `setLogLevel(level)` | Set log level (none/error/warn/info/debug) |
 | `setLogColors(bool)` | Toggle ANSI colors |
 | `setLogFile(path)` | Log to file |
@@ -1486,6 +1491,16 @@ app.run()
 ---
 
 ## Changelog
+
+### v0.4.1 — 2026-09-17
+
+#### 🐛 Fixes & Improvements
+- **Tray Left-Click & Double-Click Restore** — Left-clicking or double-clicking the system tray icon (`WM_LBUTTONUP` / `WM_LBUTTONDBLCLK`) now automatically un-minimizes, restores, and brings the application window to the foreground (`ShowWindow(SW_RESTORE)` + `SetForegroundWindow` + `SetFocus`).
+- **Cancellable `onClose` Callback** — `window.onClose(callback)` now inspects the return value of the callback. Returning `False` prevents window destruction, enabling seamless "Minimize to Tray on Close" workflows without terminating the process.
+- **Window Auto-Centering & Taskbar Integration (`nativeWindowCreate`)** — Windows without explicit `x` / `y` coordinates are now automatically centered on the screen by default. Added `WS_EX_APPWINDOW` to `GWL_EXSTYLE` to ensure reliable taskbar icon presence and grouping for frameless and standalone windows.
+- **Dpack Foreground Permission** — Integrated `AllowSetForegroundWindow(ASFW_ANY)` in `dpack` stub to ensure packaged executables can reliably bring windows to the foreground.
+
+---
 
 ### v0.4.0 — 2026-09-13
 
