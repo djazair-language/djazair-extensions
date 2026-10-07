@@ -1,0 +1,95 @@
+# test_crypto.dz — Crypto Library Tests
+# Covers: sha256, base64 encode/decode, aes encrypt/decrypt
+
+use crypto
+
+print("=== Crypto Library Tests ===\n")
+
+let passed = 0
+let failed = 0
+
+fn test(name, condition)
+    if condition
+        print("  PASS: ${name}")
+        passed += 1
+    else
+        print("  FAIL: ${name}")
+        failed += 1
+    end
+end
+
+# ═══════════════════════════════════════════════════════════════
+# PART 1: SIMPLE — Hashing
+# ═══════════════════════════════════════════════════════════════
+print("--- PART 1: Simple ---")
+
+let h1 = crypto.sha256("hello")
+test("sha256 — returns string", isString(h1))
+test("sha256 — 64 hex chars", h1.length() == 64)
+
+let h2 = crypto.sha256("hello")
+test("sha256 — deterministic", h1 == h2)
+
+let h3 = crypto.sha256("world")
+test("sha256 — different input = different hash", h1 != h3)
+
+# ═══════════════════════════════════════════════════════════════
+# PART 2: ADVANCED — Base64
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 2: Advanced ---")
+
+let encoded = crypto.base64Encode("hello world")
+test("base64Encode — returns string", isString(encoded))
+test("base64Encode — non-empty", encoded.length() > 0)
+
+let decoded = crypto.base64Decode(encoded)
+test("base64Decode — returns original", decoded == "hello world")
+
+let encoded2 = crypto.base64Encode("")
+test("base64Encode — empty string", encoded2 == "" or encoded2 == "=")
+
+let roundtrip = crypto.base64Decode(crypto.base64Encode("Djazair"))
+test("base64 roundtrip", roundtrip == "Djazair")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 3: COMPLEX — AES Encryption
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 3: Complex ---")
+
+let key = "0123456789abcdef0123456789abcdef"
+let iv = "0123456789abcdef"
+let plaintext = "Hello, Djazair!"
+let encrypted = crypto.aesEncrypt(plaintext, key, iv)
+test("aesEncrypt — returns data", !isNull(encrypted))
+test("aesEncrypt — different from plaintext", encrypted != plaintext)
+
+let decrypted = crypto.aesDecrypt(encrypted, key, iv)
+test("aesDecrypt — returns original", decrypted == plaintext)
+
+let encrypted2 = crypto.aesEncrypt("test data 123", key, iv)
+let decrypted2 = crypto.aesDecrypt(encrypted2, key, iv)
+test("aesDecrypt — different data", decrypted2 == "test data 123")
+
+let badDecrypt = Null
+try badDecrypt = crypto.aesDecrypt(encrypted, "wrongkeywrongkeywrongkeywrongkey", iv) catch e end
+test("aesDecrypt — wrong key fails", isNull(badDecrypt) or badDecrypt != plaintext)
+
+let pipeline = crypto.base64Encode(encrypted)
+test("pipeline — encode encrypted", isString(pipeline))
+let pipelineDecoded = crypto.base64Decode(pipeline)
+let pipelineDecrypted = crypto.aesDecrypt(pipelineDecoded, key, iv)
+test("pipeline — full roundtrip", pipelineDecrypted == plaintext)
+
+test("cryptoModule native reference exists", !isNull(crypto.cryptoModule))
+
+# ═══════════════════════════════════════════════════════════════
+# SUMMARY
+# ═══════════════════════════════════════════════════════════════
+print("\n═══════════════════════════════════════")
+print("  Total: ${passed + failed} | Passed: ${passed} | Failed: ${failed}")
+print("═══════════════════════════════════════")
+
+if failed > 0
+    throw "${failed} tests failed"
+end
+print("\n=== All Crypto Tests Passed ===")

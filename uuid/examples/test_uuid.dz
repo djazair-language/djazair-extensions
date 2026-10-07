@@ -1,0 +1,100 @@
+# test_uuid.dz — UUID Library Tests
+# Covers: v4 generation, validation, format, edge cases
+
+use uuid
+
+print("=== UUID Library Tests ===\n")
+
+let passed = 0
+let failed = 0
+
+fn test(name, condition)
+    if condition
+        print("  PASS: ${name}")
+        passed += 1
+    else
+        print("  FAIL: ${name}")
+        failed += 1
+    end
+end
+
+# ═══════════════════════════════════════════════════════════════
+# PART 1: SIMPLE — Basic Generation & Validation
+# ═══════════════════════════════════════════════════════════════
+print("--- PART 1: Simple ---")
+
+let id1 = uuid.v4()
+test("v4() returns a string", isString(id1))
+test("v4() has 36 characters (8-4-4-4-12)", id1.length() == 36)
+test("v4() contains hyphens", id1.contains("-"))
+test("validate() accepts valid UUID", uuid.validate(id1))
+
+let id2 = uuid.v4()
+test("Two v4() calls produce different UUIDs", id1 != id2)
+
+# ═══════════════════════════════════════════════════════════════
+# PART 2: ADVANCED — Format & Structure
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 2: Advanced ---")
+
+let parts = id1.split("-")
+test("UUID has 5 dash-separated parts", parts.length() == 5)
+test("Part 1 has 8 chars", parts[0].length() == 8)
+test("Part 2 has 4 chars", parts[1].length() == 4)
+test("Part 3 has 4 chars", parts[2].length() == 4)
+test("Part 4 has 4 chars", parts[3].length() == 4)
+test("Part 5 has 12 chars", parts[4].length() == 12)
+
+let versionChar = parts[2][0]
+test("Version nibble is '4'", versionChar == "4")
+
+let variantChar = parts[3][0]
+test("Variant nibble is 8, 9, a, or b",
+    variantChar == "8" or variantChar == "9" or variantChar == "a" or variantChar == "b")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 3: COMPLEX — Validation & Edge Cases
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 3: Complex ---")
+
+test("validate() rejects empty string", !uuid.validate(""))
+test("validate() rejects short string", !uuid.validate("not-a-uuid"))
+test("validate() rejects wrong version", !uuid.validate("00000000-0000-0000-0000-000000000000"))
+test("validate() rejects non-hex chars", !uuid.validate("zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"))
+test("validate() rejects too many segments", !uuid.validate("1-2-3-4-5-6"))
+
+let count = 0
+while count < 100
+    let id = uuid.v4()
+    if !uuid.validate(id)
+        test("Batch generation — all valid", False)
+        break
+    end
+    count += 1
+end
+test("100 UUIDs generated and validated", count == 100)
+
+# ═══════════════════════════════════════════════════════════════
+# PART 4: CONSTANTS & MASKS
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 4: Constants & Masks ---")
+
+test("HEX_CHARS has 16 characters", uuid.HEX_CHARS == "0123456789abcdef")
+test("UUID_LEN is 36", uuid.UUID_LEN == 36)
+test("NIBBLE_MASK is 15", uuid.NIBBLE_MASK == 15)
+test("VERSION_BITS is 64", uuid.VERSION_BITS == 64)
+test("VARIANT_MASK is 63", uuid.VARIANT_MASK == 63)
+test("VARIANT_BITS is 128", uuid.VARIANT_BITS == 128)
+test("HEX_RADIX is 16", uuid.HEX_RADIX == 16)
+
+# ═══════════════════════════════════════════════════════════════
+# SUMMARY
+# ═══════════════════════════════════════════════════════════════
+print("\n═══════════════════════════════════════")
+print("  Total: ${passed + failed} | Passed: ${passed} | Failed: ${failed}")
+print("═══════════════════════════════════════")
+
+if failed > 0
+    throw "${failed} tests failed"
+end
+print("\n=== All UUID Tests Passed ===")

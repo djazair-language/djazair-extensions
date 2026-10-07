@@ -1,0 +1,223 @@
+# test_regex.dz — Regex Library Tests
+# Covers: fullMatch, search, findAll, sub, split, compile, groups,
+#         MULTILINE, backreferences, edge cases, Match API, convenience
+
+use regex
+
+print("=== Regex Library Tests ===\n")
+
+let passed = 0
+let failed = 0
+
+fn test(name, condition)
+    if condition
+        print("  PASS: ${name}")
+        passed += 1
+    else
+        print("  FAIL: ${name}")
+        failed += 1
+    end
+end
+
+# ═══════════════════════════════════════════════════════════════
+# PART 1: SIMPLE — Basic Matching
+# ═══════════════════════════════════════════════════════════════
+print("--- PART 1: Simple ---")
+
+test("fullMatch — exact match", regex.fullMatch("hello", "hello"))
+test("fullMatch — no match", !regex.fullMatch("world", "hello"))
+test("fullMatch — partial fails", !regex.fullMatch("hell", "hello"))
+
+let m1 = regex.search("world", "hello world")
+test("search — finds match", !isNull(m1))
+test("search — matched group", m1.group(0) == "world")
+
+let m2 = regex.search("xyz", "hello")
+test("search — no match returns Null", isNull(m2))
+
+# ═══════════════════════════════════════════════════════════════
+# PART 2: ADVANCED — findAll, sub, split
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 2: Advanced ---")
+
+let all = regex.findAll("abc", "abc abc abc")
+test("findAll — count matches", all.length() == 3)
+test("findAll — first match text", all[0] == "abc")
+
+let subbed = regex.sub("world", "earth", "hello world world")
+test("sub — replaces all", subbed == "hello earth earth")
+
+let subbed2 = regex.sub("a", "b", "aaa")
+test("sub — replaces all single char", subbed2 == "bbb")
+
+let parts = regex.split(",", "one,two,three")
+test("split — correct parts", parts.length() == 3)
+test("split — first part", parts[0] == "one")
+test("split — last part", parts[2] == "three")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 3: COMPLEX — Compile, Groups, Edge Cases
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 3: Complex ---")
+
+let pat = regex.compile("hello (\\w+)")
+test("compile — pattern object created", !isNull(pat))
+
+let m3 = pat.search("hello world")
+test("compiled search — found", !isNull(m3))
+test("compiled search — group 0", m3.group(0) == "hello world")
+test("compiled search — group 1", m3.group(1) == "world")
+test("compiled search — start", m3.start() == 0)
+test("compiled search — endPos", m3.endPos() == 11)
+
+test("compiled fullMatch — valid", pat.fullMatch("hello world"))
+test("compiled fullMatch — rejects partial", !pat.fullMatch("hello world!"))
+
+let pat3 = regex.compile("hello", 1)
+test("case-insensitive — matches upper", pat3.search("HELLO"))
+test("case-insensitive — matches mixed", pat3.search("Hello World"))
+
+let m4 = pat3.search("Hello World")
+test("case-insensitive — group 0", m4.group(0) == "Hello")
+
+test("empty pattern — fullMatch empty", regex.fullMatch("", ""))
+
+let patEmpty = regex.compile(".*")
+test("greedy pattern — matches any", patEmpty.fullMatch("anything goes here"))
+
+# ═══════════════════════════════════════════════════════════════
+# PART 4: FLAGS — IGNORECASE & MULTILINE
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 4: Flags (IGNORECASE & MULTILINE) ---")
+
+test("flag constants — IGNORECASE and I", regex.IGNORECASE == 1 and regex.I == 1)
+test("flag constants — MULTILINE and M", regex.MULTILINE == 2 and regex.M == 2)
+
+let patIC = regex.compile("hello", regex.IGNORECASE)
+test("ignorecase — matches uppercase", !isNull(patIC.search("HELLO WORLD")))
+
+let patML = regex.compile("^hello", regex.MULTILINE)
+test("multiline — ^ matches start of line", !isNull(patML.search("hello\nworld")))
+test("multiline — ^ does not match mid-line", isNull(patML.search("say hello world")))
+
+let patEnd = regex.compile("world$", regex.M)
+test("multiline — $ matches end of line", !isNull(patEnd.search("hello\nworld")))
+test("multiline — $ does not match mid-line", isNull(patEnd.search("world here")))
+
+let patDotAll = regex.compile("^line1$", regex.MULTILINE)
+test("multiline — match full line", patDotAll.search("line1\nline2").group(0) == "line1")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 5: BACKREFERENCES — Substitution with Groups
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 5: Backreferences ---")
+
+let patBR = regex.compile("(\\w+) (\\w+)")
+let swapped = patBR.sub("$2 $1", "hello world")
+test("backref — swap words", swapped == "world hello")
+
+let duped = regex.sub("(\\d+)", "$1$1", "a3b5")
+test("backref — duplicate group", duped == "a33b55")
+
+let literal = regex.sub("x", "$$1", "x y x")
+test("backref — $$ produces literal $", literal == "$1 y $1")
+
+let mixed = regex.sub("(\\w+)", "[$1]", "hi there")
+test("backref — wrap in brackets", mixed == "[hi] [there]")
+
+let noGroup = regex.sub("\\d+", "#", "a1b2c3")
+test("sub — no groups, plain replacement", noGroup == "a#b#c#")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 6: MATCH API — Detailed Accessors
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 6: Match API ---")
+
+let m5 = regex.search("(\\w+)@(\\w+)", "user@host")
+test("groups — count", m5.groups().length() == 2)
+test("groups — first group", m5.groups()[0] == "user")
+test("groups — second group", m5.groups()[1] == "host")
+
+test("start — group 0", m5.start(0) == 0)
+test("start — group 1", m5.start(1) == 0)
+test("start — group 2", m5.start(2) == 5)
+
+test("endPos — group 0", m5.endPos(0) == 9)
+test("endPos — group 1", m5.endPos(1) == 4)
+test("endPos — group 2", m5.endPos(2) == 9)
+
+test("span — group 0", m5.span(0)[0] == 0 and m5.span(0)[1] == 9)
+
+let m6 = regex.search("not here", "hello world")
+test("no match — start returns -1", isNull(m6))
+
+let m7 = regex.search("(a)?(b)", "xb")
+test("optional group — absent group returns Null", isNull(m7.group(1)))
+test("optional group — present group captured", m7.group(2) == "b")
+
+test("group — out of range returns Null", isNull(m5.group(99)))
+test("group — negative index returns Null", isNull(m5.group(-1)))
+
+# ═══════════════════════════════════════════════════════════════
+# PART 7: EDGE CASES — Zero-Length, Special Chars
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 7: Edge Cases ---")
+
+let patEmpty2 = regex.compile("")
+let allEmpty = patEmpty2.findAll("abc")
+test("empty pattern — findAll count", allEmpty.length() >= 3)
+
+let subEmpty = regex.sub("z", "X", "bac")
+test("sub — no match returns original", subEmpty == "bac")
+
+let splitEmpty = regex.split("\\s+", "  one  two  ")
+test("split — multiple delimiters", splitEmpty.length() == 4)
+test("split — leading empty", splitEmpty[0] == "")
+test("split — trailing empty", splitEmpty[3] == "")
+
+let patSpecial = regex.compile("\\d+\\.\\d+")
+let mSpecial = patSpecial.search("price is 3.14 dollars")
+test("escaped dot — matches literal dot", !isNull(mSpecial))
+test("escaped dot — correct match", mSpecial.group(0) == "3.14")
+
+let patAlt = regex.compile("cat|dog")
+test("alternation — matches first", patAlt.search("I have a cat").group(0) == "cat")
+test("alternation — matches second", patAlt.search("I have a dog").group(0) == "dog")
+
+let patQuant = regex.compile("\\w+")
+let mQuant = patQuant.search("hello world")
+test("quantifier — greedy match", mQuant.group(0) == "hello")
+
+# ═══════════════════════════════════════════════════════════════
+# PART 8: CONVENIENCE — String/Pattern Input
+# ═══════════════════════════════════════════════════════════════
+print("\n--- PART 8: Convenience ---")
+
+let patC = regex.compile("\\d+")
+let conv1 = regex.search(patC, "abc 42 def")
+test("convenience — search with Pattern", !isNull(conv1))
+test("convenience — search result correct", conv1.group(0) == "42")
+
+let conv2 = regex.findAll(patC, "1 2 3")
+test("convenience — findAll with Pattern", conv2.length() == 3)
+
+let conv3 = regex.sub(patC, "N", "a1b2")
+test("convenience — sub with Pattern", conv3 == "aNbN")
+
+let conv4 = regex.split(patC, "a1b2c3")
+test("convenience — split with Pattern", conv4.length() == 4)
+
+let conv5 = regex.fullMatch(patC, "42")
+test("convenience — fullMatch with Pattern", !isNull(conv5))
+
+# ═══════════════════════════════════════════════════════════════
+# SUMMARY
+# ═══════════════════════════════════════════════════════════════
+print("\n═══════════════════════════════════════")
+print("  Total: ${passed + failed} | Passed: ${passed} | Failed: ${failed}")
+print("═══════════════════════════════════════")
+
+if failed > 0
+    throw "${failed} tests failed"
+end
+print("\n=== All Regex Tests Passed ===")
