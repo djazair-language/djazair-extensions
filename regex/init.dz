@@ -1,0 +1,405 @@
+# ==============================================================================
+# regex/init.dz — Regular Expression Engine
+# 
+# Provides object-oriented wrappers (Pattern, Match) around the native regex engine.
+# Supports full match, search, find all, substitution (with backreferences), and split.
+# 
+# Author: Harizi Riyadh
+# ==============================================================================
+
+use assert
+
+# Internal native module reference for C-bindings
+let _regex = __dynamic("regex")
+
+# ── Flag Constants ────────────────────────────────────────────────────────────
+# Allows Case-Insensitive matching
+let I = 1
+let IGNORECASE = 1
+# Allows Multi-line matching (^ and $ match per line)
+let M = 2
+let MULTILINE = 2
+
+# ==============================================================================
+# Match Class
+# ==============================================================================
+# Represents the result of a successful regex match operation.
+
+class Match
+    # Internal constructor initialized by Pattern methods.
+    init(text, groups, pattern)
+        self.string = text
+        self._groups = groups
+        self._pattern = pattern
+        if groups.length() > 0
+            self._start = groups[0][0]
+            self._end = groups[0][1]
+        else
+            self._start = -1
+            self._end = -1
+        end
+    end
+
+    # Returns the string matched by the n-th capturing group.
+    # Group 0 is the entire match.
+    #
+    # @param n: Group index (defaults to 0).
+    # @return The matched substring, or Null if the group did not participate.
+    group(n = 0)
+        if n < 0 or n >= self._groups.length()
+            return Null
+        end
+        let g = self._groups[n]
+        if g[0] == -1
+            return Null
+        end
+        return self.string.slice(g[0], g[1])
+    end
+
+    # Returns an array containing all the capturing groups (excluding group 0).
+    # @return Array of substrings or Nulls.
+    groups()
+        let result = []
+        for i in 1..self._groups.length() - 1
+            result.append(self.group(i))
+        end
+        return result
+    end
+
+    # Returns the starting index of a capturing group.
+    # @param n: Group index (defaults to 0).
+    start(n = 0)
+        if n < 0 or n >= self._groups.length()
+            return -1
+        end
+        return self._groups[n][0]
+    end
+
+    # Returns the ending index of a capturing group.
+    # @param n: Group index (defaults to 0).
+    endPos(n = 0)
+        if n < 0 or n >= self._groups.length()
+            return -1
+        end
+        return self._groups[n][1]
+    end
+
+    # Returns a 2-element array [start, end] for a capturing group.
+    # @param n: Group index (defaults to 0).
+    span(n = 0)
+        return [self.start(n), self.endPos(n)]
+    end
+
+    # Returns the starting index of the full match.
+    pos()
+        return self._start
+    end
+
+    toString()
+        let val = self.group(0)
+        if isNull(val)
+            return "new Match(Null)"
+        end
+        return "new Match(${val})"
+    end
+end
+
+# ==============================================================================
+# Pattern Class
+# ==============================================================================
+# Represents a compiled regular expression.
+
+class Pattern
+    # Compiles a regular expression pattern.
+    # @param pattern: Regex string.
+    # @param flags: Bitwise OR of flags (e.g., regex.I, regex.M).
+    init(pattern, flags = 0)
+        assert.string(pattern, "pattern")
+        if isNull(flags)
+            flags = 0
+        end
+        self.pattern = pattern
+        self.flags = flags
+        if flags == 0
+            self._handle = _regex.compile(pattern)
+        else
+            let flagStr = ""
+            if flags % 2 == 1
+                flagStr += "i"
+            end
+            if (flags // 2) % 2 == 1
+                flagStr += "m"
+            end
+            self._handle = _regex.compile(pattern, flagStr)
+        end
+    end
+
+    # Checks if the entire text string exactly matches the pattern.
+    # @param text: The string to test.
+    # @return Match object, or Null.
+    fullMatch(text)
+        assert.string(text, "text")
+        let res = _regex.find(self._handle, text)
+        if isNull(res) or res.length() == 0
+            return Null
+        end
+        let m = new Match(text, res, self)
+        if m.pos() != 0 or m.endPos() != text.length()
+            return Null
+        end
+        return m
+    end
+
+    # Scans through a string, looking for the first location where the pattern matches.
+    # @param text: The string to search.
+    # @return Match object, or Null.
+    search(text)
+        assert.string(text, "text")
+        let res = _regex.find(self._handle, text)
+        if isNull(res) or res.length() == 0
+            return Null
+        end
+        return new Match(text, res, self)
+    end
+
+    # Finds all non-overlapping occurrences of the pattern.
+    # @param text: The string to search.
+    # @return Array of strings (if no groups) or arrays of strings (if groups exist).
+    findAll(text)
+        assert.string(text, "text")
+        let results = []
+        let offset = 0
+        while offset < text.length()
+            let r = _findAt(self._handle, text, offset)
+            if isNull(r)
+                break
+            end
+            let sub = r[0]
+            let groups = r[1]
+            let start = r[2]
+            let endPos = r[3]
+            let full = sub.slice(start, endPos)
+            if groups.length() > 1
+                let row = [full]
+                let i = 1
+                while i < groups.length()
+                    let g = groups[i]
+                    if g[0] == -1
+                        row.append(Null)
+                    else
+                        row.append(sub.slice(g[0], g[1]))
+                    end
+                    i = i + 1
+                end
+                results.append(row)
+            else
+                results.append(full)
+            end
+            if start == endPos
+                if endPos < sub.length()
+                    offset = offset + endPos + 1
+                else
+                    break
+                end
+            else
+                offset = offset + endPos
+            end
+        end
+        return results
+    end
+
+    # Substitutes occurrences of the pattern with a replacement string.
+    # Supports backreferences in the replacement string (e.g., $1, $2).
+    #
+    # @param replacement: The string to replace matches with.
+    # @param text: The target string.
+    # @return The modified string.
+    sub(replacement, text)
+        assert.string(replacement, "replacement")
+        assert.string(text, "text")
+        let result = ""
+        let offset = 0
+        let hasBackrefs = _hasBackrefs(replacement)
+        while offset < text.length()
+            let r = _findAt(self._handle, text, offset)
+            if isNull(r)
+                result += text.slice(offset)
+                break
+            end
+            let sub = r[0]
+            let groups = r[1]
+            let start = r[2]
+            let endPos = r[3]
+            result += sub.slice(0, start)
+            if hasBackrefs
+                result += _expandBackrefs(replacement, sub, groups)
+            else
+                result += replacement
+            end
+            if start == endPos
+                if endPos < sub.length()
+                    result += sub.slice(endPos, endPos + 1)
+                    offset = offset + endPos + 1
+                else
+                    break
+                end
+            else
+                offset = offset + endPos
+            end
+        end
+        return result
+    end
+
+    # Splits a string by the occurrences of the pattern.
+    #
+    # @param text: The string to split.
+    # @return An array of substrings.
+    split(text)
+        assert.string(text, "text")
+        let result = []
+        let offset = 0
+        while offset < text.length()
+            let r = _findAt(self._handle, text, offset)
+            if isNull(r)
+                result.append(text.slice(offset))
+                return result
+            end
+            let sub = r[0]
+            let start = r[2]
+            let endPos = r[3]
+            result.append(sub.slice(0, start))
+            if start == endPos
+                if endPos < sub.length()
+                    offset = offset + endPos + 1
+                else
+                    result.append("")
+                    return result
+                end
+            else
+                offset = offset + endPos
+            end
+        end
+        result.append("")
+        return result
+    end
+end
+
+# ==============================================================================
+# Internal Regex Engine Helpers
+# ==============================================================================
+
+fn _findAt(handle, text, offset)
+    let sub = text.slice(offset)
+    let res = _regex.find(handle, sub)
+    if isNull(res) or res.length() == 0
+        return Null
+    end
+    let g0 = res[0]
+    if isNull(g0) or !isArray(g0) or g0.length() < 2
+        return Null
+    end
+    return [sub, res, g0[0], g0[1]]
+end
+
+fn _hasBackrefs(repl)
+    let i = 0
+    let len = repl.length()
+    while i < len
+        if repl.slice(i, i + 1) == "$"
+            if i + 1 < len
+                let next = repl.slice(i + 1, i + 2)
+                if (next >= "0" and next <= "9") or next == "$"
+                    return True
+                end
+            end
+        end
+        i = i + 1
+    end
+    return False
+end
+
+fn _expandBackrefs(repl, sub, groups)
+    let result = ""
+    let i = 0
+    let len = repl.length()
+    while i < len
+        let ch = repl.slice(i, i + 1)
+        if ch == "$"
+            if i + 1 < len
+                let next = repl.slice(i + 1, i + 2)
+                if next == "$"
+                    result += "$"
+                    i = i + 2
+                elif next >= "0" and next <= "9"
+                    let groupIdx = next.charCodeAt(0) - 48
+                    if groupIdx < groups.length()
+                        let g = groups[groupIdx]
+                        if g[0] != -1
+                            result += sub.slice(g[0], g[1])
+                        end
+                    end
+                    i = i + 2
+                else
+                    result += "$"
+                    i = i + 1
+                end
+            else
+                result += "$"
+                i = i + 1
+            end
+        else
+            result += ch
+            i = i + 1
+        end
+    end
+    return result
+end
+
+# ==============================================================================
+# Convenience Functions (Static accessors)
+# ==============================================================================
+
+# Compiles a pattern string into a Pattern object.
+fn compile(pattern, flags = 0)
+    return new Pattern(pattern, flags)
+end
+
+# See Pattern.fullMatch. Allows passing a raw string instead of compiling manually.
+fn fullMatch(pattern, string)
+    if isString(pattern)
+        return new Pattern(pattern).fullMatch(string)
+    end
+    return pattern.fullMatch(string)
+end
+
+# See Pattern.search. Allows passing a raw string instead of compiling manually.
+fn search(pattern, string)
+    if isString(pattern)
+        return new Pattern(pattern).search(string)
+    end
+    return pattern.search(string)
+end
+
+# See Pattern.findAll. Allows passing a raw string instead of compiling manually.
+fn findAll(pattern, string)
+    if isString(pattern)
+        return new Pattern(pattern).findAll(string)
+    end
+    return pattern.findAll(string)
+end
+
+# See Pattern.sub. Allows passing a raw string instead of compiling manually.
+fn sub(pattern, replacement, string)
+    if isString(pattern)
+        return new Pattern(pattern).sub(replacement, string)
+    end
+    return pattern.sub(replacement, string)
+end
+
+# See Pattern.split. Allows passing a raw string instead of compiling manually.
+fn split(pattern, string)
+    if isString(pattern)
+        return new Pattern(pattern).split(string)
+    end
+    return pattern.split(string)
+end

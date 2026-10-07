@@ -1,0 +1,11 @@
+{
+  "name": "crypto",
+  "version": "1.0.0",
+  "description": "Cryptographic Primitives (SHA-256, Base64, AES-256) extension for Djazair",
+  "type": "hybrid",
+  "source": "github:djazair-language/djazair-extensions/crypto",
+  "developer": {
+    "name": "Harizi Riyadh",
+    "email": "hariziriyadh@gmail.com"
+  }
+}

@@ -1,0 +1,93 @@
+# ==============================================================================
+# uuid.dz — Universally Unique Identifier (UUID) Generation
+# 
+# Provides RFC 4122-compliant UUID v4 generation (random-based) and validation.
+# Format: 8-4-4-4-12 hex digits (e.g., "550e8400-e29b-41d4-a716-446655440000").
+# 
+# Author: Harizi Riyadh
+# ==============================================================================
+
+use random
+use assert
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+let HEX_CHARS    = "0123456789abcdef"
+let UUID_LEN     = 36
+let NIBBLE_MASK  = 15   # 0x0F
+let VERSION_BITS = 64   # 0x40 (UUID v4)
+let VARIANT_MASK = 63   # 0x3F
+let VARIANT_BITS = 128  # 0x80 (RFC 4122 Variant)
+let HEX_RADIX    = 16
+
+# Generates a cryptographically secure random UUID v4 string.
+#
+# Uses 16 random bytes. The version nibble (position 14) is set to '4'.
+# The variant nibble (position 19) is constrained to {8, 9, a, b}.
+#
+# @return A 36-character UUID string.
+fn v4()
+    let b = random.bytes(16)
+    
+    # Apply RFC 4122 version and variant masks
+    b[6] = (b[6] & NIBBLE_MASK) | VERSION_BITS
+    b[8] = (b[8] & VARIANT_MASK) | VARIANT_BITS
+    
+    let s = ""
+    for i in 0 to 15
+        s += HEX_CHARS[int(b[i] / HEX_RADIX)]
+        s += HEX_CHARS[b[i] % HEX_RADIX]
+        
+        # Insert hyphens at appropriate positions
+        if i == 3 or i == 5 or i == 7 or i == 9
+            s += "-"
+        end
+    end
+    
+    return s
+end
+
+# Validates whether a given string is a correctly formatted UUID v4.
+# Checks structural length, hyphen positions, hex digits, and the exact version/variant markers.
+#
+# @param uuidStr: The string to validate.
+# @return True if valid, False otherwise.
+fn validate(uuidStr)
+    if type(uuidStr) != "String"
+        return False
+    end
+    
+    let len = uuidStr.length()
+    if len != UUID_LEN
+        return False
+    end
+
+    if uuidStr[8] != "-" or uuidStr[13] != "-" or uuidStr[18] != "-" or uuidStr[23] != "-"
+        return False
+    end
+
+    let i = 0
+    while i < UUID_LEN
+        if i != 8 and i != 13 and i != 18 and i != 23
+            let c = uuidStr[i].lower()
+            if !HEX_CHARS.contains(c)
+                return False
+            end
+        end
+        i += 1
+    end
+
+    # Version check (must be 4)
+    let verChar = uuidStr[14]
+    if verChar != "4"
+        return False
+    end
+
+    # Variant check (must be 8, 9, a, or b)
+    let varNibble = uuidStr[19].lower()
+    if varNibble != "8" and varNibble != "9" and varNibble != "a" and varNibble != "b"
+        return False
+    end
+
+    return True
+end

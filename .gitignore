@@ -1,7 +1,10 @@
-# Build artifacts
+﻿# Build artifacts
 *.o
 *.obj
 *.lib
+*.dll
+*.so
+*.dylib
 
 # IDE
 .vscode/

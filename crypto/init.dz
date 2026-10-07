@@ -1,0 +1,49 @@
+# crypto.dz — Cryptographic Primitives
+# Provides SHA-256 hashing, Base64 encoding/decoding,
+# and AES-256-CBC encryption/decryption.
+# All operations delegate to the native std_crypto_native module.
+
+use assert
+
+let cryptoModule = __dynamic("crypto")
+
+# Computes the SHA-256 hash of a string.
+# Returns a 64-character lowercase hex digest.
+# The hash is deterministic and collision-resistant.
+fn sha256(text)
+    assert.string(text, "text")
+    return cryptoModule.sha256(text)
+end
+
+# Encodes a string to Base64 (RFC 4648).
+# Base64 is a binary-to-text encoding using 64 safe ASCII characters.
+fn base64Encode(text)
+    assert.string(text, "text")
+    return cryptoModule.base64Encode(text)
+end
+
+# Decodes a Base64-encoded string back to its original form.
+# Inverse of base64Encode().
+fn base64Decode(encoded)
+    assert.string(encoded, "encoded")
+    return cryptoModule.base64Decode(encoded)
+end
+
+# Encrypts data using AES-256-CBC with PKCS7 padding.
+# key must be 32 bytes, iv (initialization vector) must be 16 bytes.
+# Returns the ciphertext as a raw string.
+fn aesEncrypt(data, key, iv)
+    assert.string(data, "data")
+    assert.string(key, "key")
+    assert.string(iv, "iv")
+    return cryptoModule.aesEncrypt(data, key, iv)
+end
+
+# Decrypts AES-256-CBC ciphertext back to plaintext.
+# Requires the same key and iv used during encryption.
+fn aesDecrypt(data, key, iv)
+    assert.string(data, "data")
+    assert.string(key, "key")
+    assert.string(iv, "iv")
+    return cryptoModule.aesDecrypt(data, key, iv)
+end
