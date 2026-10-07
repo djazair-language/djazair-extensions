@@ -1,7 +1,7 @@
 {
   "name": "kasbah",
   "version": "0.2.0",
-  "description": "Full-featured web framework for Djazair â€” routing, middleware, CORS, Helmet security, sessions, static files, body parsing",
+  "description": "Full-featured web framework for Djazair — routing, middleware, CORS, Helmet security, sessions, static files, body parsing",
   "type": "pure",
   "source": "github:djazair-language/djazair-extensions/kasbah",
   "developer": {
@@ -9,6 +9,9 @@
     "email": "hariziriyadh@gmail.com"
   },
   "require": {
-    "qalam": "*"
+    "qalam": "*",
+    "http": "*",
+    "regex": "*",
+    "crypto": "*"
   }
 }
