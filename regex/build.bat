@@ -45,7 +45,7 @@ if exist "%DJAZAIR_DIR%\src\include" (
 )
 
 set "LIB_DIR=%DJAZAIR_DIR%\lib"
-if exist "%DJAZAIR_DIR%uildin\libdjazair.a" set "LIB_DIR=%DJAZAIR_DIR%uildin"
+if exist "%DJAZAIR_DIR%\build\bin\libdjazair.a" set "LIB_DIR=%DJAZAIR_DIR%\build\bin"
 
 echo [INFO] Building regex extension...
 gcc -shared -O2 -std=c99 ^
@@ -59,3 +59,4 @@ if errorlevel 1 (
     exit /b 1
 )
 echo [OK] regex.dll built successfully.
+
